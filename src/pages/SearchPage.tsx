@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { radioBrowserProvider, getCountries, CountryInfo } from "@/services/RadioService";
 import { StationCard } from "@/components/StationCard";
@@ -6,7 +6,7 @@ import { RadioStation } from "@/types/radio";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Search, Loader2, X } from "lucide-react";
+import { Search, Loader2, X, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -40,12 +40,12 @@ interface SearchPageProps {
 export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: SearchPageProps) {
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
-  const [genre, setGenre] = useState("");
-  const [language, setLanguage] = useState("");
+  const [genres, setGenres] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (initialGenre) setGenre(initialGenre);
+    if (initialGenre) setGenres([initialGenre]);
   }, [initialGenre]);
 
   const { data: apiCountries } = useQuery({
@@ -62,22 +62,25 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     }));
   }, [apiCountries]);
 
-  const hasFilters = !!(query || country || genre || language);
+  const hasFilters = !!(query || country || genres.length || languages.length);
 
   const { data: results, isLoading } = useQuery({
-    queryKey: ["search", query, country, genre, language],
+    queryKey: ["search", query, country, genres, languages],
     queryFn: () => radioBrowserProvider.searchStations({
       name: query || undefined,
       country: country || undefined,
-      tag: genre || undefined,
-      language: language || undefined,
+      tag: genres.length ? genres.join(",") : undefined,
+      language: languages.length ? languages.join(",") : undefined,
       limit: 40,
     }),
     enabled: hasFilters,
     staleTime: 2 * 60 * 1000,
   });
 
-  const clearFilters = () => { setQuery(""); setCountry(""); setGenre(""); setLanguage(""); };
+  const clearFilters = () => { setQuery(""); setCountry(""); setGenres([]); setLanguages([]); };
+
+  const toggleGenre = (g: string) => setGenres(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+  const toggleLanguage = (l: string) => setLanguages(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-32">
@@ -117,8 +120,35 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         )}
       </div>
 
-      <FilterSection label={t("search.genre")} items={GENRES} selected={genre} onSelect={v => setGenre(v === genre ? "" : v)} />
-      <FilterSection label={t("search.language")} items={LANGUAGES} selected={language} onSelect={v => setLanguage(v === language ? "" : v)} />
+      <div className="flex gap-3 mb-3">
+        <MultiSelectDropdown
+          label={t("search.genre")}
+          items={GENRES}
+          selected={genres}
+          onToggle={toggleGenre}
+        />
+        <MultiSelectDropdown
+          label={t("search.language")}
+          items={LANGUAGES}
+          selected={languages}
+          onToggle={toggleLanguage}
+        />
+      </div>
+
+      {(genres.length > 0 || languages.length > 0) && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {genres.map(g => (
+            <Badge key={g} className="bg-primary text-primary-foreground capitalize cursor-pointer gap-1" onClick={() => toggleGenre(g)}>
+              {g} <X className="w-3 h-3" />
+            </Badge>
+          ))}
+          {languages.map(l => (
+            <Badge key={l} className="bg-primary text-primary-foreground capitalize cursor-pointer gap-1" onClick={() => toggleLanguage(l)}>
+              {l} <X className="w-3 h-3" />
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {hasFilters && (
         <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-muted-foreground mb-4 hover:text-foreground">
@@ -148,22 +178,48 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   );
 }
 
-function FilterSection({ label, items, selected, onSelect }: { label: string; items: string[]; selected: string; onSelect: (v: string) => void }) {
+function MultiSelectDropdown({ label, items, selected, onToggle }: { label: string; items: string[]; selected: string[]; onToggle: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   return (
-    <div className="mb-3">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{label}</p>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {items.map(item => (
-          <Badge
-            key={item}
-            variant={selected === item ? "default" : "secondary"}
-            className={cn("cursor-pointer whitespace-nowrap capitalize transition-colors", selected === item && "bg-primary text-primary-foreground")}
-            onClick={() => onSelect(item)}
-          >
-            {item}
-          </Badge>
-        ))}
-      </div>
+    <div className="relative flex-1" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 bg-accent rounded-lg px-3 py-2.5 text-sm text-foreground"
+      >
+        <span className="truncate">
+          {selected.length ? `${label} (${selected.length})` : label}
+        </span>
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg bg-popover border border-border shadow-xl py-1 max-h-[240px] overflow-y-auto">
+          {items.map(item => (
+            <button
+              key={item}
+              onClick={() => onToggle(item)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm capitalize hover:bg-accent transition-colors text-foreground"
+            >
+              <div className={cn(
+                "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                selected.includes(item) ? "bg-primary border-primary" : "border-muted-foreground/40"
+              )}>
+                {selected.includes(item) && <Check className="w-3 h-3 text-primary-foreground" />}
+              </div>
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
