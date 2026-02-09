@@ -1,37 +1,44 @@
 
 
+# Correction critique pour le Background Audio dans l'APK Capacitor
+
+## Probleme
+L'audio coupe dans l'APK car la WebView Android gele l'objet Audio quand l'app passe en arriere-plan. Le navigateur Firefox fonctionne car il gere nativement le Media Session, mais la WebView Capacitor necessite des ajustements specifiques.
+
 ## Modifications prevues
 
-### 1. Header fixe sur la page d'accueil
+### 1. Audio global (hors cycle de vie React)
+Deplacer la creation de l'objet `Audio` en dehors du composant `PlayerProvider`, au niveau du module. Cela garantit qu'il ne sera jamais detruit par un re-render ou un demontage du composant.
 
-Actuellement, le titre "Radio Sphere" avec le logo defilent avec le reste du contenu. Le header sera extrait et place au-dessus de la zone scrollable, avec un fond opaque (`bg-background`) pour que le contenu passe en dessous sans transparence.
+```typescript
+// Cree une seule fois au niveau du module
+const globalAudio = new Audio();
+(globalAudio as any).playsInline = true;
+globalAudio.preload = "auto";
+```
 
-### 2. Suppression du bouton engrenage (Settings)
+### 2. MediaSession playbackState explicite apres play()
+Apres chaque appel `audio.play()`, forcer explicitement `navigator.mediaSession.playbackState = 'playing'` pour que la WebView Android detecte l'app comme un lecteur media actif.
 
-Le bouton Settings (icone engrenage) a droite du titre sera supprime puisqu'un onglet "Reglages" existe deja dans la barre de navigation. La prop `onSettingsClick` sera retiree de `HomePage` et de `Index.tsx`.
+### 3. Hack anti-freeze : ne jamais pauser lors de visibilitychange/blur
+Modifier le gestionnaire `visibilitychange` pour ne pas seulement reprendre quand l'app redevient visible, mais aussi empecher toute pause automatique quand elle passe en arriere-plan. Ajouter egalement un gestionnaire `blur` pour le meme effet.
 
-### 3. Avertissement donnees mobiles dans les Reglages
+### 4. Vibration de test au clic Play
+Ajouter `navigator.vibrate(10)` dans la fonction `play()` pour verifier que les APIs natives sont accessibles dans l'APK.
 
-Un encart d'avertissement sera ajoute dans `SettingsPage` sous la section langue, avec une icone et un texte informant que l'ecoute de radio consomme des donnees mobiles. Les traductions FR/EN seront ajoutees dans `translations.ts`.
+### 5. Demande de permissions au demarrage
+Deplacer la demande de permission de notification au montage du `PlayerProvider` (et non au premier play) pour qu'elle apparaisse des le lancement de l'app. Cela permet a Android de savoir que l'app a besoin d'afficher des notifications (prerequis pour le background audio).
 
----
+## Details techniques
 
-### Details techniques
+**Fichier modifie** : `src/contexts/PlayerContext.tsx`
 
-**`src/pages/HomePage.tsx`**
-- Restructurer le JSX : le conteneur principal passe de `overflow-y-auto` a `flex flex-col overflow-hidden`
-- Le header (logo + titre) devient une div fixe avec `bg-background px-4 pt-6 pb-4`
-- Le contenu scrollable (recently played, popular, genres) va dans une div enfant avec `flex-1 overflow-y-auto px-4 pb-4`
-- Supprimer l'import `Settings` de lucide-react, retirer le bouton engrenage et la prop `onSettingsClick`
+Changements concrets :
+- L'objet `Audio` est cree comme constante de module (`const globalAudio = new Audio()`) au lieu d'etre dans un `useEffect`
+- `audioRef` pointe vers cet objet global
+- Le gestionnaire `visibilitychange` re-appelle `audio.play()` dans tous les cas quand `isPlayingRef.current` est vrai (pas de pause automatique)
+- Un gestionnaire `blur` est ajoute avec la meme logique
+- `navigator.mediaSession.playbackState = 'playing'` est appele explicitement apres chaque `audio.play().then()`
+- `navigator.vibrate(10)` est ajoute dans `play()` pour le test natif
+- `requestNotificationPermission()` est appele dans un `useEffect` au montage (demarrage de l'app)
 
-**`src/pages/Index.tsx`**
-- Retirer le passage de `onSettingsClick` et le callback `handleSettingsClick`
-
-**`src/pages/SettingsPage.tsx`**
-- Ajouter un bloc avertissement apres la section langue avec une icone `Wifi` de lucide-react
-- Texte d'avertissement sur la consommation de donnees mobiles
-
-**`src/i18n/translations.ts`**
-- Ajouter les cles `settings.dataWarning` et `settings.dataWarningDesc` en FR et EN
-  - FR : "Utilisation des donnees" / "L'ecoute de stations de radio utilise votre connexion internet et peut consommer des donnees mobiles. Nous recommandons une connexion Wi-Fi pour une utilisation prolongee."
-  - EN : "Data usage" / "Listening to radio stations uses your internet connection and may consume mobile data. We recommend using Wi-Fi for extended listening."
