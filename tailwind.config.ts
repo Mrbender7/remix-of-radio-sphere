@@ -80,11 +80,16 @@ export default {
           "0%": { transform: "translateX(0%)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        "logo-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 6px hsla(250,80%,60%,0.3))" },
+          "50%": { filter: "drop-shadow(0 0 14px hsla(250,80%,60%,0.7))" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         marquee: "marquee 10s linear infinite",
+        "logo-glow": "logo-glow 3s ease-in-out infinite",
       },
     },
   },
