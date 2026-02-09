@@ -13,7 +13,7 @@ const translations: Record<Language, Record<string, string>> = {
     "home.greeting": "Bonjour 👋",
     "home.recentlyPlayed": "Écoutées récemment",
     "home.popularStations": "Stations populaires",
-    "home.localPopular": "Stations populaires locales",
+    "home.localPopular": "Stations populaires",
     "home.exploreByGenre": "Explorer par genre",
 
     // Search
@@ -75,7 +75,7 @@ const translations: Record<Language, Record<string, string>> = {
     "home.greeting": "Hello 👋",
     "home.recentlyPlayed": "Recently played",
     "home.popularStations": "Popular stations",
-    "home.localPopular": "Local popular stations",
+    "home.localPopular": "Popular stations",
     "home.exploreByGenre": "Explore by genre",
 
     // Search
