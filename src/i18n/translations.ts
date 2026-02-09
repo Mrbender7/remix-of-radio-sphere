@@ -62,6 +62,8 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.languageDesc": "Choisissez la langue de l'interface",
     "settings.french": "Français",
     "settings.english": "English",
+    "settings.dataWarning": "Utilisation des données",
+    "settings.dataWarningDesc": "L'écoute de stations de radio utilise votre connexion internet et peut consommer des données mobiles. Nous recommandons une connexion Wi-Fi pour une utilisation prolongée.",
   },
   en: {
     // Nav
@@ -124,6 +126,8 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.languageDesc": "Choose the interface language",
     "settings.french": "Français",
     "settings.english": "English",
+    "settings.dataWarning": "Data usage",
+    "settings.dataWarningDesc": "Listening to radio stations uses your internet connection and may consume mobile data. We recommend using Wi-Fi for extended listening.",
   },
 };
 

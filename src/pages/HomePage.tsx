@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { radioBrowserProvider } from "@/services/RadioService";
 import { StationCard } from "@/components/StationCard";
 import { RadioStation } from "@/types/radio";
-import { Loader2, Settings } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import radioSphereLogo from "@/assets/radio-sphere-logo.png";
 
@@ -26,10 +26,9 @@ interface HomePageProps {
   isFavorite: (id: string) => boolean;
   onToggleFavorite: (station: RadioStation) => void;
   onGenreClick: (genre: string) => void;
-  onSettingsClick: () => void;
 }
 
-export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, onSettingsClick }: HomePageProps) {
+export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick }: HomePageProps) {
   const detectedLang = useMemo(detectLanguage, []);
   const { t } = useTranslation();
 
@@ -43,16 +42,15 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
   });
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-4">
-      <div className="flex items-center justify-between mt-6 mb-4">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="bg-background px-4 pt-6 pb-4">
         <div className="flex items-center gap-2">
           <img src={radioSphereLogo} alt="Radio Sphere" className="w-14 h-14 rounded-xl mix-blend-screen drop-shadow-[0_0_6px_hsl(141,73%,42%)]" />
           <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent drop-shadow-[0_0_12px_hsla(250,80%,60%,0.4)]">Radio Sphere</h1>
         </div>
-        <button onClick={onSettingsClick} className="p-2 rounded-full hover:bg-accent transition-colors">
-          <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
       </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
 
       {recent.length > 0 && (
         <section className="mb-6">
@@ -88,6 +86,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
           ))}
         </div>
       </section>
+      </div>
     </div>
   );
 }
