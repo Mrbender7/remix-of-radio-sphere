@@ -160,22 +160,33 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const play = useCallback((station: RadioStation) => {
     const audio = audioRef.current;
 
-    // On prépare d'abord le système Android
-    updateMediaSession(station, true);
+    // 1. On nettoie l'état précédent
+    audio.pause();
 
+    // 2. On prépare les métadonnées (SANS HTTP pour éviter le blocage Mixed Content)
+    const secureLogo = station.logo?.replace('http://', 'https://');
+    updateMediaSession({ ...station, logo: secureLogo }, true);
+
+    // 3. On définit la source
     if ('vibrate' in navigator) navigator.vibrate(10);
     audio.src = station.streamUrl;
+    audio.load(); // On force le chargement initial
 
-    // Petit délai pour laisser Android créer le "canal" de notification
-    setTimeout(() => {
-      audio.play().then(() => {
-        navigator.mediaSession.playbackState = 'playing';
-      }).catch(() => {
-        toast({ title: "Erreur", description: "Flux indisponible", variant: "destructive" });
-      });
-    }, 100);
+    // 4. On attend que le buffer soit prêt AVANT de tenter le play()
+    const startPlayback = () => {
+      audio.play()
+        .then(() => {
+          if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+          setState(s => ({ ...s, isPlaying: true }));
+        })
+        .catch((e) => {
+          console.error("Lecture différée échouée", e);
+        });
+      audio.removeEventListener('canplay', startPlayback);
+    };
+    audio.addEventListener('canplay', startPlayback);
 
-    setState(s => ({ ...s, currentStation: station, isPlaying: true }));
+    setState(s => ({ ...s, currentStation: station }));
     onStationPlay?.(station);
     requestWakeLock();
   }, [onStationPlay, requestWakeLock, updateMediaSession]);
