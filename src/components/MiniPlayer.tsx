@@ -23,7 +23,7 @@ export function MiniPlayer() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate text-foreground">{currentStation.name}</p>
+        <p className="text-sm font-medium truncate bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</p>
         <p className="text-xs text-muted-foreground truncate">{currentStation.country}</p>
       </div>
       <button

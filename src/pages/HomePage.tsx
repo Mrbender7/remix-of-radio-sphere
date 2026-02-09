@@ -56,7 +56,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
 
       {recent.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-lg font-heading font-semibold mb-3 text-foreground">{t("home.recentlyPlayed")}</h2>
+          <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("home.recentlyPlayed")}</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {recent.slice(0, 10).map(s => (
               <StationCard key={s.id} station={s} isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
@@ -66,7 +66,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
       )}
 
       <section className="mb-6">
-        <h2 className="text-lg font-heading font-semibold mb-3 text-foreground">
+        <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">
           {detectedLang ? t("home.localPopular") : t("home.popularStations")}
         </h2>
         {isLoading ? (
@@ -81,7 +81,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-heading font-semibold mb-3 text-foreground">{t("home.exploreByGenre")}</h2>
+        <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("home.exploreByGenre")}</h2>
         <div className="grid grid-cols-2 gap-3">
           {GENRES.map(genre => (
             <GenreCard key={genre} genre={genre} onClick={() => onGenreClick(genre)} />
