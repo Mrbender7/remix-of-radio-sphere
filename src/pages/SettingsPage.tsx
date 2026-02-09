@@ -1,5 +1,5 @@
 import { useTranslation } from "@/contexts/LanguageContext";
-import { RadioSphereLogo } from "@/components/RadioSphereLogo";
+import radioSphereLogo from "@/assets/radio-sphere-logo.png";
 import { cn } from "@/lib/utils";
 
 export function SettingsPage() {
@@ -8,7 +8,7 @@ export function SettingsPage() {
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       <div className="flex items-center gap-3 mt-6 mb-6">
-        <RadioSphereLogo size={40} />
+        <img src={radioSphereLogo} alt="Radio Sphere" className="w-10 h-10 rounded-full" />
         <h1 className="text-2xl font-bold text-foreground">Radio Sphere</h1>
       </div>
 

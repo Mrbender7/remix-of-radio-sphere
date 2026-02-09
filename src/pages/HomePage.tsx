@@ -5,7 +5,7 @@ import { StationCard } from "@/components/StationCard";
 import { RadioStation } from "@/types/radio";
 import { Loader2, Settings } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { RadioSphereLogo } from "@/components/RadioSphereLogo";
+import radioSphereLogo from "@/assets/radio-sphere-logo.png";
 
 const GENRES = ["pop", "rock", "jazz", "classical", "electronic", "hiphop", "news", "ambient"];
 
@@ -46,8 +46,8 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       <div className="flex items-center justify-between mt-6 mb-4">
         <div className="flex items-center gap-2">
-          <RadioSphereLogo size={28} />
-          <h1 className="text-2xl font-bold">{t("home.greeting")}</h1>
+          <img src={radioSphereLogo} alt="Radio Sphere" className="w-8 h-8 rounded-full" />
+          <h1 className="text-2xl font-bold">Radio Sphere</h1>
         </div>
         <button onClick={onSettingsClick} className="p-2 rounded-full hover:bg-accent transition-colors">
           <Settings className="w-5 h-5 text-muted-foreground" />
