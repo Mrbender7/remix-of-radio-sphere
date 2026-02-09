@@ -39,7 +39,7 @@ export function FullScreenPlayer() {
       <div className="px-8 pb-8 space-y-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-foreground truncate">{currentStation.name}</h2>
+            <h2 className="text-xl font-heading font-bold text-foreground truncate">{currentStation.name}</h2>
             <p className="text-sm text-muted-foreground">{currentStation.country} {currentStation.tags.length > 0 && `• ${currentStation.tags[0]}`}</p>
           </div>
           <button

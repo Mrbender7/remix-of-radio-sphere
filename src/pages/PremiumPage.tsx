@@ -19,7 +19,7 @@ export function PremiumPage() {
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20">
           <Crown className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">{t("premium.title")}</h1>
+        <h1 className="text-2xl font-heading font-bold text-foreground mb-2">{t("premium.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("premium.subtitle")}</p>
         {isPremium && (
           <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-400 rounded-full px-4 py-1.5 text-sm font-semibold">

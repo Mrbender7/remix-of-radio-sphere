@@ -8,11 +8,11 @@ export function SettingsPage() {
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       <div className="flex items-center gap-3 mt-6 mb-6">
-        <img src={radioSphereLogo} alt="Radio Sphere" className="w-10 h-10 rounded-full" />
-        <h1 className="text-2xl font-bold text-foreground">Radio Sphere</h1>
+        <img src={radioSphereLogo} alt="Radio Sphere" className="w-10 h-10 mix-blend-screen drop-shadow-[0_0_8px_hsl(141,73%,42%)]" />
+        <h1 className="text-2xl font-heading font-bold text-foreground">Radio Sphere</h1>
       </div>
 
-      <h2 className="text-xl font-bold mb-4">{t("settings.title")}</h2>
+      <h2 className="text-xl font-heading font-bold mb-4">{t("settings.title")}</h2>
 
       <div className="rounded-xl bg-accent p-4">
         <h3 className="text-sm font-semibold text-foreground mb-1">{t("settings.language")}</h3>

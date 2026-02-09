@@ -46,8 +46,8 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       <div className="flex items-center justify-between mt-6 mb-4">
         <div className="flex items-center gap-2">
-          <img src={radioSphereLogo} alt="Radio Sphere" className="w-8 h-8 rounded-full" />
-          <h1 className="text-2xl font-bold">Radio Sphere</h1>
+          <img src={radioSphereLogo} alt="Radio Sphere" className="w-8 h-8 mix-blend-screen drop-shadow-[0_0_6px_hsl(141,73%,42%)]" />
+          <h1 className="text-2xl font-heading font-bold">Radio Sphere</h1>
         </div>
         <button onClick={onSettingsClick} className="p-2 rounded-full hover:bg-accent transition-colors">
           <Settings className="w-5 h-5 text-muted-foreground" />
@@ -56,7 +56,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
 
       {recent.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-3 text-foreground">{t("home.recentlyPlayed")}</h2>
+          <h2 className="text-lg font-heading font-semibold mb-3 text-foreground">{t("home.recentlyPlayed")}</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {recent.slice(0, 10).map(s => (
               <StationCard key={s.id} station={s} isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
@@ -66,7 +66,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
       )}
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-3 text-foreground">
+        <h2 className="text-lg font-heading font-semibold mb-3 text-foreground">
           {detectedLang ? t("home.localPopular") : t("home.popularStations")}
         </h2>
         {isLoading ? (
@@ -81,7 +81,7 @@ export function HomePage({ recent, isFavorite, onToggleFavorite, onGenreClick, o
       </section>
 
       <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-3 text-foreground">{t("home.exploreByGenre")}</h2>
+        <h2 className="text-lg font-heading font-semibold mb-3 text-foreground">{t("home.exploreByGenre")}</h2>
         <div className="grid grid-cols-2 gap-3">
           {GENRES.map(genre => (
             <GenreCard key={genre} genre={genre} onClick={() => onGenreClick(genre)} />
@@ -109,7 +109,7 @@ function GenreCard({ genre, onClick }: { genre: string; onClick: () => void }) {
       className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${GENRE_COLORS[genre] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 hover:shadow-xl hover:-translate-y-0.5`}
       onClick={onClick}
     >
-      <span className="text-sm font-bold text-white capitalize drop-shadow-md">{genre}</span>
+      <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{genre}</span>
     </div>
   );
 }

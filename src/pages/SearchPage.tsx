@@ -81,7 +81,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-32">
-      <h1 className="text-2xl font-bold mt-6 mb-4">{t("search.title")}</h1>
+      <h1 className="text-2xl font-heading font-bold mt-6 mb-4">{t("search.title")}</h1>
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
