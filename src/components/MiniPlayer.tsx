@@ -23,8 +23,8 @@ export function MiniPlayer() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-base font-heading font-semibold truncate bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</p>
-        <p className="text-sm text-muted-foreground truncate">{currentStation.country}</p>
+        <p className="text-lg font-heading font-bold truncate bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</p>
+        <p className="text-xs text-muted-foreground truncate">{currentStation.country}</p>
       </div>
       <button
         onClick={e => { e.stopPropagation(); toggleFavorite(currentStation); }}
