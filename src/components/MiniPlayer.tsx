@@ -1,10 +1,25 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
+import { useRef, useEffect, useState } from "react";
 import { Play, Pause, Radio, Heart } from "lucide-react";
 
 export function MiniPlayer() {
   const { currentStation, isPlaying, togglePlay, openFullScreen } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [needsMarquee, setNeedsMarquee] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      if (measureRef.current && containerRef.current) {
+        setNeedsMarquee(measureRef.current.scrollWidth > containerRef.current.clientWidth);
+      }
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [currentStation?.name]);
 
   if (!currentStation) return null;
 
@@ -23,7 +38,16 @@ export function MiniPlayer() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-lg font-heading font-bold truncate bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</p>
+        {/* Hidden measurer */}
+        <span ref={measureRef} className="text-lg font-heading font-bold whitespace-nowrap absolute invisible pointer-events-none">{currentStation.name}</span>
+        <div ref={containerRef} className="overflow-hidden">
+          <p className={`text-lg font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : ""}`}>
+            {needsMarquee
+              ? <>{currentStation.name}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentStation.name}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
+              : currentStation.name
+            }
+          </p>
+        </div>
         <p className="text-xs text-muted-foreground truncate">{currentStation.country}</p>
       </div>
       <button
