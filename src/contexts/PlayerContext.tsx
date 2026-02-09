@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import { RadioStation } from "@/types/radio";
 import { toast } from "@/hooks/use-toast";
-import { LocalNotifications } from "@capacitor/local-notifications";
 
 interface PlayerState {
   currentStation: RadioStation | null;
@@ -147,10 +146,15 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     if (notifPermissionAsked.current) return;
     notifPermissionAsked.current = true;
     try {
-      const { display } = await LocalNotifications.requestPermissions();
+      // Try Capacitor LocalNotifications if available (dynamic import)
+      const mod = await import("@capacitor/local-notifications");
+      const { display } = await mod.LocalNotifications.requestPermissions();
       console.log("[RadioSphere] Notification permission:", display);
     } catch {
-      // Not running in Capacitor — ignore
+      // Not running in Capacitor or module not installed — try web Notification API
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then(p => console.log("[RadioSphere] Web notification permission:", p));
+      }
     }
   }, []);
 
