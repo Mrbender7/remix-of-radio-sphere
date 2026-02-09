@@ -23,8 +23,8 @@ export function MiniPlayer() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</p>
-        <p className="text-xs text-muted-foreground truncate">{currentStation.country}</p>
+        <p className="text-base font-heading font-semibold truncate bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</p>
+        <p className="text-sm text-muted-foreground truncate">{currentStation.country}</p>
       </div>
       <button
         onClick={e => { e.stopPropagation(); toggleFavorite(currentStation); }}
@@ -34,9 +34,9 @@ export function MiniPlayer() {
       </button>
       <button
         onClick={e => { e.stopPropagation(); togglePlay(); }}
-        className="w-9 h-9 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/40 active:shadow-sm active:translate-y-0.5 transition-all"
+        className="w-11 h-11 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/40 active:shadow-sm active:translate-y-0.5 transition-all"
       >
-        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
       </button>
     </div>
   );
