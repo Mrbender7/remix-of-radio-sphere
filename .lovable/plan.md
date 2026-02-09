@@ -1,58 +1,110 @@
 
 
-# Mise a jour UX — Recherche, Accueil interactif et Premium
+# Refinement UX et corrections de layout
 
-## 1. Recherche par pays avec Select/Dropdown + bouton Reset
+## 1. Renommer "Bibliotheque" en "Favoris"
 
-**SearchPage.tsx** : Remplacer les chips "Pays" par un composant `Select` (shadcn/ui) avec un mapping francais/drapeau vers nom anglais API.
+**Fichiers concernes** : `BottomNav.tsx`, `LibraryPage.tsx`
 
-Liste des pays :
-- France, Belgique, Suisse, Canada, Allemagne, USA, Espagne, Italie, Royaume-Uni
+- Dans `BottomNav.tsx` : changer le label `"Bibliothèque"` en `"Favoris"` et l'icone `Library` en `Heart`
+- Dans `LibraryPage.tsx` : changer le titre `h1` de `"Bibliothèque"` en `"Favoris"`
 
-Le Select affichera par exemple "France (drapeau FR)" mais enverra `"France"` a l'API. Pour les USA, il enverra `"The United States Of America"`.
+## 2. Bouton favori sur le MiniPlayer et FullScreenPlayer
 
-Le bouton "Reinitialiser" existant reste, et on ajoute un bouton croix (X) dans la barre de recherche elle-meme pour vider le texte rapidement.
+**Fichiers concernes** : `MiniPlayer.tsx`, `FullScreenPlayer.tsx`, `Index.tsx`
 
-## 2. Cartes de genre cliquables sur la page d'accueil
+- Les deux players ont besoin d'acceder a `isFavorite` et `toggleFavorite`. Ces fonctions seront passees via le `PlayerProvider` ou directement en props.
+- Approche : ajouter `isFavorite` et `onToggleFavorite` en props au `MiniPlayer` et `FullScreenPlayer` depuis `Index.tsx` (ou les importer du hook `useFavorites` directement dans ces composants -- mais comme le hook est deja utilise dans Index, on passera les props pour coherence).
+- **Alternative plus propre** : Creer un contexte `FavoritesContext` qui wrappera l'app, ainsi les players pourront acceder aux favoris directement sans props drilling. On va utiliser cette approche.
+- `MiniPlayer.tsx` : ajouter un bouton coeur a cote du bouton play/pause
+- `FullScreenPlayer.tsx` : ajouter un bouton coeur sous les infos de la station
 
-**HomePage.tsx** : Ajouter un callback `onGenreClick` en prop. Au clic sur une carte genre, appeler ce callback avec le tag correspondant.
+## 3. Correction du z-index du dropdown pays
 
-**Index.tsx** : Quand `onGenreClick` est appele, basculer sur l'onglet "search" et passer le genre selectionne a `SearchPage`.
+**Fichier concerne** : `SearchPage.tsx`
 
-**SearchPage.tsx** : Accepter une prop optionnelle `initialGenre` qui pre-remplit le filtre genre au montage (avec un `useEffect` pour synchroniser).
+- Ajouter `z-50` au `SelectContent` du pays pour qu'il s'affiche au-dessus de la barre de navigation
+- Ajouter `shadow-xl` pour la lisibilite
+- Ajouter du padding en bas de la page de recherche (`pb-32`) pour que le contenu ne soit pas cache par le mini player et la nav
 
-## 3. Etat Premium mock
+## 4. Liste des pays dynamique depuis l'API Radio Browser
 
-Creer un contexte `PremiumContext.tsx` avec un simple state `isPremium` (defaut `false`) et un toggle. Le provider sera place dans `Index.tsx`. La page Premium utilisera ce contexte pour afficher "Vous etes Premium" ou les boutons d'achat. Cela permettra plus tard de conditionner l'affichage de pubs.
+**Fichiers concernes** : `RadioService.ts`, `SearchPage.tsx`
+
+- Ajouter une methode `getCountries()` dans le service radio qui appelle `/json/countries` de l'API Radio Browser
+- Trier par ordre alphabetique
+- Generer les drapeaux emoji a partir du code pays ISO (algorithme standard : convertir les 2 lettres du code pays en Regional Indicator Symbols)
+- Dans `SearchPage.tsx` : charger la liste via `useQuery` et alimenter le `Select` dynamiquement
+- Garder la liste statique comme fallback en cas d'echec API
+
+## 5. Intelligence locale sur la page d'accueil
+
+**Fichier concerne** : `HomePage.tsx`
+
+- Detecter `navigator.language` (ex: `"fr-FR"`, `"fr"`, `"en-US"`)
+- Si la langue contient `"fr"` : passer `language: "french"` au filtre des stations populaires
+- Si `"es"` : `"spanish"`, si `"de"` : `"german"`, etc.
+- Sinon : garder le top mondial (comportement actuel)
+- Modifier le `useQuery` pour `topStations` en utilisant `searchStations` avec filtre langue plutot que `getTopStations`
+
+## 6. Verification des genre cards (deja fonctionnel)
+
+- Les genre cards appellent deja `onGenreClick` qui set le genre et switch l'onglet. On verifiera que c'est bien connecte.
+
+## 7. Aspect 3D des boutons
+
+**Fichiers concernes** : `HomePage.tsx` (genre cards), `MiniPlayer.tsx`, `FullScreenPlayer.tsx`, `index.css`
+
+- Genre cards : ajouter des classes Tailwind pour un effet 3D (`shadow-lg`, `border-t border-white/10`, un leger `ring` interne, et un `hover:shadow-xl hover:-translate-y-0.5` pour l'effet de profondeur)
+- Boutons play/pause du MiniPlayer et FullScreenPlayer : ajouter un gradient plus prononce, `shadow-lg shadow-primary/40`, `border-t border-white/20` pour simuler une lumiere venant du haut, et un `active:shadow-sm active:translate-y-0.5` pour l'effet d'enfoncement
 
 ---
 
 ## Details techniques
 
-### Fichiers modifies
+### Nouveau fichier : `src/contexts/FavoritesContext.tsx`
+- Exporte `FavoritesProvider` et `useFavoritesContext`
+- Encapsule le hook `useFavorites` et `useRecentStations` existants
+- Place dans `Index.tsx` au niveau le plus haut
 
-1. **`src/pages/SearchPage.tsx`**
-   - Importer `Select, SelectTrigger, SelectContent, SelectItem, SelectValue` depuis shadcn/ui
-   - Definir un tableau `COUNTRIES_MAP` avec `{ label: "France (drapeau FR)", value: "France" }`, etc.
-   - Remplacer la section filtre "Pays" (chips) par un `Select` avec placeholder "Choisir un pays"
-   - Ajouter un bouton X dans l'input de recherche pour vider le texte
-   - Ajouter prop `initialGenre?: string` et un `useEffect` pour le synchroniser avec l'etat `genre`
+### Modifications fichier par fichier
 
-2. **`src/pages/HomePage.tsx`**
-   - Ajouter prop `onGenreClick: (genre: string) => void`
-   - Passer `onClick` sur chaque `GenreCard` qui appelle `onGenreClick(genre)`
+1. **`src/contexts/FavoritesContext.tsx`** (nouveau)
+   - Contexte React avec `favorites`, `toggleFavorite`, `isFavorite`, `recent`, `addRecent`
 
-3. **`src/pages/Index.tsx`**
-   - Ajouter state `selectedGenre` 
-   - Handler `handleGenreClick` : set genre + switch tab to "search"
-   - Passer `selectedGenre` a SearchPage et `onGenreClick` a HomePage
-   - Reset `selectedGenre` quand on quitte l'onglet search
+2. **`src/pages/Index.tsx`**
+   - Wrapper avec `FavoritesProvider`
+   - Retirer les appels directs a `useFavorites`/`useRecentStations`
+   - Utiliser le contexte a la place
 
-4. **`src/contexts/PremiumContext.tsx`** (nouveau)
-   - Contexte avec `isPremium: boolean` et `togglePremium: () => void`
-   - Stockage dans `localStorage`
+3. **`src/components/BottomNav.tsx`**
+   - Changer label et icone de l'onglet library : `Heart` + `"Favoris"`
 
-5. **`src/pages/PremiumPage.tsx`**
-   - Utiliser `PremiumContext` pour afficher un badge "Premium actif" si `isPremium` est true
-   - Les boutons d'achat appelleront `togglePremium()` (mock)
+4. **`src/pages/LibraryPage.tsx`**
+   - Titre `h1` : `"Favoris"`
+
+5. **`src/components/MiniPlayer.tsx`**
+   - Importer `useFavoritesContext`
+   - Ajouter bouton coeur avec style 3D sur le bouton play
+
+6. **`src/components/FullScreenPlayer.tsx`**
+   - Importer `useFavoritesContext`
+   - Ajouter bouton coeur a cote du nom de la station
+   - Style 3D sur le bouton play
+
+7. **`src/services/RadioService.ts`**
+   - Ajouter methode `getCountries()` qui appelle `/json/countries`
+   - Retourne `{ name: string, stationcount: number, iso_3166_1: string }[]`
+   - Ajouter dans l'interface `RadioProvider`
+
+8. **`src/pages/SearchPage.tsx`**
+   - Charger les pays via `useQuery` + `getCountries()`
+   - Fonction utilitaire `countryCodeToFlag(iso: string)` pour convertir code ISO en emoji drapeau
+   - `SelectContent` avec `className="z-50 shadow-xl"`
+   - Padding bas augmente
+
+9. **`src/pages/HomePage.tsx`**
+   - Detecter `navigator.language` et mapper vers une langue Radio Browser
+   - Modifier la query `topStations` pour filtrer par langue si detectee
+   - Genre cards : ajouter classes 3D (shadow, border highlight, transform on hover)
 
