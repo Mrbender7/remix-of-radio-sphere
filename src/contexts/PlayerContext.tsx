@@ -58,6 +58,58 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     }
   }, []);
 
+  // Update Media Session metadata
+  const updateMediaSession = useCallback((station: RadioStation, playing: boolean) => {
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: station.name,
+      artist: station.country || 'Radio Sphere',
+      album: station.tags?.[0] || 'Live Radio',
+      artwork: station.logo
+        ? [
+            { src: station.logo, sizes: '96x96', type: 'image/png' },
+            { src: station.logo, sizes: '128x128', type: 'image/png' },
+            { src: station.logo, sizes: '256x256', type: 'image/png' },
+            { src: station.logo, sizes: '512x512', type: 'image/png' },
+          ]
+        : [],
+    });
+
+    navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+  }, []);
+
+  // Register Media Session action handlers
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    const handlePlay = () => {
+      const audio = audioRef.current;
+      if (!audio || !audio.src) return;
+      audio.play().catch(() => {});
+      setState(s => ({ ...s, isPlaying: true }));
+      requestWakeLock();
+    };
+
+    const handlePause = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.pause();
+      setState(s => ({ ...s, isPlaying: false }));
+      releaseWakeLock();
+    };
+
+    navigator.mediaSession.setActionHandler('play', handlePlay);
+    navigator.mediaSession.setActionHandler('pause', handlePause);
+    navigator.mediaSession.setActionHandler('stop', handlePause);
+
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('stop', null);
+    };
+  }, [requestWakeLock, releaseWakeLock]);
+
   useEffect(() => {
     const audio = new Audio();
     audio.volume = state.volume;
@@ -65,6 +117,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
 
     audio.addEventListener("error", () => {
       setState(s => ({ ...s, isPlaying: false }));
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
       toast({ title: "Erreur de lecture", description: "Impossible de lire ce flux. Essayez une autre station.", variant: "destructive" });
     });
 
@@ -95,9 +148,10 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     });
     setState(s => ({ ...s, currentStation: station, isPlaying: true }));
     onStationPlay?.(station);
+    updateMediaSession(station, true);
     requestWakeLock();
     console.log("[RadioSphere] Audio ready");
-  }, [onStationPlay, requestWakeLock]);
+  }, [onStationPlay, requestWakeLock, updateMediaSession]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -109,8 +163,10 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       audio.play().catch(() => {});
       requestWakeLock();
     }
-    setState(s => ({ ...s, isPlaying: !s.isPlaying }));
-  }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock]);
+    const newPlaying = !state.isPlaying;
+    setState(s => ({ ...s, isPlaying: newPlaying }));
+    updateMediaSession(state.currentStation, newPlaying);
+  }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock, updateMediaSession]);
 
   const setVolume = useCallback((v: number) => {
     if (audioRef.current) audioRef.current.volume = v;
