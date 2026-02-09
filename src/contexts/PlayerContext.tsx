@@ -68,18 +68,15 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const updateMediaSession = useCallback((station: RadioStation, playing: boolean) => {
     if (!('mediaSession' in navigator)) return;
 
+    const artworkUrl = station.logo || 'https://placehold.co/512x512/000000/FFFFFF/png?text=Radio+Sphere';
+
     navigator.mediaSession.metadata = new MediaMetadata({
       title: station.name,
-      artist: station.country || 'Radio Sphere',
-      album: station.tags?.[0] || 'Live Radio',
-      artwork: station.logo
-        ? [
-            { src: station.logo, sizes: '96x96', type: 'image/png' },
-            { src: station.logo, sizes: '128x128', type: 'image/png' },
-            { src: station.logo, sizes: '256x256', type: 'image/png' },
-            { src: station.logo, sizes: '512x512', type: 'image/png' },
-          ]
-        : [],
+      artist: "Radio Sphere",
+      album: station.country || "Live",
+      artwork: [
+        { src: artworkUrl, sizes: '512x512', type: 'image/png' }
+      ],
     });
 
     navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
@@ -163,20 +160,24 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const play = useCallback((station: RadioStation) => {
     const audio = audioRef.current;
 
-    // Vibration test — confirms native API access in APK
-    if ('vibrate' in navigator) navigator.vibrate(10);
+    // On prépare d'abord le système Android
+    updateMediaSession(station, true);
 
+    if ('vibrate' in navigator) navigator.vibrate(10);
     audio.src = station.streamUrl;
-    audio.play().then(() => {
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    }).catch(() => {
-      toast({ title: "Erreur", description: "Flux indisponible", variant: "destructive" });
-    });
+
+    // Petit délai pour laisser Android créer le "canal" de notification
+    setTimeout(() => {
+      audio.play().then(() => {
+        navigator.mediaSession.playbackState = 'playing';
+      }).catch(() => {
+        toast({ title: "Erreur", description: "Flux indisponible", variant: "destructive" });
+      });
+    }, 100);
+
     setState(s => ({ ...s, currentStation: station, isPlaying: true }));
     onStationPlay?.(station);
-    updateMediaSession(station, true);
     requestWakeLock();
-    console.log("[RadioSphere] Audio ready");
   }, [onStationPlay, requestWakeLock, updateMediaSession]);
 
   const togglePlay = useCallback(() => {
