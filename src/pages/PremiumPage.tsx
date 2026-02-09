@@ -1,5 +1,6 @@
-import { Crown, Zap, Headphones, ShieldCheck } from "lucide-react";
+import { Crown, Zap, Headphones, ShieldCheck, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePremium } from "@/contexts/PremiumContext";
 
 const features = [
   { icon: Zap, title: "Sans publicité", desc: "Écoute ininterrompue, sans aucune pub" },
@@ -8,6 +9,8 @@ const features = [
 ];
 
 export function PremiumPage() {
+  const { isPremium, togglePremium } = usePremium();
+
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
       {/* Hero */}
@@ -17,6 +20,11 @@ export function PremiumPage() {
         </div>
         <h1 className="text-2xl font-bold text-foreground mb-2">RadioFlow Premium</h1>
         <p className="text-sm text-muted-foreground">L'expérience radio ultime</p>
+        {isPremium && (
+          <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-400 rounded-full px-4 py-1.5 text-sm font-semibold">
+            <CheckCircle className="w-4 h-4" /> Premium actif
+          </div>
+        )}
       </div>
 
       {/* Features */}
@@ -36,12 +44,20 @@ export function PremiumPage() {
 
       {/* Pricing */}
       <div className="space-y-3 mb-8">
-        <Button className="w-full h-14 text-base font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 rounded-xl shadow-lg">
-          Mensuel — 4,99€/mois
-        </Button>
-        <Button variant="outline" className="w-full h-14 text-base font-semibold rounded-xl border-amber-500/30 text-foreground">
-          Annuel — 49,99€/an <span className="ml-2 text-xs text-primary">-17%</span>
-        </Button>
+        {isPremium ? (
+          <Button onClick={togglePremium} variant="outline" className="w-full h-14 text-base font-semibold rounded-xl border-amber-500/30 text-foreground">
+            Annuler l'abonnement
+          </Button>
+        ) : (
+          <>
+            <Button onClick={togglePremium} className="w-full h-14 text-base font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 rounded-xl shadow-lg">
+              Mensuel — 4,99€/mois
+            </Button>
+            <Button onClick={togglePremium} variant="outline" className="w-full h-14 text-base font-semibold rounded-xl border-amber-500/30 text-foreground">
+              Annuel — 49,99€/an <span className="ml-2 text-xs text-primary">-17%</span>
+            </Button>
+          </>
+        )}
       </div>
 
       <p className="text-[10px] text-muted-foreground text-center">
