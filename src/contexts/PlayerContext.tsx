@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import { RadioStation } from "@/types/radio";
 import { toast } from "@/hooks/use-toast";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 interface PlayerState {
   currentStation: RadioStation | null;
@@ -29,6 +30,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const isPlayingRef = useRef(false);
+  const notifPermissionAsked = useRef(false);
   const [state, setState] = useState<PlayerState>({
     currentStation: null,
     isPlaying: false,
@@ -113,6 +115,8 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   useEffect(() => {
     const audio = new Audio();
     audio.volume = state.volume;
+    (audio as any).playsInline = true;
+    audio.preload = "auto";
     audioRef.current = audio;
 
     audio.addEventListener("error", () => {
@@ -139,9 +143,24 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const requestNotificationPermission = useCallback(async () => {
+    if (notifPermissionAsked.current) return;
+    notifPermissionAsked.current = true;
+    try {
+      const { display } = await LocalNotifications.requestPermissions();
+      console.log("[RadioSphere] Notification permission:", display);
+    } catch {
+      // Not running in Capacitor — ignore
+    }
+  }, []);
+
   const play = useCallback((station: RadioStation) => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Request notification permission on first play (needed for Android background audio)
+    requestNotificationPermission();
+
     audio.src = station.streamUrl;
     audio.play().catch(() => {
       toast({ title: "Erreur", description: "Flux indisponible", variant: "destructive" });
@@ -151,7 +170,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     updateMediaSession(station, true);
     requestWakeLock();
     console.log("[RadioSphere] Audio ready");
-  }, [onStationPlay, requestWakeLock, updateMediaSession]);
+  }, [onStationPlay, requestWakeLock, updateMediaSession, requestNotificationPermission]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
