@@ -37,7 +37,6 @@ function AppContent() {
             {activeTab === "home" && <HomePage recent={recent} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
             {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
             {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
-            {activeTab === "premium" && <PremiumPage />}
             {activeTab === "settings" && <SettingsPage />}
           </div>
           <MiniPlayer />

@@ -64,6 +64,10 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.english": "English",
     "settings.dataWarning": "Utilisation des données",
     "settings.dataWarningDesc": "L'écoute de stations de radio utilise votre connexion internet et peut consommer des données mobiles. Nous recommandons une connexion Wi-Fi pour une utilisation prolongée.",
+    "settings.dataDisclaimer": "Données locales",
+    "settings.dataDisclaimerDesc": "Vos favoris et préférences sont stockés localement sur votre appareil. Aucune donnée personnelle n'est envoyée à un serveur.",
+    "settings.radioSource": "Source des stations",
+    "settings.radioSourceDesc": "La liste des stations est fournie par Radio Browser, une API communautaire libre et gratuite qui recense plus de 30 000 radios à travers le monde.",
   },
   en: {
     // Nav
@@ -128,6 +132,10 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.english": "English",
     "settings.dataWarning": "Data usage",
     "settings.dataWarningDesc": "Listening to radio stations uses your internet connection and may consume mobile data. We recommend using Wi-Fi for extended listening.",
+    "settings.dataDisclaimer": "Local data",
+    "settings.dataDisclaimerDesc": "Your favorites and preferences are stored locally on your device. No personal data is sent to any server.",
+    "settings.radioSource": "Station source",
+    "settings.radioSourceDesc": "The station list is provided by Radio Browser, a free and open community API that indexes over 30,000 radio stations worldwide.",
   },
 };
 
