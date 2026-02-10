@@ -2,6 +2,34 @@ import React, { createContext, useContext, useState, useRef, useCallback, useEff
 import { RadioStation } from "@/types/radio";
 import { toast } from "@/hooks/use-toast";
 
+// --- Android Foreground Service helpers (Capacitor only) ---
+async function startNativeForegroundService(station: RadioStation) {
+  try {
+    const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
+    await ForegroundService.startForegroundService({
+      id: 1,
+      title: station.name,
+      body: station.country || 'Radio Sphere',
+      smallIcon: 'ic_stat_radio',
+      // serviceType mediaPlayback = 2
+      serviceType: 2,
+    } as any);
+    console.log("[RadioSphere] Foreground service started");
+  } catch (e) {
+    console.log("[RadioSphere] Foreground service not available", e);
+  }
+}
+
+async function stopNativeForegroundService() {
+  try {
+    const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
+    await ForegroundService.stopForegroundService();
+    console.log("[RadioSphere] Foreground service stopped");
+  } catch (e) {
+    console.log("[RadioSphere] Foreground service stop failed", e);
+  }
+}
+
 // Global audio instance — survives React lifecycle, never destroyed by re-renders
 const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
@@ -129,7 +157,10 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       if (!audio || !audio.src) return;
       audio.play().catch(() => {});
       startSilentLoop();
-      setState(s => ({ ...s, isPlaying: true }));
+      setState(s => {
+        if (s.currentStation) startNativeForegroundService(s.currentStation);
+        return { ...s, isPlaying: true };
+      });
       requestWakeLock();
       startHeartbeat();
     };
@@ -142,6 +173,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       setState(s => ({ ...s, isPlaying: false }));
       releaseWakeLock();
       stopHeartbeat();
+      stopNativeForegroundService();
     };
 
     const noop = () => {};
@@ -180,6 +212,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       setState(s => ({ ...s, isPlaying: false }));
       stopSilentLoop();
       stopHeartbeat();
+      stopNativeForegroundService();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
       toast({ title: "Erreur de lecture", description: "Impossible de lire ce flux. Essayez une autre station.", variant: "destructive" });
     };
@@ -227,6 +260,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
           setState(s => ({ ...s, isPlaying: true }));
           startSilentLoop();
           startHeartbeat();
+          startNativeForegroundService(station);
         })
         .catch((e) => {
           console.error("Lecture différée échouée", e);
@@ -248,6 +282,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       stopSilentLoop();
       stopHeartbeat();
       releaseWakeLock();
+      stopNativeForegroundService();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
       audio.play().then(() => {
@@ -256,6 +291,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       startSilentLoop();
       startHeartbeat();
       requestWakeLock();
+      startNativeForegroundService(state.currentStation);
     }
     const newPlaying = !state.isPlaying;
     setState(s => ({ ...s, isPlaying: newPlaying }));
