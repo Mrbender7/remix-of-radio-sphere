@@ -12,7 +12,6 @@ const queryClient = new QueryClient();
 const App = () => {
   useEffect(() => {
     const initNative = async () => {
-      // 1. Demande de permission de notification (Débloque le player Android)
       try {
         if (window.hasOwnProperty('Capacitor')) {
           const { LocalNotifications } = await import('@capacitor/local-notifications');
@@ -24,6 +23,17 @@ const App = () => {
       } catch (e) { console.log("Capacitor not ready"); }
     };
     initNative();
+
+    // Request fullscreen on first user interaction (mobile browsers)
+    const requestFullscreen = () => {
+      const el = document.documentElement;
+      if (!document.fullscreenElement && el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {});
+      }
+      document.removeEventListener("click", requestFullscreen);
+    };
+    document.addEventListener("click", requestFullscreen);
+    return () => document.removeEventListener("click", requestFullscreen);
   }, []);
 
   return (
