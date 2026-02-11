@@ -17,7 +17,7 @@ export function FullScreenPlayer() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+      <div className="flex items-center justify-between px-4 pb-2" style={{ paddingTop: "max(env(safe-area-inset-top, 24px), 1.5rem)" }}>
         <button onClick={closeFullScreen} className="p-2 -ml-2">
           <ChevronDown className="w-6 h-6 text-muted-foreground" />
         </button>
