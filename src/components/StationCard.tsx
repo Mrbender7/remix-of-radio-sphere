@@ -71,6 +71,12 @@ export function StationCard({ station, isFavorite, onToggleFavorite, compact }: 
         <div className="absolute inset-0 bg-black/40 opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <Play className="w-8 h-8 text-white" />
         </div>
+        <button
+          onClick={e => { e.stopPropagation(); onToggleFavorite(station); }}
+          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/30 backdrop-blur-sm z-10"
+        >
+          <Heart className={cn("w-3.5 h-3.5", isFavorite ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : "text-white/80")} />
+        </button>
       </div>
       <p className="text-xs font-medium text-foreground truncate w-full text-center">{station.name}</p>
       <p className="text-[10px] text-muted-foreground truncate w-full text-center">{station.country}</p>
