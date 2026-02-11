@@ -2,8 +2,33 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe } from "lucide-react";
+import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+
+function CollapsibleDisclaimer({ icon: Icon, iconSize, title, desc }: { icon: React.ElementType; iconSize: string; title: string; desc: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <button
+      onClick={() => setOpen(o => !o)}
+      className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4 text-left transition-all"
+    >
+      <div className="flex items-center gap-3">
+        <Icon className={cn(iconSize, "text-muted-foreground shrink-0")} />
+        <h3 className="text-sm font-semibold text-foreground flex-1">{title}</h3>
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", open && "rotate-180")} />
+      </div>
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out",
+          open ? "max-h-40 opacity-100 mt-2" : "max-h-0 opacity-0"
+        )}
+      >
+        <p className="text-xs text-muted-foreground leading-relaxed pl-[calc(theme(spacing.3)+theme(spacing.3))]">{desc}</p>
+      </div>
+    </button>
+  );
+}
 
 export function SettingsPage() {
   const { language, setLanguage, t } = useTranslation();
@@ -88,32 +113,14 @@ export function SettingsPage() {
         <p className="text-[9px] text-muted-foreground text-center mt-2">{t("premium.disclaimer")}</p>
       </div>
 
-      {/* Data warning */}
-      <div className="rounded-xl border border-border bg-accent/50 p-4 flex gap-3 mb-4">
-        <Wifi className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-1">{t("settings.dataWarning")}</h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">{t("settings.dataWarningDesc")}</p>
-        </div>
-      </div>
-
-      {/* Local data disclaimer */}
-      <div className="rounded-xl border border-border bg-accent/50 p-4 flex gap-3 mb-4">
-        <Database className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-1">{t("settings.dataDisclaimer")}</h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">{t("settings.dataDisclaimerDesc")}</p>
-        </div>
-      </div>
-
-      {/* Radio source */}
-      <div className="rounded-xl border border-border bg-accent/50 p-4 flex gap-3 mb-4">
-        <Globe className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-1">{t("settings.radioSource")}</h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">{t("settings.radioSourceDesc")}</p>
-        </div>
-      </div>
+      {/* Collapsible disclaimers */}
+      {[
+        { icon: Wifi, iconSize: "w-5 h-5", title: t("settings.dataWarning"), desc: t("settings.dataWarningDesc"), key: "data" },
+        { icon: Database, iconSize: "w-4 h-4", title: t("settings.dataDisclaimer"), desc: t("settings.dataDisclaimerDesc"), key: "local" },
+        { icon: Globe, iconSize: "w-4 h-4", title: t("settings.radioSource"), desc: t("settings.radioSourceDesc"), key: "radio" },
+      ].map(({ icon: Icon, iconSize, title, desc, key }) => (
+        <CollapsibleDisclaimer key={key} icon={Icon} iconSize={iconSize} title={title} desc={desc} />
+      ))}
     </div>
   );
 }
