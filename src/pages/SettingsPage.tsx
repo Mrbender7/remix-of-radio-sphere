@@ -6,6 +6,31 @@ import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
+function CollapsibleSection({ icon: Icon, title, badge, children }: { icon: React.ElementType; title: string; badge?: React.ReactNode; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <button
+      onClick={() => setOpen(o => !o)}
+      className="w-full rounded-xl bg-accent p-4 mb-4 text-left transition-all"
+    >
+      <div className="flex items-center gap-2">
+        <Icon className="w-5 h-5 text-amber-400" />
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {badge && <span className="ml-auto">{badge}</span>}
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300 ml-auto", open && "rotate-180")} />
+      </div>
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out",
+          open ? "max-h-[500px] opacity-100 mt-3" : "max-h-0 opacity-0"
+        )}
+      >
+        {children}
+      </div>
+    </button>
+  );
+}
+
 function CollapsibleDisclaimer({ icon: Icon, iconSize, title, desc }: { icon: React.ElementType; iconSize: string; title: string; desc: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -71,17 +96,18 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Premium section */}
-      <div className="rounded-xl bg-accent p-4 mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Crown className="w-5 h-5 text-amber-400" />
-          <h3 className="text-sm font-semibold text-foreground">{t("premium.title")}</h3>
-          {isPremium && (
-            <span className="ml-auto inline-flex items-center gap-1 bg-amber-500/20 text-amber-400 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
+      {/* Premium section - collapsible */}
+      <CollapsibleSection
+        icon={Crown}
+        title={t("premium.title")}
+        badge={
+          isPremium && (
+            <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-400 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
               <CheckCircle className="w-3 h-3" /> {t("premium.active")}
             </span>
-          )}
-        </div>
+          )
+        }
+      >
         <p className="text-xs text-muted-foreground mb-3">{t("premium.subtitle")}</p>
 
         <div className="space-y-2 mb-3">
@@ -111,7 +137,7 @@ export function SettingsPage() {
           </div>
         )}
         <p className="text-[9px] text-muted-foreground text-center mt-2">{t("premium.disclaimer")}</p>
-      </div>
+      </CollapsibleSection>
 
       {/* Collapsible disclaimers */}
       {[
