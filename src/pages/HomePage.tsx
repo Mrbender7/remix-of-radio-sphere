@@ -44,7 +44,7 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
       {/* Favorites section */}
       <section className="mb-6">
         <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
-          <Heart className="w-4 h-4" />
+          <Heart className="w-4 h-4 text-[hsl(280,80%,60%)]" />
           {t("home.yourFavorites")}
         </h2>
         {favorites.length > 0 ? (

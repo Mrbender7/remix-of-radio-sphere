@@ -47,7 +47,7 @@ export function FullScreenPlayer() {
              onClick={() => toggleFavorite(currentStation)}
              className="flex-shrink-0 p-2 rounded-full hover:bg-accent transition-colors"
            >
-             <Heart className={`w-6 h-6 ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+             <Heart className={`w-6 h-6 ${fav ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : "text-muted-foreground"}`} />
            </button>
          </div>
 

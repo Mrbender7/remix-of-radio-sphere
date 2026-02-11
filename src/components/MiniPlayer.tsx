@@ -55,7 +55,7 @@ export function MiniPlayer() {
         onClick={e => { e.stopPropagation(); toggleFavorite(currentStation); }}
         className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
       >
-        <Heart className={`w-4 h-4 ${fav ? "fill-primary text-primary" : ""}`} />
+        <Heart className={`w-4 h-4 ${fav ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : ""}`} />
       </button>
       <button
         onClick={e => { e.stopPropagation(); togglePlay(); }}

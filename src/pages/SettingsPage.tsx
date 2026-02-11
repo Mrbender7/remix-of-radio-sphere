@@ -77,7 +77,7 @@ export function SettingsPage() {
           </Button>
         ) : (
           <div className="space-y-2">
-            <Button onClick={togglePremium} size="sm" className="w-full rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 shadow-lg">
+            <Button onClick={togglePremium} size="sm" className="w-full rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30">
               {t("premium.monthly")}
             </Button>
             <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">

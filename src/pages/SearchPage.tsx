@@ -177,12 +177,12 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       {(genres.length > 0 || languages.length > 0) && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {genres.map(g => (
-            <Badge key={g} className="bg-primary text-primary-foreground capitalize cursor-pointer gap-1" onClick={() => toggleGenre(g)}>
+            <Badge key={g} className="bg-[hsl(225,90%,58%)] text-white capitalize cursor-pointer gap-1 hover:bg-[hsl(225,90%,50%)]" onClick={() => toggleGenre(g)}>
               {g} <X className="w-3 h-3" />
             </Badge>
           ))}
           {languages.map(l => (
-            <Badge key={l} className="bg-primary text-primary-foreground capitalize cursor-pointer gap-1" onClick={() => toggleLanguage(l)}>
+            <Badge key={l} className="bg-[hsl(280,80%,60%)] text-white capitalize cursor-pointer gap-1 hover:bg-[hsl(280,80%,50%)]" onClick={() => toggleLanguage(l)}>
               {l} <X className="w-3 h-3" />
             </Badge>
           ))}
