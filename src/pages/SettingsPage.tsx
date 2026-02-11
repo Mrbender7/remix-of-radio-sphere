@@ -1,6 +1,6 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
-import radioSphereLogo from "@/assets/radio-sphere-logo.png";
+import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
 import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";

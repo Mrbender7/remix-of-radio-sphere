@@ -3,7 +3,7 @@ import { StationCard } from "@/components/StationCard";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useWeeklyDiscoveries } from "@/hooks/useWeeklyDiscoveries";
 import { Heart, Sparkles, RefreshCw } from "lucide-react";
-import radioSphereLogo from "@/assets/radio-sphere-logo.png";
+import radioSphereLogo from "@/assets/new-radio-logo.png";
 
 const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
 
