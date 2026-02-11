@@ -229,8 +229,11 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: { label: string; items: string[]; selected: string[]; onToggle: (v: string) => void; searchable?: boolean }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -241,6 +244,19 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
   }, []);
 
   // Removed autofocus to avoid opening keyboard on mobile
+
+  const checkScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    setCanScrollUp(el.scrollTop > 4);
+    setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(checkScroll, 50);
+    return () => clearTimeout(timer);
+  }, [open, checkScroll, search]);
 
   const filtered = search
     ? items.filter(i => i.toLowerCase().includes(search.toLowerCase()))
@@ -279,29 +295,45 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
               />
             </div>
           )}
-          <div className="overflow-y-auto py-1 flex-1 min-h-0">
-            {filtered.map(item => (
-              <button
-                key={item}
-                onClick={() => onToggle(item)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm capitalize hover:bg-accent transition-colors text-foreground"
-              >
-                <div className={cn(
-                  "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                  selected.includes(item) ? "bg-primary border-primary" : "border-muted-foreground/40"
-                )}>
-                  {selected.includes(item) && <Check className="w-3 h-3 text-primary-foreground" />}
-                </div>
-                {item}
-              </button>
-            ))}
-            {searchable && filtered.length === 0 && search.trim() && (
-              <button
-                onClick={handleCustomTag}
-                className="w-full px-3 py-2 text-sm text-primary hover:bg-accent transition-colors text-left"
-              >
-                + Ajouter « {search.trim()} »
-              </button>
+          <div className="relative flex-1 min-h-0">
+            {canScrollUp && (
+              <div className="absolute top-0 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <ChevronUp className="w-4 h-4 text-muted-foreground animate-pulse" />
+              </div>
+            )}
+            <div
+              ref={listRef}
+              className="overflow-y-auto py-1 max-h-[220px]"
+              onScroll={checkScroll}
+            >
+              {filtered.map(item => (
+                <button
+                  key={item}
+                  onClick={() => onToggle(item)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm capitalize hover:bg-accent transition-colors text-foreground"
+                >
+                  <div className={cn(
+                    "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                    selected.includes(item) ? "bg-primary border-primary" : "border-muted-foreground/40"
+                  )}>
+                    {selected.includes(item) && <Check className="w-3 h-3 text-primary-foreground" />}
+                  </div>
+                  {item}
+                </button>
+              ))}
+              {searchable && filtered.length === 0 && search.trim() && (
+                <button
+                  onClick={handleCustomTag}
+                  className="w-full px-3 py-2 text-sm text-primary hover:bg-accent transition-colors text-left"
+                >
+                  + Ajouter « {search.trim()} »
+                </button>
+              )}
+            </div>
+            {canScrollDown && (
+              <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <ChevronDown className="w-4 h-4 text-muted-foreground animate-pulse" />
+              </div>
             )}
           </div>
         </div>

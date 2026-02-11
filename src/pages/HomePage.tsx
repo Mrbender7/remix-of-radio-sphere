@@ -47,6 +47,9 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
         <h2 className="text-lg font-heading font-semibold mb-3 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
           <Heart className="w-4 h-4 text-[hsl(280,80%,60%)]" />
           {t("home.yourFavorites")}
+          {favorites.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">{favorites.length}</span>
+          )}
         </h2>
         {favorites.length > 0 ? (
           <ScrollableRow>

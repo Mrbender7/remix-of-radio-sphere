@@ -14,7 +14,12 @@ export function LibraryPage({ favorites, isFavorite, onToggleFavorite }: Library
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
-      <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("favorites.title")}</h1>
+      <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
+        {t("favorites.title")}
+        {favorites.length > 0 && (
+          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-[hsl(280,80%,60%)] text-white leading-none">{favorites.length}</span>
+        )}
+      </h1>
 
       {favorites.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
