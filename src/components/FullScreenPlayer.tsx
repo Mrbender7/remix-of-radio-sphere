@@ -36,20 +36,29 @@ export function FullScreenPlayer() {
         </div>
       </div>
 
-      {/* Info & Controls */}
-      <div className="px-8 pb-8 space-y-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>
-            <p className="text-sm text-muted-foreground">{currentStation.country} {currentStation.tags.length > 0 && `• ${currentStation.tags[0]}`}</p>
-          </div>
-          <button
-            onClick={() => toggleFavorite(currentStation)}
-            className="flex-shrink-0 p-2 rounded-full hover:bg-accent transition-colors"
-          >
-            <Heart className={`w-6 h-6 ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
-          </button>
-        </div>
+       {/* Info & Controls */}
+       <div className="px-8 pb-8 space-y-6">
+         <div className="flex items-start justify-between gap-3">
+           <div className="min-w-0">
+             <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>
+             <p className="text-sm text-muted-foreground">{currentStation.country}</p>
+           </div>
+           <button
+             onClick={() => toggleFavorite(currentStation)}
+             className="flex-shrink-0 p-2 rounded-full hover:bg-accent transition-colors"
+           >
+             <Heart className={`w-6 h-6 ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+           </button>
+         </div>
+
+         {/* Tags */}
+         {currentStation.tags.length > 0 && (
+           <div className="flex flex-wrap gap-2">
+             {currentStation.tags.slice(0, 4).map((tag, i) => (
+               <span key={i} className="px-3 py-1 rounded-full bg-accent text-xs text-foreground font-medium">{tag}</span>
+             ))}
+           </div>
+         )}
 
         {/* Play button */}
         <div className="flex justify-center">
@@ -73,12 +82,28 @@ export function FullScreenPlayer() {
           />
         </div>
 
-        {/* Codec / Bitrate info */}
-        <div className="flex justify-center gap-4 text-xs text-muted-foreground">
-          {currentStation.codec && <span>{currentStation.codec}</span>}
-          {currentStation.bitrate > 0 && <span>{currentStation.bitrate} kbps</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
+         {/* Codec / Bitrate / Language info */}
+         <div className="grid grid-cols-3 gap-3 py-4 px-4 rounded-xl bg-accent/50">
+           {currentStation.codec && (
+             <div className="text-center">
+               <p className="text-xs text-muted-foreground">Codec</p>
+               <p className="text-sm font-semibold text-foreground">{currentStation.codec}</p>
+             </div>
+           )}
+           {currentStation.bitrate > 0 && (
+             <div className="text-center">
+               <p className="text-xs text-muted-foreground">Bitrate</p>
+               <p className="text-sm font-semibold text-foreground">{currentStation.bitrate} kbps</p>
+             </div>
+           )}
+           {currentStation.language && (
+             <div className="text-center">
+               <p className="text-xs text-muted-foreground">Langue</p>
+               <p className="text-sm font-semibold text-foreground">{currentStation.language}</p>
+             </div>
+           )}
+         </div>
+       </div>
+     </div>
+   );
+ }
