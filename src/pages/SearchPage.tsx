@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { radioBrowserProvider, getCountries, CountryInfo } from "@/services/RadioService";
 import { StationCard } from "@/components/StationCard";
 import { RadioStation } from "@/types/radio";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, X, ChevronDown, Check } from "lucide-react";
+import { Search, Loader2, X, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -240,9 +240,7 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  useEffect(() => {
-    if (open && searchable) inputRef.current?.focus();
-  }, [open, searchable]);
+  // Removed autofocus to avoid opening keyboard on mobile
 
   const filtered = search
     ? items.filter(i => i.toLowerCase().includes(search.toLowerCase()))
@@ -270,7 +268,7 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
       {open && (
         <div className="absolute z-50 mt-1 w-full rounded-lg bg-popover border border-border shadow-xl py-1 max-h-[280px] overflow-y-auto">
           {searchable && (
-            <div className="px-2 pb-1 pt-1 sticky top-0 bg-popover">
+            <div className="px-2 pb-1 pt-1 sticky top-0 bg-popover z-10 border-b border-border">
               <Input
                 ref={inputRef}
                 value={search}
@@ -313,8 +311,11 @@ function MultiSelectDropdown({ label, items, selected, onToggle, searchable }: {
 function CountryDropdown({ countries, value, onChange, placeholder }: { countries: { label: string; value: string }[]; value: string; onChange: (v: string) => void; placeholder: string }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -324,9 +325,20 @@ function CountryDropdown({ countries, value, onChange, placeholder }: { countrie
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Removed autofocus to avoid opening keyboard on mobile
+
+  const checkScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    setCanScrollUp(el.scrollTop > 4);
+    setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
+
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (!open) return;
+    const timer = setTimeout(checkScroll, 50);
+    return () => clearTimeout(timer);
+  }, [open, checkScroll, search]);
 
   const filtered = search
     ? countries.filter(c => c.label.toLowerCase().includes(search.toLowerCase()))
@@ -344,8 +356,8 @@ function CountryDropdown({ countries, value, onChange, placeholder }: { countrie
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="absolute z-[100] mt-1 w-full rounded-lg bg-popover border border-border shadow-xl py-1 max-h-[280px] overflow-y-auto">
-          <div className="px-2 pb-1 pt-1 sticky top-0 bg-popover">
+        <div className="absolute z-[100] mt-1 w-full rounded-lg bg-popover border border-border shadow-xl max-h-[280px] flex flex-col">
+          <div className="px-2 pb-1 pt-1 bg-popover z-10 border-b border-border rounded-t-lg shrink-0">
             <Input
               ref={inputRef}
               value={search}
@@ -354,17 +366,35 @@ function CountryDropdown({ countries, value, onChange, placeholder }: { countrie
               className="h-8 text-xs bg-accent border-0"
             />
           </div>
-          {filtered.map(c => (
-            <button
-              key={c.value}
-              onClick={() => { onChange(c.value); setOpen(false); setSearch(""); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-foreground"
+          <div className="relative flex-1 min-h-0">
+            {canScrollUp && (
+              <div className="absolute top-0 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <ChevronUp className="w-4 h-4 text-muted-foreground animate-pulse" />
+              </div>
+            )}
+            <div
+              ref={listRef}
+              className="overflow-y-auto py-1 max-h-[220px]"
+              onScroll={checkScroll}
             >
-              {value === c.value && <Check className="w-4 h-4 text-primary shrink-0" />}
-              {value !== c.value && <div className="w-4 h-4 shrink-0" />}
-              {c.label}
-            </button>
-          ))}
+              {filtered.map(c => (
+                <button
+                  key={c.value}
+                  onClick={() => { onChange(c.value); setOpen(false); setSearch(""); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-foreground text-left"
+                >
+                  {value === c.value && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  {value !== c.value && <div className="w-4 h-4 shrink-0" />}
+                  <span className="truncate">{c.label}</span>
+                </button>
+              ))}
+            </div>
+            {canScrollDown && (
+              <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <ChevronDown className="w-4 h-4 text-muted-foreground animate-pulse" />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
