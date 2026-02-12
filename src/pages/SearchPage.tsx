@@ -68,9 +68,10 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   const hasFilters = !!(query || country || genres.length || languages.length);
 
-  // Reset pagination when filters change
+  // Reset extra (load-more) results when filters change
+  const [extraResults, setExtraResults] = useState<RadioStation[]>([]);
   useEffect(() => {
-    setAllResults([]);
+    setExtraResults([]);
     setOffset(0);
     setHasMore(false);
   }, [query, country, genres, languages]);
@@ -86,14 +87,27 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         limit: PAGE_SIZE,
         offset: 0,
       });
-      setAllResults(data);
-      setOffset(data.length);
-      setHasMore(data.length >= PAGE_SIZE);
       return data;
     },
     enabled: hasFilters,
     staleTime: 2 * 60 * 1000,
   });
+
+  // Derive allResults from query data + extra loaded pages
+  useEffect(() => {
+    if (results) {
+      setOffset(results.length);
+      setHasMore(results.length >= PAGE_SIZE);
+      if (extraResults.length > 0) {
+        const ids = new Set(results.map(s => s.id));
+        setAllResults([...results, ...extraResults.filter(s => !ids.has(s.id))]);
+      } else {
+        setAllResults(results);
+      }
+    } else {
+      setAllResults([]);
+    }
+  }, [results]);
 
   const loadMore = async () => {
     setLoadingMore(true);
@@ -106,11 +120,12 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         limit: PAGE_SIZE,
         offset,
       });
-      // Deduplicate by station id
-      setAllResults(prev => {
+      setExtraResults(prev => {
         const ids = new Set(prev.map(s => s.id));
         return [...prev, ...data.filter(s => !ids.has(s.id))];
       });
+      const newAll = [...allResults, ...data.filter(s => !new Set(allResults.map(x => x.id)).has(s.id))];
+      setAllResults(newAll);
       setOffset(o => o + data.length);
       setHasMore(data.length >= PAGE_SIZE);
     } catch {
