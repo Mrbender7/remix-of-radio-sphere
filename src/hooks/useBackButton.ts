@@ -17,18 +17,11 @@ export function useBackButton({
   const backPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleBackPress = useCallback(() => {
-    // If fullscreen player is open, close it
-    if (isFullScreen) {
-      onBack();
-      return;
-    }
-
-    // If on home page, check for double back
+    // If on home page, check for double back to exit
     if (isHome) {
       const now = Date.now();
       const timeSinceLastPress = now - lastBackPressRef.current;
 
-      // Double back within 300ms
       if (timeSinceLastPress < 300) {
         if (backPressTimeoutRef.current) {
           clearTimeout(backPressTimeoutRef.current);
@@ -40,7 +33,6 @@ export function useBackButton({
         if (backPressTimeoutRef.current) {
           clearTimeout(backPressTimeoutRef.current);
         }
-        // Reset after 300ms
         backPressTimeoutRef.current = setTimeout(() => {
           lastBackPressRef.current = 0;
         }, 300);
@@ -48,9 +40,9 @@ export function useBackButton({
       return;
     }
 
-    // Default back behavior
+    // Default: close fullscreen or go home
     onBack();
-  }, [isFullScreen, isHome, onBack, onDoubleBackHome]);
+  }, [isHome, onBack, onDoubleBackHome]);
 
   useEffect(() => {
     // Prevent default back behavior and use our custom handler

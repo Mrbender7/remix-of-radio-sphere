@@ -31,7 +31,13 @@ function AppContentInner() {
   }, []);
 
   useBackButton({
-    onBack: closeFullScreen,
+    onBack: () => {
+      if (isFullScreen) {
+        closeFullScreen();
+      } else {
+        setActiveTab("home");
+      }
+    },
     onDoubleBackHome: () => setShowExitDialog(true),
     isHome: activeTab === "home",
     isFullScreen,
