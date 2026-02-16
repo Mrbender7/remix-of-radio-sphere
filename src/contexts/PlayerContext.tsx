@@ -3,9 +3,32 @@ import { RadioStation } from "@/types/radio";
 import { toast } from "@/hooks/use-toast";
 import { reportStationClick } from "@/services/RadioService";
 
+// --- Notification channel (created once via plugin JS API) ---
+const NOTIFICATION_CHANNEL_ID = 'radio_silent';
+let channelCreated = false;
+
+async function ensureNotificationChannel() {
+  if (channelCreated) return;
+  try {
+    const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
+    await (ForegroundService as any).createNotificationChannel({
+      id: NOTIFICATION_CHANNEL_ID,
+      name: 'Radio Playback',
+      importance: 2, // IMPORTANCE_LOW — no sound
+      sound: undefined,
+      vibration: false,
+    });
+    channelCreated = true;
+    console.log("[RadioSphere] Notification channel created via plugin JS:", NOTIFICATION_CHANNEL_ID);
+  } catch (e) {
+    console.log("[RadioSphere] createNotificationChannel not available", e);
+  }
+}
+
 // --- Android Foreground Service helpers (Capacitor only) ---
 async function startNativeForegroundService(station: RadioStation, isPaused = false) {
   try {
+    await ensureNotificationChannel();
     const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
     await ForegroundService.startForegroundService({
       id: 1,
@@ -14,11 +37,12 @@ async function startNativeForegroundService(station: RadioStation, isPaused = fa
       smallIcon: 'ic_notification',
       serviceType: 2,
       silent: true,
+      notificationChannelId: NOTIFICATION_CHANNEL_ID,
       buttons: [
         { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
       ],
     } as any);
-    console.log("[RadioSphere] Foreground service started (silent)");
+    console.log("[RadioSphere] Foreground service started (channel:", NOTIFICATION_CHANNEL_ID, ")");
   } catch (e) {
     console.log("[RadioSphere] Foreground service not available", e);
   }
@@ -32,6 +56,7 @@ async function updateNativeForegroundService(station: RadioStation, isPaused: bo
       title: station.name,
       body: station.country || 'Radio Sphere',
       smallIcon: 'ic_notification',
+      notificationChannelId: NOTIFICATION_CHANNEL_ID,
       buttons: [
         { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
       ],
@@ -116,12 +141,17 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     isPlayingRef.current = state.isPlaying;
   }, [state.isPlaying]);
 
+  // Create notification channel once at mount
+  useEffect(() => {
+    ensureNotificationChannel();
+  }, []);
+
   const requestWakeLock = useCallback(async () => {
     if ('wakeLock' in navigator) {
       try {
         wakeLockRef.current = await navigator.wakeLock.request('screen');
       } catch {
-        // WakeLock request failed (e.g. low battery)
+        // WakeLock request failed
       }
     }
   }, []);
@@ -133,7 +163,6 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     }
   }, []);
 
-  // Start heartbeat — recovers from unexpected pauses every 10s
   const startHeartbeat = useCallback(() => {
     if (heartbeatRef.current) return;
     heartbeatRef.current = setInterval(() => {
@@ -154,21 +183,15 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     }
   }, []);
 
-  // Update Media Session metadata
   const updateMediaSession = useCallback((station: RadioStation, playing: boolean) => {
     if (!('mediaSession' in navigator)) return;
-
     const artworkUrl = station.logo ? station.logo.replace('http://', 'https://') : 'https://placehold.co/512x512.png';
-
     navigator.mediaSession.metadata = new MediaMetadata({
       title: station.name,
       artist: "Radio Sphere",
       album: station.country || "Live",
-      artwork: [
-        { src: artworkUrl, sizes: '512x512', type: 'image/png' }
-      ],
+      artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }],
     });
-
     navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
   }, []);
 
@@ -182,9 +205,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       audio.play().catch(() => {});
       startSilentLoop();
       setState(s => {
-        if (s.currentStation) {
-          startNativeForegroundService(s.currentStation, false);
-        }
+        if (s.currentStation) startNativeForegroundService(s.currentStation, false);
         return { ...s, isPlaying: true };
       });
       requestWakeLock();
@@ -197,9 +218,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       audio.pause();
       stopSilentLoop();
       setState(s => {
-        if (s.currentStation) {
-          updateNativeForegroundService(s.currentStation, true);
-        }
+        if (s.currentStation) updateNativeForegroundService(s.currentStation, true);
         return { ...s, isPlaying: false };
       });
       releaseWakeLock();
@@ -207,14 +226,12 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
 
     const noop = () => {};
-
     navigator.mediaSession.setActionHandler('play', handlePlay);
     navigator.mediaSession.setActionHandler('pause', handlePause);
     navigator.mediaSession.setActionHandler('stop', handlePause);
     navigator.mediaSession.setActionHandler('seekbackward', noop);
     navigator.mediaSession.setActionHandler('seekforward', noop);
 
-    // Listen for foreground service notification button clicks
     let buttonListener: any = null;
     (async () => {
       try {
@@ -222,11 +239,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
         buttonListener = await (ForegroundService as any).addListener('buttonClicked', (event: any) => {
           console.log("[RadioSphere] Notification button clicked:", event);
           if (event.buttonId === 1) {
-            if (isPlayingRef.current) {
-              handlePause();
-            } else {
-              handlePlay();
-            }
+            if (isPlayingRef.current) handlePause(); else handlePlay();
           }
         });
       } catch (e) {
@@ -244,7 +257,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
   }, [requestWakeLock, releaseWakeLock, startHeartbeat, stopHeartbeat]);
 
-  // Request notification permission at startup (needed for Android background audio)
+  // Request notification permission at startup
   useEffect(() => {
     if (notifPermissionAsked.current) return;
     notifPermissionAsked.current = true;
@@ -269,7 +282,6 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
     audio.addEventListener("error", handleError);
 
-    // Enhanced keep-alive: restart audio + silent loop + WakeLock on visibility changes
     const keepAlive = () => {
       if (isPlayingRef.current) {
         audio.play().catch(() => {});
@@ -294,7 +306,6 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   }, []);
 
   const play = useCallback(async (station: RadioStation) => {
-    // 1. Validate URL
     if (!station.streamUrl) {
       console.error('[RadioSphere] Cannot play station with no stream URL.');
       toast({ title: "Flux indisponible", description: "Cette station n'a pas d'URL de flux.", variant: "destructive" });
@@ -302,18 +313,15 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     }
 
     const audio = audioRef.current;
-
-    // 2. Clean up previous playback
     audio.pause();
     audio.removeAttribute('src');
-    audio.load(); // Reset internal state
+    audio.load();
     stopSilentLoop();
     stopHeartbeat();
     releaseWakeLock();
     stopNativeForegroundService();
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
 
-    // 3. Prepare new playback
     setState(s => ({ ...s, currentStation: station, isBuffering: true }));
     const secureLogo = station.logo?.replace('http://', 'https://');
     updateMediaSession({ ...station, logo: secureLogo }, true);
@@ -333,7 +341,6 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
         })
         .catch((e) => {
           console.error("[RadioSphere] Playback failed", e);
-          // 4. Robust error handling
           stopNativeForegroundService();
           stopSilentLoop();
           stopHeartbeat();
@@ -346,7 +353,6 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
     audio.addEventListener('canplay', startPlayback);
 
-    // Timeout: if canplay never fires within 15s, abort
     const timeout = setTimeout(() => {
       audio.removeEventListener('canplay', startPlayback);
       if (audio.readyState < 3) {
@@ -360,7 +366,6 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       }
     }, 15000);
 
-    // Clear timeout once canplay fires
     const clearTimeoutOnCanplay = () => {
       clearTimeout(timeout);
       audio.removeEventListener('canplay', clearTimeoutOnCanplay);
