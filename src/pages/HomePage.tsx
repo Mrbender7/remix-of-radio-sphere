@@ -4,7 +4,7 @@ import { StationCard } from "@/components/StationCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useWeeklyDiscoveries } from "@/hooks/useWeeklyDiscoveries";
-import { Heart, Sparkles, RefreshCw, ChevronRight } from "lucide-react";
+import { Heart, Sparkles, RefreshCw, ChevronRight, Disc3, Music, Radio, Headphones, Brain, CloudSun, Piano, Cpu, Mic2, Newspaper, Star, HeartPulse, Guitar, Flame, type LucideIcon } from "lucide-react";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 
 const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
@@ -134,13 +134,32 @@ const GENRE_COLORS: Record<string, string> = {
   soul: "from-orange-700 to-amber-400",
 };
 
+const GENRE_ICONS: Record<string, LucideIcon> = {
+  "70s": Disc3,
+  "80s": Star,
+  "90s": Radio,
+  ambient: Brain,
+  chillout: CloudSun,
+  classical: Piano,
+  electronic: Cpu,
+  hiphop: Mic2,
+  jazz: Music,
+  news: Newspaper,
+  pop: Headphones,
+  "r&b": HeartPulse,
+  rock: Guitar,
+  soul: Flame,
+};
+
 function GenreCard({ genre, onClick }: { genre: string; onClick: () => void }) {
+  const Icon = GENRE_ICONS[genre] || Music;
   return (
     <div
-      className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${GENRE_COLORS[genre] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10`}
+      className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${GENRE_COLORS[genre] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 relative overflow-hidden`}
       onClick={onClick}
     >
-      <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md">{genre}</span>
+      <Icon className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 text-white opacity-20 rotate-[-15deg]" />
+      <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md relative z-10">{genre}</span>
     </div>
   );
 }
