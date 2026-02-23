@@ -159,7 +159,7 @@ function GenreCard({ genre, onClick }: { genre: string; onClick: () => void }) {
       className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${GENRE_COLORS[genre] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 relative overflow-hidden`}
       onClick={onClick}
     >
-      <Icon icon={icon} className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 text-white opacity-40 rotate-[-15deg]" />
+      <Icon icon={icon} className="absolute right-2 top-1/2 -translate-y-1/2 w-16 h-16 text-white opacity-40 rotate-[-15deg]" />
       <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md relative z-10">{genre}</span>
     </div>
   );
