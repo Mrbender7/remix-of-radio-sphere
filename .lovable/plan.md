@@ -1,37 +1,37 @@
 
 
-# Ajouter le lien vers le site web de la radio dans le Full Screen Player
+# Corrections du Full Screen Player : Partage + Lien externe + Positionnement
 
-## Ce qui change pour l'utilisateur
+## Problemes identifies
 
-Un nouveau bouton "Site web" apparait dans le full screen player (sous les infos codec/bitrate/langue). En appuyant dessus, le site de la radio s'ouvre dans le navigateur par defaut du telephone (Safari, Chrome, etc.), pas dans l'app.
+1. **Le bouton "Visiter le site" ouvre le site dans l'app** : Capacitor intercepte `window.open` et affiche la page dans la WebView interne au lieu du navigateur du telephone.
+2. **Le bouton "Visiter le site" est cache sous les boutons systeme** : Le padding en bas du player ne compense pas suffisamment la zone de navigation Android.
+3. **Le bouton de partage ne fonctionne pas** : `navigator.share` n'est pas toujours disponible dans la WebView Capacitor.
 
-Le bouton n'apparait que si la station possede un site web renseigne.
+## Solution
 
-## Modifications techniques
+### 1. Installer `@capacitor/browser` (nouvelle dependance)
 
-### 1. `src/types/radio.ts`
+Ce plugin officiel Capacitor permet d'ouvrir un lien dans le navigateur par defaut du telephone (pas dans l'app).
 
-Ajouter le champ optionnel `homepage` a l'interface `RadioStation`.
+### 2. Modifier `src/components/FullScreenPlayer.tsx`
 
-### 2. `src/services/RadioService.ts`
+**Lien externe** : Remplacer `window.open(url, '_blank')` par un appel a `Browser.open({ url })` du plugin `@capacitor/browser`. Avec un fallback sur `window.open` pour le mode web/preview.
 
-Dans `normalizeStation`, extraire `raw.homepage` et l'affecter au nouveau champ.
+**Partage** : Ajouter un fallback quand `navigator.share` n'est pas disponible : copier le texte dans le presse-papiers via `navigator.clipboard.writeText()` et afficher un toast de confirmation via `sonner`.
 
-### 3. `src/components/FullScreenPlayer.tsx`
+**Positionnement** : Augmenter le padding bottom du conteneur d'infos/controles pour que le bouton "Visiter le site" ne soit pas masque par les boutons de navigation du telephone. Passer de `pb-[max(env(safe-area-inset-bottom,16px),1rem)]` a un calcul plus genereux avec un minimum de 2rem additionnel.
 
-- Ajouter un bouton avec une icone `ExternalLink` (lucide-react) sous la grille codec/bitrate/langue.
-- Au clic, ouvrir le lien via `window.open(url, '_blank')` qui, sur Capacitor Android, ouvre automatiquement le navigateur externe.
-- Le bouton n'est affiche que si `currentStation.homepage` existe et n'est pas vide.
+### 3. Fichiers modifies
 
-### 4. `src/i18n/translations.ts`
+- `package.json` : ajout de `@capacitor/browser`
+- `src/components/FullScreenPlayer.tsx` : logique Browser.open, fallback partage, fix padding
 
-Ajouter la traduction `"player.visitWebsite"` en FR ("Visiter le site") et EN ("Visit website").
+### 4. Impact sur le build Android
 
-## Fichiers modifies
-
-- `src/types/radio.ts`
-- `src/services/RadioService.ts`
-- `src/components/FullScreenPlayer.tsx`
-- `src/i18n/translations.ts`
+Apres ces modifications, il faudra :
+1. `git pull`
+2. `npm install`
+3. `npx cap sync`
+4. Rebuild l'APK
 
