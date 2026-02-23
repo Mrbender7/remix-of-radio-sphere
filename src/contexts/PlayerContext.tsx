@@ -132,6 +132,9 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const isPlayingRef = useRef(false);
   const notifPermissionAsked = useRef(false);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingCanplayRef = useRef<(() => void) | null>(null);
+  const pendingClearCanplayRef = useRef<(() => void) | null>(null);
+  const pendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<PlayerState>({
     currentStation: null,
     isPlaying: false,
@@ -294,79 +297,107 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   }, []);
 
   const play = useCallback(async (station: RadioStation) => {
-    if (!station.streamUrl) {
-      console.error('[RadioSphere] Cannot play station with no stream URL.');
-      toast({ title: "Flux indisponible", description: "Cette station n'a pas d'URL de flux.", variant: "destructive" });
-      return;
-    }
+    try {
+      if (!station.streamUrl) {
+        console.error('[RadioSphere] Cannot play station with no stream URL.');
+        toast({ title: "Flux indisponible", description: "Cette station n'a pas d'URL de flux.", variant: "destructive" });
+        return;
+      }
 
-    const audio = audioRef.current;
-    audio.pause();
-    audio.removeAttribute('src');
-    audio.load();
-    stopSilentLoop();
-    stopHeartbeat();
-    releaseWakeLock();
-    // Ne PAS arrêter le foreground service ici — on le mettra à jour silencieusement
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+      const audio = audioRef.current;
 
-    setState(s => ({ ...s, currentStation: station, isBuffering: true }));
-    const secureLogo = station.logo?.replace('http://', 'https://');
-    updateMediaSession({ ...station, logo: secureLogo }, true);
+      // --- Cleanup previous pending listeners/timeouts ---
+      if (pendingCanplayRef.current) {
+        audio.removeEventListener('canplay', pendingCanplayRef.current);
+        pendingCanplayRef.current = null;
+      }
+      if (pendingClearCanplayRef.current) {
+        audio.removeEventListener('canplay', pendingClearCanplayRef.current);
+        pendingClearCanplayRef.current = null;
+      }
+      if (pendingTimeoutRef.current) {
+        clearTimeout(pendingTimeoutRef.current);
+        pendingTimeoutRef.current = null;
+      }
 
-    if ('vibrate' in navigator) navigator.vibrate(10);
-    audio.src = station.streamUrl;
-    audio.load();
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      stopSilentLoop();
+      stopHeartbeat();
+      releaseWakeLock();
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
 
-    const startPlayback = () => {
-      audio.play()
-        .then(() => {
-          if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-          setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
-          startSilentLoop();
-          startHeartbeat();
-          if (foregroundServiceRunning) {
-            updateNativeForegroundService(station, false);
-          } else {
-            startNativeForegroundService(station, false).then(() => { foregroundServiceRunning = true; });
-          }
-        })
-        .catch((e) => {
-          console.error("[RadioSphere] Playback failed", e);
+      setState(s => ({ ...s, currentStation: station, isBuffering: true, isPlaying: false }));
+      const secureLogo = station.logo?.replace('http://', 'https://');
+      updateMediaSession({ ...station, logo: secureLogo }, true);
+
+      if ('vibrate' in navigator) navigator.vibrate(10);
+      audio.src = station.streamUrl;
+      audio.load();
+
+      const startPlayback = () => {
+        audio.play()
+          .then(() => {
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+            setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+            startSilentLoop();
+            startHeartbeat();
+            if (foregroundServiceRunning) {
+              updateNativeForegroundService(station, false);
+            } else {
+              startNativeForegroundService(station, false).then(() => { foregroundServiceRunning = true; });
+            }
+          })
+          .catch((e) => {
+            console.error("[RadioSphere] Playback failed", e);
+            stopNativeForegroundService();
+            stopSilentLoop();
+            stopHeartbeat();
+            releaseWakeLock();
+            if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+            setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+            toast({ title: "Erreur de lecture", description: "Impossible de lire ce flux. Essayez une autre station.", variant: "destructive" });
+          });
+        audio.removeEventListener('canplay', startPlayback);
+        pendingCanplayRef.current = null;
+      };
+      audio.addEventListener('canplay', startPlayback);
+      pendingCanplayRef.current = startPlayback;
+
+      const timeout = setTimeout(() => {
+        audio.removeEventListener('canplay', startPlayback);
+        pendingCanplayRef.current = null;
+        pendingTimeoutRef.current = null;
+        if (audio.readyState < 3) {
+          console.warn("[RadioSphere] Stream timeout — no canplay after 15s");
+          audio.pause();
+          audio.removeAttribute('src');
           stopNativeForegroundService();
-          stopSilentLoop();
-          stopHeartbeat();
-          releaseWakeLock();
           if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
           setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
-          toast({ title: "Erreur de lecture", description: "Impossible de lire ce flux. Essayez une autre station.", variant: "destructive" });
-        });
-      audio.removeEventListener('canplay', startPlayback);
-    };
-    audio.addEventListener('canplay', startPlayback);
+          toast({ title: "Délai dépassé", description: "Le flux ne répond pas. Essayez une autre station.", variant: "destructive" });
+        }
+      }, 15000);
+      pendingTimeoutRef.current = timeout;
 
-    const timeout = setTimeout(() => {
-      audio.removeEventListener('canplay', startPlayback);
-      if (audio.readyState < 3) {
-        console.warn("[RadioSphere] Stream timeout — no canplay after 15s");
-        audio.pause();
-        audio.removeAttribute('src');
-        stopNativeForegroundService();
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
-        setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
-        toast({ title: "Délai dépassé", description: "Le flux ne répond pas. Essayez une autre station.", variant: "destructive" });
-      }
-    }, 15000);
+      const clearTimeoutOnCanplay = () => {
+        clearTimeout(timeout);
+        pendingTimeoutRef.current = null;
+        audio.removeEventListener('canplay', clearTimeoutOnCanplay);
+        pendingClearCanplayRef.current = null;
+      };
+      audio.addEventListener('canplay', clearTimeoutOnCanplay);
+      pendingClearCanplayRef.current = clearTimeoutOnCanplay;
 
-    const clearTimeoutOnCanplay = () => {
-      clearTimeout(timeout);
-      audio.removeEventListener('canplay', clearTimeoutOnCanplay);
-    };
-    audio.addEventListener('canplay', clearTimeoutOnCanplay);
-
-    onStationPlay?.(station);
-    reportStationClick(station.id);
-    requestWakeLock();
+      onStationPlay?.(station);
+      reportStationClick(station.id);
+      requestWakeLock();
+    } catch (e) {
+      console.error("[RadioSphere] Unexpected error in play()", e);
+      setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+      toast({ title: "Erreur inattendue", description: "Une erreur est survenue. Réessayez.", variant: "destructive" });
+    }
   }, [onStationPlay, requestWakeLock, releaseWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat]);
 
   const togglePlay = useCallback(() => {
