@@ -2,6 +2,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Play, Pause, ChevronDown, Volume2, Heart, Loader2 } from "lucide-react";
+import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { Slider } from "@/components/ui/slider";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
@@ -35,6 +36,13 @@ export function FullScreenPlayer() {
           )}
         </div>
       </div>
+
+      {/* Audio Visualizer */}
+      {isPlaying && (
+        <div className="flex justify-center py-3">
+          <AudioVisualizer size="large" />
+        </div>
+      )}
 
        {/* Info & Controls */}
        <div className="px-6 pb-[max(env(safe-area-inset-bottom,16px),1rem)] space-y-4">
