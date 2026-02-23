@@ -65,11 +65,15 @@ async function stopNativeForegroundService() {
   try {
     const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
     await ForegroundService.stopForegroundService();
+    foregroundServiceRunning = false;
     console.log("[RadioSphere] Foreground service stopped");
   } catch (e) {
     console.log("[RadioSphere] Foreground service stop failed", e);
   }
 }
+
+// Flag: foreground service is currently running
+let foregroundServiceRunning = false;
 
 // Global audio instance — survives React lifecycle, never destroyed by re-renders
 const globalAudio = new Audio();
@@ -297,7 +301,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     stopSilentLoop();
     stopHeartbeat();
     releaseWakeLock();
-    stopNativeForegroundService();
+    // Ne PAS arrêter le foreground service ici — on le mettra à jour silencieusement
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
 
     setState(s => ({ ...s, currentStation: station, isBuffering: true }));
@@ -315,7 +319,11 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
           setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
           startSilentLoop();
           startHeartbeat();
-          startNativeForegroundService(station, false);
+          if (foregroundServiceRunning) {
+            updateNativeForegroundService(station, false);
+          } else {
+            startNativeForegroundService(station, false).then(() => { foregroundServiceRunning = true; });
+          }
         })
         .catch((e) => {
           console.error("[RadioSphere] Playback failed", e);
