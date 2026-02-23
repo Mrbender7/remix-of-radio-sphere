@@ -1,46 +1,37 @@
 
 
-# Ajout du tri des resultats de recherche
+# Ajouter le lien vers le site web de la radio dans le Full Screen Player
 
-## Situation actuelle
+## Ce qui change pour l'utilisateur
 
-Les resultats sont toujours tries par popularite (votes, decroissant). L'API Radio Browser supporte le parametre `order` avec plusieurs valeurs possibles : `name`, `votes`, `clickcount`, `bitrate`, `country`, `language`.
+Un nouveau bouton "Site web" apparait dans le full screen player (sous les infos codec/bitrate/langue). En appuyant dessus, le site de la radio s'ouvre dans le navigateur par defaut du telephone (Safari, Chrome, etc.), pas dans l'app.
 
-## Solution proposee
+Le bouton n'apparait que si la station possede un site web renseigne.
 
-Ajouter un selecteur de tri compact sur la page de recherche, juste au-dessus des resultats, permettant de choisir entre :
+## Modifications techniques
 
-- **Popularite** (votes, par defaut -- comportement actuel)
-- **A-Z** (name, ordre alphabetique croissant)
-- **Clicks** (clickcount, les plus ecoutes recemment)
+### 1. `src/types/radio.ts`
 
-## Modifications
+Ajouter le champ optionnel `homepage` a l'interface `RadioStation`.
 
-### 1. `src/services/RadioService.ts`
+### 2. `src/services/RadioService.ts`
 
-Rendre les parametres `order` et `reverse` dynamiques dans `searchStations` en les acceptant via `SearchParams`.
+Dans `normalizeStation`, extraire `raw.homepage` et l'affecter au nouveau champ.
 
-### 2. `src/types/radio.ts`
+### 3. `src/components/FullScreenPlayer.tsx`
 
-Ajouter `order` et `reverse` optionnels a l'interface `SearchParams`.
-
-### 3. `src/pages/SearchPage.tsx`
-
-- Ajouter un etat `sortBy` (valeur par defaut : `"votes"`).
-- Afficher un petit groupe de boutons/badges cliquables (Popularite | A-Z | Clicks) au-dessus de la liste de resultats.
-- Passer `order` et `reverse` dans les appels de recherche (query initiale et load more).
-- Inclure `sortBy` dans la queryKey de react-query pour declencher une nouvelle requete quand le tri change.
-- Reinitialiser les extra results quand le tri change.
+- Ajouter un bouton avec une icone `ExternalLink` (lucide-react) sous la grille codec/bitrate/langue.
+- Au clic, ouvrir le lien via `window.open(url, '_blank')` qui, sur Capacitor Android, ouvre automatiquement le navigateur externe.
+- Le bouton n'est affiche que si `currentStation.homepage` existe et n'est pas vide.
 
 ### 4. `src/i18n/translations.ts`
 
-Ajouter les traductions pour les labels de tri (FR/EN).
+Ajouter la traduction `"player.visitWebsite"` en FR ("Visiter le site") et EN ("Visit website").
 
-## Details techniques
+## Fichiers modifies
 
-Le tri se fait cote API (pas cote client) pour garantir la coherence avec la pagination "load more". Quand l'utilisateur change le tri, la requete repart a offset 0 avec le nouvel ordre.
-
-Pour le tri alphabetique : `order: "name"`, `reverse: "false"`.
-Pour la popularite : `order: "votes"`, `reverse: "true"`.
-Pour les clicks : `order: "clickcount"`, `reverse: "true"`.
+- `src/types/radio.ts`
+- `src/services/RadioService.ts`
+- `src/components/FullScreenPlayer.tsx`
+- `src/i18n/translations.ts`
 
