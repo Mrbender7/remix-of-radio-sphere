@@ -63,7 +63,7 @@ export function StationCard({ station, isFavorite, onToggleFavorite, compact }: 
       onClick={() => play(station)}
       className="relative flex flex-col items-center w-36 flex-shrink-0 p-3 rounded-xl transition-colors"
     >
-      <div className="relative w-28 h-28 rounded-xl bg-accent mb-2 overflow-hidden shadow-lg">
+      <div className={cn("relative w-28 h-28 rounded-xl bg-accent mb-2 overflow-hidden shadow-lg", isActive && isPlaying && "animate-card-glow")}>
         <StationLogo src={station.logo} alt={station.name} />
         {isActive && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">

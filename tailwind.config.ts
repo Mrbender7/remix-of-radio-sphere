@@ -85,8 +85,12 @@ export default {
           "50%": { filter: "drop-shadow(0 0 14px hsla(250,80%,60%,0.7))" },
         },
         "play-breathe": {
-          "0%, 100%": { boxShadow: "0 0 8px hsla(250,80%,60%,0.3), 0 4px 12px hsla(250,80%,60%,0.2)" },
-          "50%": { boxShadow: "0 0 20px hsla(250,80%,60%,0.6), 0 4px 24px hsla(250,80%,60%,0.4)" },
+          "0%, 100%": { boxShadow: "0 0 14px hsla(225,90%,58%,0.5), 0 0 28px hsla(250,80%,60%,0.3), 0 4px 16px hsla(250,80%,60%,0.25)" },
+          "50%": { boxShadow: "0 0 28px hsla(225,90%,58%,0.8), 0 0 48px hsla(250,80%,60%,0.5), 0 4px 32px hsla(250,80%,60%,0.4)" },
+        },
+        "card-glow": {
+          "0%, 100%": { boxShadow: "0 0 8px hsla(225,90%,58%,0.25), 0 0 20px hsla(250,80%,60%,0.15)" },
+          "50%": { boxShadow: "0 0 16px hsla(225,90%,58%,0.45), 0 0 36px hsla(250,80%,60%,0.25)" },
         },
       },
       animation: {
@@ -94,7 +98,8 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         marquee: "marquee 10s linear infinite",
         "logo-glow": "logo-glow 3s ease-in-out infinite",
-        "play-breathe": "play-breathe 3s ease-in-out infinite",
+        "play-breathe": "play-breathe 2.5s ease-in-out infinite",
+        "card-glow": "card-glow 2.5s ease-in-out infinite",
       },
     },
   },
