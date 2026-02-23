@@ -58,9 +58,16 @@ export function FullScreenPlayer() {
           <ChevronDown className="w-6 h-6 text-muted-foreground" />
         </button>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("player.nowPlaying")}</span>
-        <button onClick={handleShare} className="p-2 -mr-2">
-          <Share2 className="w-5 h-5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-1 -mr-2">
+          {currentStation.homepage && (
+            <button onClick={handleOpenWebsite} className="w-9 h-9 rounded-full bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] flex items-center justify-center text-[10px] font-extrabold text-white shadow-md shadow-primary/30 hover:opacity-90 transition-opacity">
+              www
+            </button>
+          )}
+          <button onClick={handleShare} className="p-2">
+            <Share2 className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Artwork */}
@@ -107,23 +114,14 @@ export function FullScreenPlayer() {
            </div>
          )}
 
-        {/* Play button + www */}
-        <div className="flex items-center justify-center gap-6">
-          {currentStation.homepage ? (
-            <button
-              onClick={handleOpenWebsite}
-              className="w-11 h-11 rounded-full bg-accent border border-border flex items-center justify-center text-xs font-bold text-foreground hover:bg-accent/80 transition-colors"
-            >
-              www
-            </button>
-          ) : <div className="w-11" />}
+        {/* Play button */}
+        <div className="flex justify-center">
           <button
             onClick={togglePlay}
             className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
           >
             {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
           </button>
-          <div className="w-11" />
         </div>
 
         {/* Volume */}
