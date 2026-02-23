@@ -86,7 +86,7 @@ export function FullScreenPlayer() {
             onValueChange={([v]) => setVolume(v / 100)}
             max={100}
             step={1}
-            className="flex-1"
+            className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_[data-orientation=horizontal]>:first-child>div]:bg-gradient-to-r [&_[data-orientation=horizontal]>:first-child>div]:from-[hsl(220,90%,60%)] [&_[data-orientation=horizontal]>:first-child>div]:to-[hsl(280,80%,60%)]"
           />
         </div>
 

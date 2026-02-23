@@ -2,6 +2,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useRef, useEffect, useState } from "react";
 import { Play, Pause, Heart, Loader2 } from "lucide-react";
+import { AudioVisualizer } from "@/components/AudioVisualizer";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 export function MiniPlayer() {
@@ -51,6 +52,9 @@ export function MiniPlayer() {
         </div>
         <p className="text-xs text-muted-foreground truncate">{currentStation.country}</p>
       </div>
+      {isPlaying && (
+        <AudioVisualizer size="medium" />
+      )}
       <button
         onClick={e => { e.stopPropagation(); toggleFavorite(currentStation); }}
         className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
