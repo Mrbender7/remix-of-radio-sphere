@@ -14,7 +14,7 @@ async function ensureNotificationChannel() {
     await (ForegroundService as any).createNotificationChannel({
       id: NOTIFICATION_CHANNEL_ID,
       name: 'Radio Playback',
-      importance: 2, // IMPORTANCE_LOW — no sound
+      importance: 3, // DEFAULT — visible lockscreen, silent via sound: undefined
       sound: undefined,
       vibration: false,
     });
@@ -38,9 +38,6 @@ async function startNativeForegroundService(station: RadioStation, isPaused = fa
       serviceType: 2,
       silent: true,
       notificationChannelId: NOTIFICATION_CHANNEL_ID,
-      buttons: [
-        { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
-      ],
     } as any);
     console.log("[RadioSphere] Foreground service started (channel:", NOTIFICATION_CHANNEL_ID, ")");
   } catch (e) {
@@ -57,9 +54,6 @@ async function updateNativeForegroundService(station: RadioStation, isPaused: bo
       body: station.country || 'Radio Sphere',
       smallIcon: 'ic_notification',
       notificationChannelId: NOTIFICATION_CHANNEL_ID,
-      buttons: [
-        { title: isPaused ? '▶ Play' : '⏸ Pause', id: 1 }
-      ],
     });
     console.log("[RadioSphere] Foreground service updated");
   } catch (e) {
@@ -232,28 +226,12 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     navigator.mediaSession.setActionHandler('seekbackward', noop);
     navigator.mediaSession.setActionHandler('seekforward', noop);
 
-    let buttonListener: any = null;
-    (async () => {
-      try {
-        const { ForegroundService } = await import('@capawesome-team/capacitor-android-foreground-service');
-        buttonListener = await (ForegroundService as any).addListener('buttonClicked', (event: any) => {
-          console.log("[RadioSphere] Notification button clicked:", event);
-          if (event.buttonId === 1) {
-            if (isPlayingRef.current) handlePause(); else handlePlay();
-          }
-        });
-      } catch (e) {
-        console.log("[RadioSphere] Button listener not available", e);
-      }
-    })();
-
     return () => {
       navigator.mediaSession.setActionHandler('play', null);
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('stop', null);
       navigator.mediaSession.setActionHandler('seekbackward', null);
       navigator.mediaSession.setActionHandler('seekforward', null);
-      if (buttonListener) buttonListener.remove();
     };
   }, [requestWakeLock, releaseWakeLock, startHeartbeat, stopHeartbeat]);
 
