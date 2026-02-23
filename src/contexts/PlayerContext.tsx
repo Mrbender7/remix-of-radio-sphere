@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { reportStationClick } from "@/services/RadioService";
 
 // --- Notification channel (created once via plugin JS API) ---
-const NOTIFICATION_CHANNEL_ID = 'radio_playback_v2';
+const NOTIFICATION_CHANNEL_ID = 'radio_playback_v3';
 let channelCreated = false;
 
 async function ensureNotificationChannel() {

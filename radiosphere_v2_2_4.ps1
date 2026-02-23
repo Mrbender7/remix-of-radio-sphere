@@ -119,10 +119,26 @@ if ($MainAct) {
   }
 "@
     $Java = Get-Content $MainAct.FullName -Raw
+    $OnCreatePatch = @"
+  @Override
+  public void onCreate(android.os.Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+        android.app.NotificationChannel channel = new android.app.NotificationChannel(
+            "radio_playback_v3", "Radio Playback", android.app.NotificationManager.IMPORTANCE_LOW);
+        channel.setShowBadge(false);
+        channel.setDescription("Notification silencieuse pour la lecture radio");
+        channel.enableVibration(false);
+        nm.createNotificationChannel(channel);
+    }
+  }
+"@
     $Java = $Java -replace '(?s)\s*@Override\s*public void onCreate\(android\.os\.Bundle[^}]*}\s*}\s*}', ''
     $Java = $Java -replace '(?s)\s*@Override\s*public void onResume\(\).*?}\s*}', ''
     if ($Java -notmatch "setMixedContentMode") {
-        $NewJava = $Java -replace 'public class MainActivity extends BridgeActivity \{', "public class MainActivity extends BridgeActivity {`n$JavaPatch"
+        $FullPatch = "$OnCreatePatch`n$JavaPatch"
+        $NewJava = $Java -replace 'public class MainActivity extends BridgeActivity \{', "public class MainActivity extends BridgeActivity {`n$FullPatch"
         [System.IO.File]::WriteAllText($MainAct.FullName, $NewJava, $UTF8NoBOM)
     }
 }
