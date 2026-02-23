@@ -1,7 +1,7 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, ExternalLink } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, ExternalLink, Share2 } from "lucide-react";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { Slider } from "@/components/ui/slider";
 import stationPlaceholder from "@/assets/station-placeholder.png";
@@ -15,6 +15,21 @@ export function FullScreenPlayer() {
 
   const fav = isFavorite(currentStation.id);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: currentStation.name,
+      text: `${t("player.nowPlaying")}: ${currentStation.name}`,
+      ...(currentStation.homepage ? { url: currentStation.homepage } : {}),
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      }
+    } catch {
+      // User cancelled or share failed silently
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in slide-in-from-bottom duration-300">
       {/* Header */}
@@ -23,7 +38,9 @@ export function FullScreenPlayer() {
           <ChevronDown className="w-6 h-6 text-muted-foreground" />
         </button>
         <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("player.nowPlaying")}</span>
-        <div className="w-10" />
+        <button onClick={handleShare} className="p-2 -mr-2">
+          <Share2 className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
       {/* Artwork */}
