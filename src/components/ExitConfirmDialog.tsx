@@ -9,14 +9,12 @@ interface ExitConfirmDialogProps {
 export function ExitConfirmDialog({ open, onOpenChange }: ExitConfirmDialogProps) {
   const { t } = useTranslation();
 
-  const handleExit = () => {
-    // Attempt to close the app or navigate away
-    if (window.history.length <= 1) {
-      // No history, try to close
+  const handleExit = async () => {
+    try {
+      const { App } = await import('@capacitor/app');
+      await App.exitApp();
+    } catch {
       window.close();
-    } else {
-      // Go back
-      window.history.back();
     }
   };
 

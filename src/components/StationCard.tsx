@@ -1,6 +1,7 @@
 import { RadioStation } from "@/types/radio";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { Heart, Play } from "lucide-react";
+import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { cn } from "@/lib/utils";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
@@ -45,11 +46,7 @@ export function StationCard({ station, isFavorite, onToggleFavorite, compact }: 
           <p className="text-xs text-muted-foreground truncate">{station.country}{station.tags[0] ? ` • ${station.tags[0]}` : ''}</p>
         </div>
         {isActive && isPlaying && (
-          <div className="flex gap-0.5 items-end h-4">
-            <span className="w-1 rounded-full animate-pulse bg-[hsl(225,90%,58%)]" style={{ height: '60%' }} />
-            <span className="w-1 rounded-full animate-pulse bg-[hsl(225,90%,58%)]" style={{ height: '100%', animationDelay: '0.15s' }} />
-            <span className="w-1 rounded-full animate-pulse bg-[hsl(225,90%,58%)]" style={{ height: '40%', animationDelay: '0.3s' }} />
-          </div>
+          <AudioVisualizer size="small" />
         )}
         <button
           onClick={e => { e.stopPropagation(); onToggleFavorite(station); }}
@@ -71,11 +68,7 @@ export function StationCard({ station, isFavorite, onToggleFavorite, compact }: 
         {isActive && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
             {isPlaying ? (
-              <div className="flex gap-0.5 items-end h-6">
-                <span className="w-1 rounded-full animate-pulse bg-white" style={{ height: '60%' }} />
-                <span className="w-1 rounded-full animate-pulse bg-white" style={{ height: '100%', animationDelay: '0.15s' }} />
-                <span className="w-1 rounded-full animate-pulse bg-white" style={{ height: '40%', animationDelay: '0.3s' }} />
-              </div>
+              <AudioVisualizer size="small" />
             ) : (
               <Play className="w-8 h-8 text-white" />
             )}
