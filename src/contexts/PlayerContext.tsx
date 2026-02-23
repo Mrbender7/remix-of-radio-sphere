@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { reportStationClick } from "@/services/RadioService";
 
 // --- Notification channel (created once via plugin JS API) ---
-const NOTIFICATION_CHANNEL_ID = 'radio_silent';
+const NOTIFICATION_CHANNEL_ID = 'radio_playback_v2';
 let channelCreated = false;
 
 async function ensureNotificationChannel() {
@@ -14,7 +14,8 @@ async function ensureNotificationChannel() {
     await (ForegroundService as any).createNotificationChannel({
       id: NOTIFICATION_CHANNEL_ID,
       name: 'Radio Playback',
-      importance: 3, // DEFAULT — visible lockscreen, silent via sound: undefined
+      description: 'Notification silencieuse pour la lecture radio',
+      importance: 2, // LOW — no sound, no vibration, visible in tray & lockscreen
       sound: undefined,
       vibration: false,
     });
