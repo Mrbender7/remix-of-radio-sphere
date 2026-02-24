@@ -1,30 +1,41 @@
 
 
-# Fix Script v2.2.5 — Fichiers natifs embarques dans le script
+# Fix Script v2.2.5 — Erreur de chemin .NET
 
-## Probleme
+## Probleme identifie
 
-Le script clone le repo GitHub, mais les fichiers `android-auto/RadioBrowserService.kt`, `android-auto/RadioAutoPlugin.kt` et `android-auto/res/xml/automotive_app_desc.xml` n'existent pas dans le repo (ils ont ete crees uniquement dans Lovable). Le script echoue avec des erreurs "Impossible de trouver le chemin d'acces".
+Le bug est subtil : quand le script fait `cd radiosphere`, cela change le repertoire de travail **PowerShell** mais PAS le repertoire .NET (`[System.Environment]::CurrentDirectory`). Or, `[System.IO.File]::WriteAllText()` utilise le repertoire .NET, donc il resout les chemins relatifs par rapport a `E:\Projets\` au lieu de `E:\Projets\radiosphere\`.
+
+C'est pour ca que l'erreur dit :
+```
+E:\Projets\android\app\src\main\java\com\radiosphere\app\RadioBrowserService.kt
+```
+au lieu de :
+```
+E:\Projets\radiosphere\android\app\src\main\java\com\radiosphere\app\RadioBrowserService.kt
+```
 
 ## Solution
 
-Embarquer le contenu complet des 3 fichiers natifs directement dans le script PowerShell sous forme de here-strings (`@"..."@`), au lieu de les lire depuis des fichiers externes. Le script generera les fichiers directement dans le dossier Android correct.
+Ajouter une seule ligne apres le `cd $ProjectFolder` pour synchroniser le repertoire .NET :
 
-## Modifications
+```powershell
+cd $ProjectFolder
+[System.Environment]::CurrentDirectory = (Get-Location).Path
+```
 
-### Fichier modifie : `radiosphere_v2_2_5.ps1`
+Cette ligne unique corrige TOUTES les operations `[System.IO.File]::WriteAllText()` du script d'un coup.
 
-**Etape 3b** — `automotive_app_desc.xml` : Remplacer la logique de copie par une generation directe du fichier XML via here-string (le fallback existant fait deja ca, on le rend principal).
+## Fichier modifie
 
-**Etape 6** — Fichiers Kotlin : Remplacer les `Get-Content "android-auto/..."` par des here-strings contenant le code complet de :
-- `RadioBrowserService.kt` (~405 lignes) — service MediaBrowserServiceCompat avec ExoPlayer, browse tree, recherche vocale
-- `RadioAutoPlugin.kt` (~69 lignes) — plugin Capacitor pour SharedPreferences
-
-Le remplacement du package (`app.lovable.radiosphere` -> package detecte) sera applique sur les here-strings au lieu des fichiers lus.
+| Fichier | Modification |
+|---------|-------------|
+| `radiosphere_v2_2_5.ps1` | Ajout d'une ligne apres `cd $ProjectFolder` (ligne 11) pour synchroniser le repertoire .NET avec le repertoire PowerShell |
 
 ## Impact
 
-- Aucun fichier web modifie
-- Le script devient 100% autonome, sans dependance aux fichiers du repo
-- Le dossier `android-auto/` dans Lovable reste comme reference/documentation
+- Correction d'une seule ligne
+- Aucun autre changement necessaire
+- Tous les `WriteAllText` utilisant des chemins relatifs fonctionneront correctement
+- Pas besoin d'uploader les fichiers sur GitHub (mais on peut garder cette option pour plus tard si souhaite)
 
