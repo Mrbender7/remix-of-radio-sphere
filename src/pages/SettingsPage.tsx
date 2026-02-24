@@ -3,9 +3,11 @@ import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown, Moon, TimerOff } from "lucide-react";
+import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown, Moon, TimerOff, Lock, Unlock, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 function CollapsibleSection({ icon: Icon, title, badge, children }: { icon: React.ElementType; title: string; badge?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -58,9 +60,10 @@ function CollapsibleDisclaimer({ icon: Icon, iconSize, title, desc }: { icon: Re
 
 export function SettingsPage() {
   const { language, setLanguage, t } = useTranslation();
-  const { isPremium, togglePremium } = usePremium();
+  const { isPremium, unlockWithPassword, lockPremium } = usePremium();
   const { isActive, formattedTime, startTimer, cancelTimer } = useSleepTimer();
-
+  const [premiumCode, setPremiumCode] = useState("");
+  const [codeError, setCodeError] = useState(false);
   const premiumFeatures = [
     { icon: Zap, title: t("premium.noAds"), desc: t("premium.noAdsDesc") },
     { icon: Headphones, title: t("premium.hd"), desc: t("premium.hdDesc") },
@@ -111,16 +114,17 @@ export function SettingsPage() {
         }
       >
         <div className="relative">
-          <div className="pointer-events-none opacity-50">
+          <div className={cn(!isPremium && "pointer-events-none opacity-50")}>
             <p className="text-xs text-muted-foreground mb-3">{t("sleepTimer.desc")}</p>
 
             <div className="grid grid-cols-3 gap-2 mb-3">
               {SLEEP_TIMER_OPTIONS.map(opt => (
                 <button
                   key={opt.minutes}
+                  onClick={(e) => { e.stopPropagation(); startTimer(opt.minutes); }}
                   className={cn(
                     "py-2.5 rounded-lg text-xs font-semibold transition-all",
-                    "bg-secondary text-muted-foreground"
+                    "bg-secondary text-muted-foreground hover:bg-primary hover:text-primary-foreground"
                   )}
                 >
                   {language === "fr" ? opt.labelFr : opt.labelEn}
@@ -130,6 +134,7 @@ export function SettingsPage() {
 
             {isActive && (
               <Button
+                onClick={(e) => { e.stopPropagation(); cancelTimer(); }}
                 variant="outline"
                 size="sm"
                 className="w-full rounded-lg border-destructive/30 text-destructive text-xs gap-1.5"
@@ -139,11 +144,13 @@ export function SettingsPage() {
               </Button>
             )}
           </div>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <span className="text-2xl font-black uppercase tracking-widest opacity-25 -rotate-12 border-4 border-primary px-5 py-3 rounded-xl text-primary select-none">
-              {t("premium.comingSoon")}
-            </span>
-          </div>
+          {!isPremium && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <span className="text-2xl font-black uppercase tracking-widest opacity-25 -rotate-12 border-4 border-primary px-5 py-3 rounded-xl text-primary select-none">
+                {t("premium.comingSoon")}
+              </span>
+            </div>
+          )}
         </div>
       </CollapsibleSection>
 
@@ -152,15 +159,15 @@ export function SettingsPage() {
         icon={Crown}
         title={t("premium.title")}
         badge={
-          isPremium && (
+          isPremium ? (
             <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-400 rounded-full px-2.5 py-0.5 text-[10px] font-semibold">
               <CheckCircle className="w-3 h-3" /> {t("premium.active")}
             </span>
-          )
+          ) : null
         }
       >
         <div className="relative">
-          <div className="pointer-events-none opacity-50">
+          <div className={cn(!isPremium && "pointer-events-none opacity-50")}>
             <p className="text-xs text-muted-foreground mb-3">{t("premium.subtitle")}</p>
 
             <div className="space-y-2 mb-3">
@@ -174,27 +181,80 @@ export function SettingsPage() {
                 </div>
               ))}
             </div>
-
-            {isPremium ? (
-              <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">
-                {t("premium.cancel")}
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Button onClick={togglePremium} size="sm" className="w-full rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30">
-                  {t("premium.monthly")}
-                </Button>
-              </div>
-            )}
             <p className="text-[9px] text-muted-foreground text-center mt-2">{t("premium.disclaimer")}</p>
           </div>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <span className="text-2xl font-black uppercase tracking-widest opacity-25 -rotate-12 border-4 border-primary px-5 py-3 rounded-xl text-primary select-none">
-              {t("premium.comingSoon")}
-            </span>
-          </div>
+          {!isPremium && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <span className="text-2xl font-black uppercase tracking-widest opacity-25 -rotate-12 border-4 border-primary px-5 py-3 rounded-xl text-primary select-none">
+                {t("premium.comingSoon")}
+              </span>
+            </div>
+          )}
         </div>
       </CollapsibleSection>
+
+      {/* Premium unlock/lock */}
+      <div className="rounded-xl bg-accent p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <KeyRound className="w-4 h-4 text-amber-400" />
+          <h3 className="text-sm font-semibold text-foreground">
+            {isPremium ? t("premium.lock") : t("premium.unlock")}
+          </h3>
+        </div>
+        {isPremium ? (
+          <Button
+            onClick={() => lockPremium()}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg border-destructive/30 text-destructive text-xs gap-1.5"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            {t("premium.lock")}
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              type="password"
+              placeholder={t("premium.passwordPlaceholder")}
+              value={premiumCode}
+              onChange={(e) => { setPremiumCode(e.target.value); setCodeError(false); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const ok = unlockWithPassword(premiumCode);
+                  if (ok) {
+                    setPremiumCode("");
+                    toast({ title: "🎉 " + t("premium.unlocked") });
+                  } else {
+                    setCodeError(true);
+                  }
+                }
+              }}
+              className={cn(
+                "flex-1 h-9 text-xs bg-secondary border-border",
+                codeError && "border-destructive"
+              )}
+            />
+            <Button
+              onClick={() => {
+                const ok = unlockWithPassword(premiumCode);
+                if (ok) {
+                  setPremiumCode("");
+                  toast({ title: "🎉 " + t("premium.unlocked") });
+                } else {
+                  setCodeError(true);
+                }
+              }}
+              size="sm"
+              className="h-9 px-3 text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
+        {codeError && (
+          <p className="text-[10px] text-destructive mt-1.5">{t("premium.wrongPassword")}</p>
+        )}
+      </div>
 
       {/* Collapsible disclaimers */}
       {[

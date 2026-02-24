@@ -57,6 +57,11 @@ const translations: Record<Language, Record<string, string>> = {
     "premium.cancel": "Restaurer l'achat",
     "premium.disclaimer": "Achat unique, accès à vie. Pas d'abonnement.",
     "premium.comingSoon": "Arrive bientôt",
+    "premium.passwordPlaceholder": "Entrez le code d'accès",
+    "premium.unlock": "Déverrouiller",
+    "premium.lock": "Verrouiller Premium",
+    "premium.wrongPassword": "Code incorrect",
+    "premium.unlocked": "Premium déverrouillé !",
 
     // Sleep Timer
     "sleepTimer.title": "Minuterie de sommeil",
@@ -151,6 +156,11 @@ const translations: Record<Language, Record<string, string>> = {
     "premium.cancel": "Restore purchase",
     "premium.disclaimer": "One-time purchase, lifetime access. No subscription.",
     "premium.comingSoon": "Coming soon",
+    "premium.passwordPlaceholder": "Enter access code",
+    "premium.unlock": "Unlock",
+    "premium.lock": "Lock Premium",
+    "premium.wrongPassword": "Wrong code",
+    "premium.unlocked": "Premium unlocked!",
 
     // Sleep Timer
     "sleepTimer.title": "Sleep Timer",
