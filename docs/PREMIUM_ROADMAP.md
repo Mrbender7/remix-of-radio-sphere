@@ -1,0 +1,61 @@
+# RadioSphere — Premium Roadmap
+
+## Modèle de tarification
+
+### Achat unique (One-Shot) — **Premium Lifetime**
+- **Prix** : 9,99€ (achat unique, accès à vie)
+- Débloque toutes les fonctionnalités premium actuelles et futures (basées sur Radio Browser)
+- Pas d'abonnement, pas de renouvellement
+
+### Abonnement (futur, si changement d'API)
+- Envisagé uniquement si migration vers une API radio premium (contenu exclusif, qualité supérieure)
+- Formule mensuelle / annuelle à définir
+- Justifié par les coûts récurrents de l'API premium
+
+---
+
+## Fonctionnalités Premium
+
+### 1. 🚗 Android Auto
+- **Statut** : En développement
+- **Description** : Intégration complète Android Auto avec browse tree (Favoris, Récents, Genres), recherche vocale, lecture native ExoPlayer, artwork plein écran, navigation next/previous dans les favoris
+- **Fichiers concernés** : `src/plugins/RadioAutoPlugin.ts`, `android-auto/*`, `src/contexts/FavoritesContext.tsx`, `src/contexts/PlayerContext.tsx`
+
+### 2. 💤 Sleep Timer
+- **Statut** : En développement
+- **Description** : Minuterie d'arrêt automatique avec options prédéfinies (15 min, 30 min, 45 min, 1h, 1h30, 2h). Affichage du décompte en temps réel dans les réglages. Pause automatique de la lecture à expiration
+- **Fichiers concernés** : `src/contexts/SleepTimerContext.tsx`, `src/pages/SettingsPage.tsx`
+
+---
+
+## Fonctionnalités Premium futures (idées)
+
+### 3. 🎨 Thèmes personnalisés
+- Choix de thèmes de couleurs (dark, amoled, blue, warm, etc.)
+- Thème personnalisable par l'utilisateur
+
+### 4. 📻 Qualité audio HD
+- Priorisation des flux haute qualité (320 kbps)
+- Indicateur de qualité dans le player
+
+### 5. 🔇 Sans publicité
+- Suppression de toute publicité future dans l'app
+
+### 6. 📊 Statistiques d'écoute
+- Temps d'écoute par jour/semaine/mois
+- Stations les plus écoutées
+- Genres préférés
+
+### 7. 🌐 API Premium (nécessite abonnement)
+- Accès à des contenus exclusifs via une API radio premium
+- Stations en exclusivité, podcasts, replays
+- **Ce cas justifierait le passage à un modèle d'abonnement**
+
+---
+
+## Notes techniques
+
+- Le flag premium est géré via `src/contexts/PremiumContext.tsx`
+- Actuellement simulé (toggle local), à remplacer par un vrai système de paiement (Stripe one-shot)
+- La section Premium dans les réglages est grisée avec un filigrane "Arrive bientôt"
+- Toutes les fonctionnalités premium doivent vérifier `isPremium` avant activation

@@ -51,12 +51,20 @@ const translations: Record<Language, Record<string, string>> = {
     "premium.hdDesc": "Audio haute qualité jusqu'à 320 kbps",
     "premium.exclusive": "Accès exclusif",
     "premium.exclusiveDesc": "Stations premium et contenus exclusifs",
-    "premium.monthly": "Mensuel — 4,99€/mois",
-    "premium.yearly": "Annuel — 49,99€/an",
-    "premium.yearlySave": "-17%",
-    "premium.cancel": "Annuler l'abonnement",
-    "premium.disclaimer": "Annulez à tout moment. Les prix peuvent varier selon votre région.",
+    "premium.monthly": "Achat unique — 9,99€",
+    "premium.yearly": "",
+    "premium.yearlySave": "",
+    "premium.cancel": "Restaurer l'achat",
+    "premium.disclaimer": "Achat unique, accès à vie. Pas d'abonnement.",
     "premium.comingSoon": "Arrive bientôt",
+
+    // Sleep Timer
+    "sleepTimer.title": "Minuterie de sommeil",
+    "sleepTimer.desc": "Arrête automatiquement la lecture après un délai",
+    "sleepTimer.off": "Désactivée",
+    "sleepTimer.active": "Actif",
+    "sleepTimer.remaining": "Restant",
+    "sleepTimer.cancel": "Annuler la minuterie",
 
     // Player
     "player.nowPlaying": "En cours de lecture",
@@ -137,12 +145,20 @@ const translations: Record<Language, Record<string, string>> = {
     "premium.hdDesc": "High quality audio up to 320 kbps",
     "premium.exclusive": "Exclusive access",
     "premium.exclusiveDesc": "Premium stations and exclusive content",
-    "premium.monthly": "Monthly — €4.99/mo",
-    "premium.yearly": "Yearly — €49.99/yr",
-    "premium.yearlySave": "-17%",
-    "premium.cancel": "Cancel subscription",
-    "premium.disclaimer": "Cancel anytime. Prices may vary by region.",
+    "premium.monthly": "One-time purchase — €9.99",
+    "premium.yearly": "",
+    "premium.yearlySave": "",
+    "premium.cancel": "Restore purchase",
+    "premium.disclaimer": "One-time purchase, lifetime access. No subscription.",
     "premium.comingSoon": "Coming soon",
+
+    // Sleep Timer
+    "sleepTimer.title": "Sleep Timer",
+    "sleepTimer.desc": "Automatically stops playback after a set time",
+    "sleepTimer.off": "Off",
+    "sleepTimer.active": "Active",
+    "sleepTimer.remaining": "Remaining",
+    "sleepTimer.cancel": "Cancel timer",
 
     // Player
     "player.nowPlaying": "Now playing",

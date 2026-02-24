@@ -3,6 +3,7 @@ import { PlayerProvider, usePlayer } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
 import { FavoritesProvider, useFavoritesContext } from "@/contexts/FavoritesContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { FullScreenPlayer } from "@/components/FullScreenPlayer";
@@ -44,20 +45,22 @@ function AppContentInner() {
   });
 
   return (
-    <PremiumProvider>
-      <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
-          {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
-          {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
-          {activeTab === "settings" && <SettingsPage />}
-        </div>
-        <MiniPlayer />
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-        <FullScreenPlayer />
-        <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
-      </div>
-    </PremiumProvider>
+      <PremiumProvider>
+        <SleepTimerProvider>
+          <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
+              {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
+              {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
+              {activeTab === "settings" && <SettingsPage />}
+            </div>
+            <MiniPlayer />
+            <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+            <FullScreenPlayer />
+            <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
+          </div>
+        </SleepTimerProvider>
+      </PremiumProvider>
   );
 }
 

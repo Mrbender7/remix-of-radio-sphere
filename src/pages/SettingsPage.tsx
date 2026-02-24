@@ -1,8 +1,9 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
+import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown } from "lucide-react";
+import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown, Moon, TimerOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
@@ -58,6 +59,7 @@ function CollapsibleDisclaimer({ icon: Icon, iconSize, title, desc }: { icon: Re
 export function SettingsPage() {
   const { language, setLanguage, t } = useTranslation();
   const { isPremium, togglePremium } = usePremium();
+  const { isActive, formattedTime, startTimer, cancelTimer } = useSleepTimer();
 
   const premiumFeatures = [
     { icon: Zap, title: t("premium.noAds"), desc: t("premium.noAdsDesc") },
@@ -96,6 +98,55 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {/* Sleep Timer */}
+      <CollapsibleSection
+        icon={Moon}
+        title={t("sleepTimer.title")}
+        badge={
+          isActive ? (
+            <span className="inline-flex items-center gap-1 bg-primary/20 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold font-mono">
+              ⏱ {formattedTime}
+            </span>
+          ) : null
+        }
+      >
+        <div className="relative">
+          <div className="pointer-events-none opacity-50">
+            <p className="text-xs text-muted-foreground mb-3">{t("sleepTimer.desc")}</p>
+
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {SLEEP_TIMER_OPTIONS.map(opt => (
+                <button
+                  key={opt.minutes}
+                  className={cn(
+                    "py-2.5 rounded-lg text-xs font-semibold transition-all",
+                    "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {language === "fr" ? opt.labelFr : opt.labelEn}
+                </button>
+              ))}
+            </div>
+
+            {isActive && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full rounded-lg border-destructive/30 text-destructive text-xs gap-1.5"
+              >
+                <TimerOff className="w-3.5 h-3.5" />
+                {t("sleepTimer.cancel")}
+              </Button>
+            )}
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <span className="text-2xl font-black uppercase tracking-widest opacity-25 -rotate-12 border-4 border-primary px-5 py-3 rounded-xl text-primary select-none">
+              {t("premium.comingSoon")}
+            </span>
+          </div>
+        </div>
+      </CollapsibleSection>
+
       {/* Premium section - collapsible */}
       <CollapsibleSection
         icon={Crown}
@@ -132,9 +183,6 @@ export function SettingsPage() {
               <div className="space-y-2">
                 <Button onClick={togglePremium} size="sm" className="w-full rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 shadow-lg shadow-amber-500/30">
                   {t("premium.monthly")}
-                </Button>
-                <Button onClick={togglePremium} variant="outline" size="sm" className="w-full rounded-lg border-amber-500/30 text-foreground text-xs">
-                  {t("premium.yearly")} <span className="ml-1.5 text-[10px] text-primary">{t("premium.yearlySave")}</span>
                 </Button>
               </div>
             )}
