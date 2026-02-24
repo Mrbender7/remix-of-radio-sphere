@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useCallback, useEff
 import { RadioStation } from "@/types/radio";
 import { toast } from "@/hooks/use-toast";
 import { reportStationClick } from "@/services/RadioService";
+import { notifyNativePlaybackState } from "@/plugins/RadioAutoPlugin";
 
 // --- Notification channel (created once via plugin JS API) ---
 const NOTIFICATION_CHANNEL_ID = 'radio_playback_v3';
@@ -341,6 +342,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
           .then(() => {
             if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
             setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+            notifyNativePlaybackState(station, true);
             startSilentLoop();
             startHeartbeat();
             if (foregroundServiceRunning) {
@@ -422,6 +424,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     const newPlaying = !state.isPlaying;
     setState(s => ({ ...s, isPlaying: newPlaying }));
     updateMediaSession(state.currentStation, newPlaying);
+    notifyNativePlaybackState(state.currentStation, newPlaying);
   }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat]);
 
   const setVolume = useCallback((v: number) => {

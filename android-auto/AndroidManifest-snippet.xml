@@ -1,0 +1,33 @@
+<!--
+  ══════════════════════════════════════════════════════════════════════
+  RadioSphere — Android Auto Manifest Additions
+  ══════════════════════════════════════════════════════════════════════
+
+  Add these elements inside the <application> tag of your AndroidManifest.xml
+  (android/app/src/main/AndroidManifest.xml)
+-->
+
+<!-- 1. Android Auto metadata — tells Android this is a media app -->
+<meta-data
+    android:name="com.google.android.gms.car.application"
+    android:resource="@xml/automotive_app_desc" />
+
+<!-- 2. MediaBrowserService — the entry point for Android Auto -->
+<service
+    android:name=".RadioBrowserService"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.media.browse.MediaBrowserService" />
+    </intent-filter>
+</service>
+
+<!--
+  ══════════════════════════════════════════════════════════════════════
+  Also add the Capacitor plugin registration in your MainActivity.kt:
+
+  import app.lovable.radiosphere.RadioAutoPlugin
+
+  // Inside the init block or onCreate:
+  registerPlugin(RadioAutoPlugin::class.java)
+  ══════════════════════════════════════════════════════════════════════
+-->
