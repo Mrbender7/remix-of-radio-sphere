@@ -45,6 +45,9 @@ async function startNativeForegroundService(station: RadioStation, isPaused = fa
       serviceType: 2,
       silent: true,
       notificationChannelId: NOTIFICATION_CHANNEL_ID,
+      buttons: [
+        { title: isPaused ? '▶ Play' : '⏸ Pause', id: isPaused ? 1 : 2 }
+      ],
     } as any);
     console.log("[RadioSphere] Foreground service started (channel:", NOTIFICATION_CHANNEL_ID, ")");
   } catch (e) {
@@ -61,6 +64,9 @@ async function updateNativeForegroundService(station: RadioStation, isPaused: bo
       body: getStationSubtitle(station),
       smallIcon: 'ic_notification',
       notificationChannelId: NOTIFICATION_CHANNEL_ID,
+      buttons: [
+        { title: isPaused ? '▶ Play' : '⏸ Pause', id: isPaused ? 1 : 2 }
+      ],
     });
     console.log("[RadioSphere] Foreground service updated");
   } catch (e) {
@@ -240,12 +246,25 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     navigator.mediaSession.setActionHandler('seekbackward', noop);
     navigator.mediaSession.setActionHandler('seekforward', noop);
 
+    // Listen for notification button clicks (Android foreground service)
+    let buttonListenerRemove: (() => void) | null = null;
+    import('@capawesome-team/capacitor-android-foreground-service').then(({ ForegroundService }) => {
+      ForegroundService.addListener('buttonClicked', (event: any) => {
+        const btnId = event?.buttonId ?? event?.id;
+        if (btnId === 1) handlePlay();   // Play button
+        if (btnId === 2) handlePause();  // Pause button
+      }).then(listener => {
+        buttonListenerRemove = () => listener.remove();
+      });
+    }).catch(() => {});
+
     return () => {
       navigator.mediaSession.setActionHandler('play', null);
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('stop', null);
       navigator.mediaSession.setActionHandler('seekbackward', null);
       navigator.mediaSession.setActionHandler('seekforward', null);
+      if (buttonListenerRemove) buttonListenerRemove();
     };
   }, [requestWakeLock, releaseWakeLock, startHeartbeat, stopHeartbeat]);
 

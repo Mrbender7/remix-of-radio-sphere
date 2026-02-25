@@ -1,4 +1,265 @@
-package com.radiosphere.app;
+# radiosphere_v2_2_6.ps1
+# Android Auto Integration + AudioFocus + Notification Buttons — Full automated setup (100% autonome)
+$RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
+$ProjectFolder = "remix-of-radio-sphere"
+$UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
+
+Write-Host ">>> Lancement du Master Fix v2.2.6 - AudioFocus + Notification Buttons" -ForegroundColor Cyan
+
+if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
+git clone $RepoUrl
+cd $ProjectFolder
+[System.Environment]::CurrentDirectory = (Get-Location).Path
+
+# ═══════════════════════════════════════════════════════════════════
+# 1. Config Capacitor
+# ═══════════════════════════════════════════════════════════════════
+Write-Host ">>> Configuration Capacitor..." -ForegroundColor Yellow
+$ConfigJSON = @"
+{
+  "appId": "com.radiosphere.app",
+  "appName": "Radio Sphere",
+  "webDir": "dist",
+  "server": { "androidScheme": "https", "allowNavigation": ["*"] }
+}
+"@
+$ConfigJSON | Out-File -FilePath "capacitor.config.json" -Encoding utf8
+
+# ═══════════════════════════════════════════════════════════════════
+# 2. Installation et Build
+# ═══════════════════════════════════════════════════════════════════
+Write-Host ">>> Installation des dependances et build..." -ForegroundColor Yellow
+npm install --legacy-peer-deps
+npm install @capacitor/cli @capawesome-team/capacitor-android-foreground-service @capacitor/app
+npm run build
+npm install @capacitor/android
+npx cap add android
+
+# ═══════════════════════════════════════════════════════════════════
+# 3. Generation des icones de notification
+# ═══════════════════════════════════════════════════════════════════
+Write-Host ">>> Generation des icones de notification (fallback)..." -ForegroundColor Yellow
+
+$sizes = @{ "mdpi"=24; "hdpi"=36; "xhdpi"=48; "xxhdpi"=72; "xxxhdpi"=96 }
+foreach ($density in $sizes.Keys) {
+    $dir = "android/app/src/main/res/drawable-$density"
+    if (!(Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force }
+    $src = "android/app/src/main/res/mipmap-$density/ic_launcher_foreground.png"
+    if (!(Test-Path $src)) {
+        $src = "android/app/src/main/res/mipmap-$density/ic_launcher.png"
+    }
+    if (Test-Path $src) {
+        Copy-Item $src "$dir/ic_notification.png" -Force
+        Write-Host "    Copie $density -> ic_notification.png" -ForegroundColor DarkGray
+    } else {
+        Write-Host "    ATTENTION: Pas de source pour $density" -ForegroundColor Red
+    }
+}
+
+$DrawablePath = "android/app/src/main/res/drawable"
+if (!(Test-Path $DrawablePath)) { New-Item -ItemType Directory -Path $DrawablePath -Force }
+$FallbackSrc = "android/app/src/main/res/mipmap-mdpi/ic_launcher.png"
+if (Test-Path $FallbackSrc) {
+    Copy-Item $FallbackSrc "$DrawablePath/ic_notification.png" -Force
+    Write-Host "    Fallback drawable/ic_notification.png OK" -ForegroundColor DarkGray
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# 3b. Generation automotive_app_desc.xml (embarque dans le script)
+# ═══════════════════════════════════════════════════════════════════
+Write-Host ">>> Generation automotive_app_desc.xml..." -ForegroundColor Yellow
+$XmlDir = "android/app/src/main/res/xml"
+if (!(Test-Path $XmlDir)) { New-Item -ItemType Directory -Path $XmlDir -Force | Out-Null }
+
+$AutoDescContent = @'
+<?xml version="1.0" encoding="utf-8"?>
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>
+'@
+[System.IO.File]::WriteAllText((Join-Path (Get-Location).Path "$XmlDir/automotive_app_desc.xml"), $AutoDescContent, $UTF8NoBOM)
+
+if (Test-Path "$XmlDir/automotive_app_desc.xml") {
+    Write-Host "    automotive_app_desc.xml genere avec succes" -ForegroundColor Green
+} else {
+    Write-Host "    ERREUR: automotive_app_desc.xml absent apres generation !" -ForegroundColor Red
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# 4. MANIFEST — Permissions + Services + Android Auto
+# ═══════════════════════════════════════════════════════════════════
+$ManifestPath = "android/app/src/main/AndroidManifest.xml"
+if (Test-Path $ManifestPath) {
+    Write-Host ">>> Manifest: Injection complete (Permissions, Services, Android Auto)..." -ForegroundColor Yellow
+    $ManifestContent = Get-Content $ManifestPath -Raw
+    
+    # Permissions — only add if not already present
+    $PermsList = @(
+        "android.permission.INTERNET",
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.POST_NOTIFICATIONS"
+    )
+    $PermsToAdd = ""
+    foreach ($perm in $PermsList) {
+        if ($ManifestContent -notmatch [regex]::Escape($perm)) {
+            $PermsToAdd += "    <uses-permission android:name=`"$perm`" />`n"
+            Write-Host "    + Permission: $perm" -ForegroundColor DarkGray
+        } else {
+            Write-Host "    = Permission deja presente: $perm" -ForegroundColor DarkGray
+        }
+    }
+    if ($PermsToAdd.Length -gt 0) {
+        $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n$PermsToAdd"
+    }
+    
+    if ($ManifestContent -notmatch 'usesCleartextTraffic') {
+        $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
+    }
+    
+    # Foreground service + Android Auto MediaBrowserService
+    $ServiceDecl = @"
+    <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
+    <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="mediaPlayback" />
+
+    <!-- Android Auto -->
+    <meta-data
+        android:name="com.google.android.gms.car.application"
+        android:resource="@xml/automotive_app_desc" />
+    <service
+        android:name=".RadioBrowserService"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent-filter>
+    </service>
+"@
+    $ManifestContent = $ManifestContent -replace '(<application[^>]*>)', "`$1`n$ServiceDecl"
+    
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $ManifestPath), $ManifestContent, $UTF8NoBOM)
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# 5. Gradle — ExoPlayer + Media Compat (NO Kotlin needed)
+# ═══════════════════════════════════════════════════════════════════
+$GradleAppPath = "android/app/build.gradle"
+if (Test-Path $GradleAppPath) {
+    Write-Host ">>> Gradle: ExoPlayer + Media Compat (Java only)..." -ForegroundColor Yellow
+    $GradleContent = Get-Content $GradleAppPath -Raw
+    $DepsBlock = @"
+dependencies {
+    // ExoPlayer for Android Auto native audio playback
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
+    implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
+    // Media Compat for MediaBrowserService & MediaSession
+    implementation 'androidx.media:media:1.7.0'
+"@
+    $GradleContent = $GradleContent -replace 'dependencies \{', $DepsBlock
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $GradleAppPath), $GradleContent, $UTF8NoBOM)
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# 6. Generation des fichiers natifs Android Auto (JAVA — embarques)
+# ═══════════════════════════════════════════════════════════════════
+Write-Host ">>> Generation des fichiers natifs Android Auto (Java)..." -ForegroundColor Yellow
+
+$JavaSrcBase = "android/app/src/main/java"
+$PackageDir = "$JavaSrcBase/com/radiosphere/app"
+if (!(Test-Path $PackageDir)) {
+    $MainActFile = Get-ChildItem -Path $JavaSrcBase -Filter "MainActivity.*" -Recurse | Select-Object -First 1
+    if ($MainActFile) {
+        $PackageDir = $MainActFile.DirectoryName
+        Write-Host "    Package directory found: $PackageDir" -ForegroundColor DarkGray
+    } else {
+        $PackageDir = "$JavaSrcBase/com/radiosphere/app"
+        New-Item -ItemType Directory -Path $PackageDir -Force | Out-Null
+    }
+}
+
+$ActualPackage = "com.radiosphere.app"
+$MainActSearch = Get-ChildItem -Path $JavaSrcBase -Filter "MainActivity.*" -Recurse | Select-Object -First 1
+if ($MainActSearch) {
+    $MainContent = Get-Content $MainActSearch.FullName -Raw
+    if ($MainContent -match 'package\s+([\w.]+)') {
+        $ActualPackage = $Matches[1]
+        Write-Host "    Package detecte: $ActualPackage" -ForegroundColor DarkGray
+    }
+}
+
+# --- RadioAutoPlugin.java (embarque, single-quoted here-string) ---
+Write-Host "    Generation RadioAutoPlugin.java..." -ForegroundColor DarkGray
+$RadioAutoPluginJava = @'
+package __PACKAGE__;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+@CapacitorPlugin(name = "RadioAutoPlugin")
+public class RadioAutoPlugin extends Plugin {
+
+    private static final String PREFS_NAME = "RadioAutoPrefs";
+    private static final String KEY_FAVORITES = "favorites_json";
+    private static final String KEY_RECENTS = "recents_json";
+    private static final String KEY_PLAYBACK_STATE = "playback_state_json";
+
+    private SharedPreferences getPrefs() {
+        return getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    @PluginMethod
+    public void syncFavorites(PluginCall call) {
+        String stations = call.getString("stations", "[]");
+        getPrefs().edit().putString(KEY_FAVORITES, stations).apply();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void syncRecents(PluginCall call) {
+        String stations = call.getString("stations", "[]");
+        getPrefs().edit().putString(KEY_RECENTS, stations).apply();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void notifyPlaybackState(PluginCall call) {
+        String stationId = call.getString("stationId", "");
+        String name = call.getString("name", "");
+        String logo = call.getString("logo", "");
+        String streamUrl = call.getString("streamUrl", "");
+        Boolean isPlaying = call.getBoolean("isPlaying", false);
+        String tags = call.getString("tags", "");
+        String country = call.getString("country", "");
+
+        String json = "{"
+            + "\"stationId\":\"" + stationId + "\","
+            + "\"name\":\"" + name.replace("\"", "\\\"") + "\","
+            + "\"logo\":\"" + logo + "\","
+            + "\"streamUrl\":\"" + streamUrl + "\","
+            + "\"isPlaying\":" + isPlaying + ","
+            + "\"tags\":\"" + tags.replace("\"", "\\\"") + "\","
+            + "\"country\":\"" + country.replace("\"", "\\\"") + "\""
+            + "}";
+
+        getPrefs().edit().putString(KEY_PLAYBACK_STATE, json).apply();
+        call.resolve();
+    }
+}
+'@
+$RadioAutoPluginJava = $RadioAutoPluginJava -replace '__PACKAGE__', $ActualPackage
+[System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioAutoPlugin.java"), $RadioAutoPluginJava, $UTF8NoBOM)
+Write-Host "    RadioAutoPlugin.java genere avec succes" -ForegroundColor Green
+
+# --- RadioBrowserService.java (embarque, single-quoted here-string) ---
+# v2.2.6: Added AudioFocus management to pause other media apps
+Write-Host "    Generation RadioBrowserService.java (v2.2.6 + AudioFocus)..." -ForegroundColor DarkGray
+$RadioBrowserServiceJava = @'
+package __PACKAGE__;
 
 import android.content.Context;
 import android.media.AudioManager;
@@ -28,11 +289,7 @@ import java.util.List;
 
 /**
  * RadioBrowserService — Android Auto MediaBrowserService for RadioSphere.
- *
- * Provides browse tree (Favorites, Recents, Genres) and voice search.
- * Reads favorites/recents from SharedPreferences (synced from WebView via RadioAutoPlugin).
- * Uses ExoPlayer for native audio playback independent of the WebView.
- * Manages AudioFocus to pause other media apps when playback starts.
+ * v2.2.6: AudioFocus management — pauses other media apps (Spotify, etc.)
  */
 public class RadioBrowserService extends MediaBrowserServiceCompat {
 
@@ -93,7 +350,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
         switch (focusChange) {
             case AudioManager.AUDIOFOCUS_LOSS:
-                // Another app took focus permanently — stop
+                // Another app took focus permanently — pause
                 player.pause();
                 updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
                 break;
@@ -203,8 +460,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 if (parentId.startsWith(GENRE_PREFIX)) {
                     String genre = parentId.substring(GENRE_PREFIX.length());
                     result.detach();
+                    String finalGenre = genre;
                     new Thread(() -> {
-                        List<StationData> stations = fetchStationsByGenre(genre, 25);
+                        List<StationData> stations = fetchStationsByGenre(finalGenre, 25);
                         currentStations = stations;
                         result.sendResult(toMediaItems(stations));
                     }).start();
@@ -419,7 +677,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 }
             }
         } catch (Exception e) {
-            // ignore
+            // ignore parse errors
         }
         return list;
     }
@@ -429,8 +687,11 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             try {
                 String url = mirror + "/json/stations/bytag/" + Uri.encode(genre)
                     + "?limit=" + limit + "&order=votes&reverse=true&hidebroken=true";
-                return parseApiResponse(httpGet(url));
-            } catch (Exception e) { /* next */ }
+                String response = httpGet(url);
+                return parseApiResponse(response);
+            } catch (Exception e) {
+                // try next mirror
+            }
         }
         return new ArrayList<>();
     }
@@ -440,8 +701,11 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             try {
                 String url = mirror + "/json/stations/search?name=" + Uri.encode(query)
                     + "&limit=" + limit + "&order=votes&reverse=true&hidebroken=true";
-                return parseApiResponse(httpGet(url));
-            } catch (Exception e) { /* next */ }
+                String response = httpGet(url);
+                return parseApiResponse(response);
+            } catch (Exception e) {
+                // try next mirror
+            }
         }
         return new ArrayList<>();
     }
@@ -454,7 +718,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = reader.readLine()) != null) sb.append(line);
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
         reader.close();
         conn.disconnect();
         return sb.toString();
@@ -478,7 +744,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                     ));
                 }
             }
-        } catch (Exception e) { /* ignore */ }
+        } catch (Exception e) {
+            // ignore parse errors
+        }
         return list;
     }
 
@@ -486,13 +754,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     private List<MediaBrowserCompat.MediaItem> toMediaItems(List<StationData> stations) {
         List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-        for (StationData s : stations) items.add(stationToMediaItem(s));
+        for (StationData s : stations) {
+            items.add(stationToMediaItem(s));
+        }
         return items;
     }
 
     private MediaBrowserCompat.MediaItem stationToMediaItem(StationData station) {
         String artworkUrl = (station.logo != null && !station.logo.isEmpty())
-            ? station.logo.replace("http://", "https://") : DEFAULT_ARTWORK;
+            ? station.logo.replace("http://", "https://")
+            : DEFAULT_ARTWORK;
 
         String subtitle = "Radio Sphere";
         if (station.tags != null && !station.tags.isEmpty()) {
@@ -527,3 +798,88 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 }
+'@
+$RadioBrowserServiceJava = $RadioBrowserServiceJava -replace '__PACKAGE__', $ActualPackage
+[System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioBrowserService.java"), $RadioBrowserServiceJava, $UTF8NoBOM)
+Write-Host "    RadioBrowserService.java genere avec succes (v2.2.6 + AudioFocus)" -ForegroundColor Green
+
+Write-Host "    Fichiers Android Auto (Java) generes avec succes!" -ForegroundColor Green
+
+# ═══════════════════════════════════════════════════════════════════
+# 7. Patch MainActivity.java — WebView + NotificationChannel + RadioAutoPlugin
+# ═══════════════════════════════════════════════════════════════════
+$MainAct = Get-ChildItem -Path "android/app/src/main/java" -Filter "MainActivity.java" -Recurse | Select-Object -First 1
+if ($MainAct) {
+    Write-Host ">>> Patch Java MainActivity (WebView + NotifChannel + RadioAutoPlugin)..." -ForegroundColor Yellow
+    $Java = Get-Content $MainAct.FullName -Raw
+
+    if ($Java -notmatch 'RadioAutoPlugin') {
+        $Java = $Java -replace '(import .+BridgeActivity;)', "`$1`nimport $ActualPackage.RadioAutoPlugin;"
+    }
+
+    $OnCreatePatch = @"
+  @Override
+  public void onCreate(android.os.Bundle savedInstanceState) {
+    registerPlugin(RadioAutoPlugin.class);
+    super.onCreate(savedInstanceState);
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+        android.app.NotificationChannel channel = new android.app.NotificationChannel(
+            "radio_playback_v3", "Radio Playback", android.app.NotificationManager.IMPORTANCE_LOW);
+        channel.setShowBadge(false);
+        channel.setDescription("Notification silencieuse pour la lecture radio");
+        channel.enableVibration(false);
+        nm.createNotificationChannel(channel);
+    }
+  }
+
+  @Override
+  public void onResume() {
+    super.onResume();
+    if (getBridge() != null && getBridge().getWebView() != null) {
+        android.webkit.WebSettings s = getBridge().getWebView().getSettings();
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+    }
+  }
+"@
+    # Remove any existing onCreate/onResume overrides
+    $Java = $Java -replace '(?s)\s*@Override\s*public void onCreate\(android\.os\.Bundle[^}]*}\s*}\s*}', ''
+    $Java = $Java -replace '(?s)\s*@Override\s*public void onResume\(\).*?}\s*}', ''
+    # Insert after class declaration
+    $Java = $Java -replace '(public class MainActivity extends BridgeActivity \{)', "`$1`n$OnCreatePatch"
+    [System.IO.File]::WriteAllText($MainAct.FullName, $Java, $UTF8NoBOM)
+} else {
+    Write-Host "    ERREUR: MainActivity.java introuvable !" -ForegroundColor Red
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# 8. Sync final
+# ═══════════════════════════════════════════════════════════════════
+npx cap sync
+
+Write-Host ""
+Write-Host "============================================================" -ForegroundColor Green
+Write-Host ">>> Script v2.2.6 Termine ! AudioFocus + Notification Buttons" -ForegroundColor Green
+Write-Host "============================================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "CHANGEMENTS v2.2.6 :" -ForegroundColor Yellow
+Write-Host "  - AudioFocus: Spotify/autres apps mises en pause automatiquement" -ForegroundColor White
+Write-Host "  - AudioFocus: Gestion perte de focus (pause/duck/resume)" -ForegroundColor White
+Write-Host "  - Notification: Boutons Play/Pause dans la barre des taches" -ForegroundColor White
+Write-Host "  - Notification: Listener buttonClicked dans PlayerContext" -ForegroundColor White
+Write-Host "  - Navigation Next/Previous dans favoris/recents — inchange" -ForegroundColor White
+Write-Host "  - Recherche vocale + textuelle — inchange" -ForegroundColor White
+Write-Host "  - Browse tree: Favoris, Recents, 24 Genres — inchange" -ForegroundColor White
+Write-Host "  - Zero reference iOS — code propre" -ForegroundColor White
+Write-Host ""
+Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
+Write-Host ""
+Write-Host "ETAPES SUIVANTES :" -ForegroundColor Yellow
+Write-Host "  1. npx cap open android" -ForegroundColor White
+Write-Host "  2. Build APK dans Android Studio" -ForegroundColor White
+Write-Host "  3. Tester Android Auto : lancer une station et verifier" -ForegroundColor White
+Write-Host "     que Spotify se met en pause automatiquement" -ForegroundColor White
+Write-Host "  4. Verifier le bouton Play/Pause dans la notification" -ForegroundColor White
+Write-Host ""
+Write-Host ">>> npx cap open android" -ForegroundColor Cyan
