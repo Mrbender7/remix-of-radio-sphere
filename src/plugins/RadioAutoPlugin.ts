@@ -19,6 +19,7 @@ export interface RadioAutoPluginInterface {
     tags: string;
     country: string;
   }): Promise<void>;
+  addListener(event: 'mediaToggle', callback: () => void): Promise<{ remove: () => void }>;
 }
 
 const RadioAutoPlugin = registerPlugin<RadioAutoPluginInterface>('RadioAutoPlugin');

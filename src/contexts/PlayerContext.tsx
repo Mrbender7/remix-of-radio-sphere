@@ -375,6 +375,28 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
   }, [handlePlay, handlePause]);
 
+  // v2.2.9: Listen for MediaStyle notification toggle (native MediaPlaybackService)
+  useEffect(() => {
+    let mediaToggleRemove: (() => void) | null = null;
+    import('@capacitor/core').then(({ registerPlugin }) => {
+      const plugin = registerPlugin<any>('RadioAutoPlugin');
+      plugin.addListener('mediaToggle', () => {
+        console.log("[RadioSphere] mediaToggle event from native notification");
+        if (isPlayingRef.current) {
+          handlePause();
+        } else {
+          handlePlay();
+        }
+      }).then((listener: { remove: () => void }) => {
+        mediaToggleRemove = () => listener.remove();
+      });
+    }).catch(() => {});
+
+    return () => {
+      if (mediaToggleRemove) mediaToggleRemove();
+    };
+  }, [handlePlay, handlePause]);
+
   // Request notification permission at startup
   useEffect(() => {
     if (notifPermissionAsked.current) return;
