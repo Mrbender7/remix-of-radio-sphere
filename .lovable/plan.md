@@ -1,33 +1,50 @@
 
-# Plan v2.2.7c — Bouton scroll-up translucide + Android Auto detection et navigation
 
-## 1. Bouton scroll-to-top : rendre translucide
+# Audit complet Radio Sphere — Corrections pre-Google Play
 
-Modification CSS simple dans `SearchPage.tsx` : remplacer `bg-primary` par `bg-primary/70 backdrop-blur-sm` pour un effet translucide elegant.
+## Bugs identifies
 
-## 2. Android Auto : probleme de detection
+### 1. Messages d'erreur du player en francais uniquement (BLOQUANT UX)
+**Fichier** : `src/contexts/PlayerContext.tsx`
 
-**Diagnostic** : Le `MediaBrowserService` est un service Android standard. Pour qu'Android Auto le detecte, il faut que :
-- Le service soit declare correctement dans le manifest (OK)
-- Le `automotive_app_desc.xml` soit present (OK)
-- Le service puisse demarrer independamment du WebView
+Tous les `toast()` dans le PlayerContext sont codes en dur en francais : "Erreur de lecture", "Flux indisponible", "Delai depasse", etc. Quand l'utilisateur est en anglais, il voit quand meme du francais.
 
-**Probleme identifie** : Le service est correctement declare, mais Android Auto peut avoir du mal a le decouvrir si :
-1. L'app a ete mise a jour sans que le cache AA soit rafraichi
-2. Le `MediaSessionCompat` n'a pas les bons flags au demarrage
+**Correction** : Le PlayerContext n'a pas acces au `useTranslation()` car il est monte au-dessus du LanguageProvider dans l'arbre. Deux options :
+- Option A (recommandee) : Reorganiser l'arbre pour que `LanguageProvider` enveloppe `PlayerProvider` dans `Index.tsx` (c'est deja le cas ! LanguageProvider est au-dessus). Il suffit d'ajouter `useTranslation()` dans `PlayerProvider` et utiliser `t()` dans les toasts.
+- Ajouter les cles manquantes dans `translations.ts` : `player.streamUnavailable`, `player.streamErrorDesc`, `player.timeout`, `player.timeoutDesc`, `player.unexpectedError`, `player.unexpectedErrorDesc`
 
-**Corrections** :
-- Ajouter `mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)` dans `onCreate()` — ces flags sont requis pour qu'AA reconnaisse le service comme un lecteur media
-- Ajouter `android:enabled="true"` au service dans le manifest pour garantir la decouverte
-- Ajouter un `PlaybackState` initial dans `onCreate()` avec les actions supportees — AA verifie cela a la connexion pour determiner si le service est fonctionnel
+### 2. Toast du sleep timer en francais uniquement
+**Fichier** : `src/contexts/SleepTimerContext.tsx`, ligne 85
 
-## 3. Android Auto : browse tree vide (favoris, recents, recherche)
+Le message "La lecture a ete mise en pause automatiquement." est code en dur. Meme probleme : `SleepTimerContext` est imbrique dans `LanguageProvider`, donc `useTranslation()` est accessible.
 
-**Diagnostic** : `onLoadChildren` lit les SharedPreferences remplies par le WebView via `RadioAutoPlugin.syncFavorites()`. Si l'app est ouverte mais que le WebView n'a pas encore synchro les donnees (ou si les favoris sont vides), la liste est vide.
+**Correction** : Utiliser `t("sleepTimer.stopped")` et ajouter la cle dans `translations.ts`.
 
-**Corrections** :
-- Dans `onLoadChildren` pour `FAVORITES_ID` et `RECENTS_ID` : si la liste est vide, afficher un message "Aucun favori" / "Aucun recent" comme item non-jouable au lieu d'une liste vide (meilleure UX)
-- Dans la recherche (`onSearch`), s'assurer que les resultats sont aussi cherches par tag en plus du nom (ajout d'un 2e appel API par tag, fusion des resultats, comme dans le WebView)
+### 3. `importFavorites` retourne le mauvais nombre
+**Fichier** : `src/hooks/useFavorites.ts`, ligne 41
+
+`return stations.length` retourne le nombre TOTAL de stations dans le CSV, pas le nombre reellement importe (apres deduplication). L'utilisateur voit "15 favoris importes" alors que seulement 3 etaient nouveaux.
+
+**Correction** : Calculer et retourner le nombre de stations effectivement ajoutees.
+
+### 4. Boutons imbriques dans les sections collapsibles (accessibilite)
+**Fichier** : `src/pages/SettingsPage.tsx`
+
+`CollapsibleSection` est un `<button>` qui contient d'autres `<button>` (timer, export, etc.). C'est invalide en HTML et pose des problemes d'accessibilite. Les lecteurs d'ecran et certains navigateurs peuvent avoir un comportement imprevu.
+
+**Correction** : Remplacer le `<button>` parent par un `<div>` avec un `<button>` uniquement pour le header cliquable. Le contenu enfant ne sera plus imbrique dans un bouton.
+
+## Recommandations Google Play
+
+### 5. Lien vers la politique de confidentialite (REQUIS par Google Play)
+Google Play exige un lien vers une politique de confidentialite accessible dans l'app ET sur la fiche Play Store. L'app ne stocke aucune donnee personnelle sur serveur, mais il faut quand meme une page/lien qui le dit explicitement.
+
+**Correction** : Ajouter un lien "Politique de confidentialite" dans la section Reglages, pointant vers une URL hebergee (ex: page GitHub Pages ou Google Docs). Ajouter les cles de traduction correspondantes.
+
+### 6. Version de l'app visible dans les reglages
+Bonne pratique pour le support utilisateur et les mises a jour Google Play : afficher le numero de version (ex: "v2.2.7") en bas des reglages.
+
+**Correction** : Ajouter un petit texte `v2.2.7` en footer des reglages.
 
 ---
 
@@ -35,35 +52,24 @@ Modification CSS simple dans `SearchPage.tsx` : remplacer `bg-primary` par `bg-p
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/SearchPage.tsx` | Bouton scroll-up translucide (`bg-primary/70 backdrop-blur-sm`) |
-| `android-auto/RadioBrowserService.java` | Ajout flags MediaSession, PlaybackState initial dans onCreate, message "vide" dans browse tree, recherche par tag dans onSearch |
-| `radiosphere_v2_2_6.ps1` | Mise a jour du here-string RadioBrowserService.java embarque avec les memes corrections |
-| `android-auto/AndroidManifest-snippet.xml` | Ajout `android:enabled="true"` sur le service |
+| `src/contexts/PlayerContext.tsx` | Importer `useTranslation`, remplacer les toasts FR par `t()` |
+| `src/contexts/SleepTimerContext.tsx` | Importer `useTranslation`, toast traduit |
+| `src/i18n/translations.ts` | Ajouter cles pour les erreurs player + sleep timer stopped + privacy policy |
+| `src/hooks/useFavorites.ts` | Corriger le retour de `importFavorites` |
+| `src/pages/SettingsPage.tsx` | Corriger `CollapsibleSection` (HTML valide), ajouter lien privacy + version |
 
-## Detail technique
+## Ce qui est OK (pas besoin de toucher)
 
-### RadioBrowserService.java — onCreate()
-```java
-// Ajout des flags obligatoires pour Android Auto
-mediaSession.setFlags(
-    MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-    MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
-);
+- Architecture React propre, contexts bien separes
+- Gestion audio robuste (heartbeat, wake lock, silent loop, foreground service)
+- Recherche par name + tag en parallele avec deduplication
+- Android Auto integration (plugin Capacitor + MediaBrowserService)
+- Gestion des favoris/recents avec localStorage
+- i18n FR/EN (sauf les bugs ci-dessus)
+- Scroll-to-top translucide bien positionne
+- Export/Import/Partage CSV fonctionnel
+- Back button handler avec double-tap exit
+- MediaSession + notification lockscreen
+- Theming dark-only coherent
+- Tailwind config propre
 
-// Etat initial — AA verifie cela a la connexion
-updatePlaybackState(PlaybackStateCompat.STATE_NONE);
-```
-
-### RadioBrowserService.java — onLoadChildren() ameliore
-Si favoris ou recents sont vides, ajouter un item "placeholder" non-jouable pour indiquer a l'utilisateur que la categorie est vide (au lieu d'afficher rien).
-
-### RadioBrowserService.java — onSearch() ameliore
-Rechercher par nom ET par tag (comme le WebView), fusionner et dedupliquer les resultats.
-
-### Manifest — service declaration
-```xml
-<service
-    android:name=".RadioBrowserService"
-    android:exported="true"
-    android:enabled="true">
-```
