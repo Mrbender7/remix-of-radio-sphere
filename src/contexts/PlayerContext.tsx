@@ -144,6 +144,10 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const pendingCanplayRef = useRef<(() => void) | null>(null);
   const pendingClearCanplayRef = useRef<(() => void) | null>(null);
   const pendingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentStationRef = useRef<RadioStation | null>(null);
+  const reloadStreamRef = useRef<() => void>(() => {});
   const [state, setState] = useState<PlayerState>({
     currentStation: null,
     isPlaying: false,
@@ -152,10 +156,14 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     isFullScreen: false,
   });
 
-  // Keep ref in sync with state
+  // Keep refs in sync with state
   useEffect(() => {
     isPlayingRef.current = state.isPlaying;
   }, [state.isPlaying]);
+
+  useEffect(() => {
+    currentStationRef.current = state.currentStation;
+  }, [state.currentStation]);
 
   // Create notification channel once at mount
   useEffect(() => {
@@ -183,11 +191,16 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     if (heartbeatRef.current) return;
     heartbeatRef.current = setInterval(() => {
       const audio = audioRef.current;
-      if (isPlayingRef.current && audio.paused) {
-        console.log("[RadioSphere] Heartbeat: recovering paused audio");
-        audio.play().catch(() => {});
-        startSilentLoop();
-        requestWakeLock();
+      if (!isPlayingRef.current) return;
+
+      const isDead = audio.paused ||
+        audio.networkState === 3 /* NETWORK_NO_SOURCE */ ||
+        (audio.readyState < 2 && !audio.paused);
+
+      if (isDead) {
+        console.log("[RadioSphere] Heartbeat: stream appears dead (paused:", audio.paused,
+          "networkState:", audio.networkState, "readyState:", audio.readyState, ")");
+        reloadStreamRef.current();
       }
     }, 10000);
   }, [requestWakeLock]);
@@ -198,6 +211,91 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       heartbeatRef.current = null;
     }
   }, []);
+
+  // Reload stream completely (for dead stream recovery)
+  const reloadStream = useCallback(() => {
+    const audio = audioRef.current;
+    const station = currentStationRef.current;
+    if (!station || !station.streamUrl) return;
+    if (retryCountRef.current >= 3) {
+      console.warn("[RadioSphere] Max retries reached, giving up auto-reload");
+      return;
+    }
+    retryCountRef.current += 1;
+    console.log("[RadioSphere] Reloading stream (attempt", retryCountRef.current, "/ 3)");
+
+    // Clean up pending listeners
+    if (pendingCanplayRef.current) {
+      audio.removeEventListener('canplay', pendingCanplayRef.current);
+      pendingCanplayRef.current = null;
+    }
+    if (pendingClearCanplayRef.current) {
+      audio.removeEventListener('canplay', pendingClearCanplayRef.current);
+      pendingClearCanplayRef.current = null;
+    }
+    if (pendingTimeoutRef.current) {
+      clearTimeout(pendingTimeoutRef.current);
+      pendingTimeoutRef.current = null;
+    }
+
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+
+    setState(s => ({ ...s, isBuffering: true }));
+
+    audio.src = station.streamUrl;
+    audio.load();
+
+    const onCanplay = () => {
+      audio.play().then(() => {
+        retryCountRef.current = 0;
+        setState(s => ({ ...s, isPlaying: true, isBuffering: false }));
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+        startSilentLoop();
+        startHeartbeat();
+        requestWakeLock();
+        if (station) {
+          if (foregroundServiceRunning) {
+            updateNativeForegroundService(station, false);
+          } else {
+            startNativeForegroundService(station, false).then(() => { foregroundServiceRunning = true; });
+          }
+        }
+        console.log("[RadioSphere] Stream reloaded successfully");
+      }).catch(() => {
+        setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
+      });
+      audio.removeEventListener('canplay', onCanplay);
+      pendingCanplayRef.current = null;
+    };
+    audio.addEventListener('canplay', onCanplay);
+    pendingCanplayRef.current = onCanplay;
+
+    const timeout = setTimeout(() => {
+      audio.removeEventListener('canplay', onCanplay);
+      pendingCanplayRef.current = null;
+      if (audio.readyState < 3) {
+        console.warn("[RadioSphere] Stream reload timeout");
+        setState(s => ({ ...s, isBuffering: false }));
+      }
+    }, 15000);
+    pendingTimeoutRef.current = timeout;
+
+    const clearTimeoutOnCanplay = () => {
+      clearTimeout(timeout);
+      pendingTimeoutRef.current = null;
+      audio.removeEventListener('canplay', clearTimeoutOnCanplay);
+      pendingClearCanplayRef.current = null;
+    };
+    audio.addEventListener('canplay', clearTimeoutOnCanplay);
+    pendingClearCanplayRef.current = clearTimeoutOnCanplay;
+  }, [requestWakeLock, startHeartbeat]);
+
+  // Keep ref in sync
+  useEffect(() => {
+    reloadStreamRef.current = reloadStream;
+  }, [reloadStream]);
 
   const updateMediaSession = useCallback((station: RadioStation, playing: boolean) => {
     if (!('mediaSession' in navigator)) return;
@@ -302,6 +400,28 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
     audio.addEventListener("error", handleError);
 
+    // Stalled / ended listeners — auto-reload dead streams
+    const handleStalled = () => {
+      if (!isPlayingRef.current) return;
+      console.log("[RadioSphere] Stream stalled, scheduling reload in 2s");
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        if (isPlayingRef.current && (audio.readyState < 2 || audio.networkState === 3)) {
+          reloadStreamRef.current();
+        }
+      }, 2000);
+    };
+    const handleEnded = () => {
+      if (!isPlayingRef.current) return;
+      console.log("[RadioSphere] Stream ended, reloading in 2s");
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        reloadStreamRef.current();
+      }, 2000);
+    };
+    audio.addEventListener("stalled", handleStalled);
+    audio.addEventListener("ended", handleEnded);
+
     const keepAlive = () => {
       if (isPlayingRef.current) {
         audio.play().catch(() => {});
@@ -316,11 +436,14 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
 
     return () => {
       audio.removeEventListener("error", handleError);
+      audio.removeEventListener("stalled", handleStalled);
+      audio.removeEventListener("ended", handleEnded);
       document.removeEventListener('visibilitychange', keepAlive);
       window.removeEventListener('blur', keepAlive);
       window.removeEventListener('focus', keepAlive);
       stopHeartbeat();
       releaseWakeLock();
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -357,6 +480,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       releaseWakeLock();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
 
+      retryCountRef.current = 0;
       setState(s => ({ ...s, currentStation: station, isBuffering: true, isPlaying: false }));
       const secureLogo = station.logo?.replace('http://', 'https://');
       updateMediaSession({ ...station, logo: secureLogo }, true);
@@ -438,22 +562,31 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       stopSilentLoop();
       stopHeartbeat();
       releaseWakeLock();
+      retryCountRef.current = 0;
       updateNativeForegroundService(state.currentStation, true);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      setState(s => ({ ...s, isPlaying: false }));
+      updateMediaSession(state.currentStation, false);
+      notifyNativePlaybackState(state.currentStation, false);
     } else {
+      // Try simple play first; if it fails, do full reload
       audio.play().then(() => {
         if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-      }).catch(() => {});
-      startSilentLoop();
-      startHeartbeat();
-      requestWakeLock();
-      startNativeForegroundService(state.currentStation, false);
+        retryCountRef.current = 0;
+        setState(s => ({ ...s, isPlaying: true }));
+        startSilentLoop();
+        startHeartbeat();
+        requestWakeLock();
+        startNativeForegroundService(state.currentStation!, false);
+        updateMediaSession(state.currentStation!, true);
+        notifyNativePlaybackState(state.currentStation!, true);
+      }).catch(() => {
+        console.log("[RadioSphere] togglePlay: play() failed, reloading stream");
+        retryCountRef.current = 0; // Reset for fresh reload attempt
+        reloadStream();
+      });
     }
-    const newPlaying = !state.isPlaying;
-    setState(s => ({ ...s, isPlaying: newPlaying }));
-    updateMediaSession(state.currentStation, newPlaying);
-    notifyNativePlaybackState(state.currentStation, newPlaying);
-  }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat]);
+  }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat, reloadStream]);
 
   const setVolume = useCallback((v: number) => {
     if (audioRef.current) audioRef.current.volume = v;
