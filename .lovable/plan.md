@@ -1,57 +1,41 @@
 
 
-# Recherche multi-genres en mode OR
+# Garde-fou anti-coupure audio (ecran verrouille)
 
-## Probleme actuel
+## Probleme
 
-Quand l'utilisateur selectionne 2+ genres (ex: "rock" et "jazz"), le code envoie `tagList=rock,jazz` a l'API Radio Browser. Ce parametre fonctionne en mode **AND** : seules les stations ayant TOUS les tags sont retournees. Cela produit tres peu de resultats.
+Quand le telephone est verrouille, le stream peut s'arreter silencieusement. Le heartbeat actuel (toutes les 10s) ne detecte que `audio.paused`, mais quand le stream meurt, l'element audio peut etre dans un etat "stalled" ou "ended" sans etre techniquement en pause. De plus, le bouton Play/Pause tente juste `audio.play()` sur une source morte, ce qui ne fonctionne pas -- il faut recharger le flux completement.
 
 ## Solution
 
-Remplacer l'envoi unique `tagList=rock,jazz` par **une requete par tag**, puis fusionner et dedupliquer les resultats. Les stations ayant plusieurs des tags selectionnes apparaitront naturellement dans les resultats (deduplication par ID).
+Trois ameliorations dans `src/contexts/PlayerContext.tsx` :
 
-## Fichier modifie
+### 1. Ecouter les evenements `stalled` et `ended`
 
-`src/pages/SearchPage.tsx`
+Ajouter des listeners sur l'element audio pour detecter quand le flux se coupe. En cas de coupure, recharger automatiquement le stream (reset src + load + play) au lieu de simplement appeler `play()`.
+
+- Limite a 3 tentatives consecutives (compteur reset quand la lecture reprend avec succes)
+- Delai de 2 secondes entre chaque tentative pour ne pas surcharger
+
+### 2. Ameliorer le heartbeat
+
+Le heartbeat (10s) verifiera aussi `audio.networkState` et `audio.readyState` en plus de `audio.paused`. Si le stream semble mort (networkState idle ou readyState trop bas) alors que l'app pense qu'on joue, il relancera le flux complet plutot qu'un simple `play()`.
+
+### 3. Corriger le togglePlay (resume apres coupure)
+
+Quand l'utilisateur appuie Play apres une coupure, si `audio.play()` echoue ou si l'audio n'a plus de source valide, recharger le flux complet automatiquement (meme comportement que changer de station et revenir). Plus besoin de changer de station manuellement.
 
 ## Detail technique
 
-### Recherche initiale (lignes 94-123)
+- Nouveau ref `retryCountRef` pour limiter les tentatives (max 3)
+- Nouvelle fonction `reloadStream()` : reset src, load, canplay listener, play -- reutilise la logique existante de `play()` mais sans changer de station
+- Listeners `stalled` et `ended` ajoutees dans le useEffect principal (lignes 291-326)
+- `togglePlay` modifie pour appeler `reloadStream()` si `play()` echoue
+- Heartbeat enrichi avec verification `networkState === 3` (NETWORK_NO_SOURCE) ou `readyState < 2`
 
-Quand `genres.length > 1` :
-- Au lieu d'envoyer `tagList: genres.join(",")`, lancer une requete `tag: genre` par genre selectionne (en parallele avec `Promise.all`)
-- Fusionner tous les resultats dans une Map par ID (deduplication)
-- Si une recherche textuelle (`query`) est aussi active, combiner avec les resultats name/tag existants
+## Fichier modifie
 
-Quand `genres.length === 1` : garder le comportement actuel avec `tag: genres[0]` (plus simple et efficace).
-
-Quand `genres.length === 0` : aucun changement.
-
-### Pagination / loadMore (lignes 141-175)
-
-Meme logique : si multi-genres, lancer des requetes paralleles par tag au lieu d'un `tagList` unique.
-
-### Exemple de code
-
-```typescript
-// Multi-genre OR search
-if (genres.length > 1) {
-  const genreSearches = genres.map(g =>
-    radioBrowserProvider.searchStations({ ...baseParams, tag: g, tagList: undefined })
-  );
-  const genreResults = await Promise.all(genreSearches);
-  for (const batch of genreResults) {
-    for (const s of batch) {
-      if (!map.has(s.id)) map.set(s.id, s);
-    }
-  }
-}
-```
-
-### Impact
-
-- Plus de resultats pertinents lors de la selection multi-genres
-- Les stations ayant les deux tags apparaissent quand meme (elles sont dans les deux resultats)
-- Pas de changement pour la recherche mono-genre ou sans genre
-- Pas de nouveau fichier, modification uniquement dans SearchPage.tsx
+| Fichier | Action |
+|---------|--------|
+| `src/contexts/PlayerContext.tsx` | Ajout reloadStream, listeners stalled/ended, heartbeat ameliore, togglePlay robuste |
 
