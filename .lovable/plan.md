@@ -1,29 +1,49 @@
 
 
-# Fix script PS1 — Erreur "terminateur manquant"
+# Nettoyage affichage Android Auto -- Titre seul
 
-## Diagnostic
+## Objectif
 
-PowerShell exige que le terminateur `"@` d'un **here-string expansible** (`@"..."@`) soit au **tout debut de la ligne** (colonne 1, zero espace avant). Si le `"@` est indente (meme d'un seul espace), PowerShell ne le reconnait pas comme terminateur et continue a lire le reste du fichier comme une chaine, jusqu'a l'erreur finale en ligne 930.
+Supprimer l'affichage des tags, pays et autres metadonnees dans toutes les vues Android Auto (liste des favoris, recents, genres, player en cours de lecture). Seul le nom de la station sera visible. Les sous-titres afficheront simplement "Radio Sphere" de maniere uniforme.
 
-Le script contient **4 here-strings expansibles** (`@"..."@`) dont certains sont dans des blocs `if` indentes :
+## Zones impactees
 
-| Ligne ouverture | Ligne fermeture | Variable | Risque |
-|-----------------|-----------------|----------|--------|
-| 18 | 25 | `$ConfigJSON` | Hors if, probablement OK |
-| 123 | 139 | `$ServiceDecl` | Dans un `if` — `"@` potentiellement indente |
-| 152 | 159 | `$DepsBlock` | Dans un `if` — `"@` potentiellement indente |
-| 864 | 889 | `$OnCreatePatch` | Dans un `if` — `"@` potentiellement indente |
+Il y a **2 endroits** dans `RadioBrowserService.java` (et leur copie dans le script PS1) ou les tags/pays sont utilises pour l'affichage :
 
-## Correction
+### 1. Player (metadonnees MediaSession) -- methode `playStation()`
+- **ARTIST** : actuellement construit a partir des tags de la station
+- **ALBUM** : actuellement le pays de la station
 
-Forcer les 4 terminateurs `"@` a etre en **colonne 1** (debut absolu de ligne), meme si cela casse l'indentation visuelle du script. C'est une contrainte syntaxique de PowerShell.
+Correction : `artist = "Radio Sphere"`, `album = "Live"`
 
-De plus, remplacer tous les em-dashes (`—`, U+2014) par des doubles tirets (`--`) dans tout le script pour eviter les problemes d'encodage Windows PowerShell 5.x.
+### 2. Liste de navigation (browse tree) -- methode `buildPlayableItem()`
+- **Subtitle** : actuellement construit a partir des tags puis du pays
 
-## Fichier modifie
+Correction : `subtitle = "Radio Sphere"` (fixe)
+
+## Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `radiosphere_v2_2_8.ps1` | Aligner les 4 `"@` en colonne 1 + remplacer `—` par `--` |
+| `android-auto/RadioBrowserService.java` | Simplifier `playStation()` et `buildPlayableItem()` pour n'afficher que le nom |
+| `radiosphere_v2_2_8.ps1` | Memes corrections dans la copie du fichier Java embarquee dans le script |
+
+## Detail technique
+
+### RadioBrowserService.java
+
+**playStation()** (lignes 370-381) : Remplacer le bloc de construction `artist` (if/tags/StringBuilder) et `album` par :
+```java
+String artist = "Radio Sphere";
+String album = "Live";
+```
+
+**buildPlayableItem()** (lignes 534-546) : Remplacer le bloc de construction `subtitle` (if/tags/StringBuilder/country) par :
+```java
+String subtitle = "Radio Sphere";
+```
+
+### radiosphere_v2_2_8.ps1
+
+Memes modifications exactes dans le here-string Java correspondant (lignes 629-640 et 803-815).
 
