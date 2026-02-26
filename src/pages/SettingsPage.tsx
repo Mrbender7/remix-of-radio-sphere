@@ -1,13 +1,15 @@
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext";
+import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown, Moon, TimerOff, Lock, Unlock, KeyRound } from "lucide-react";
+import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown, Moon, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, Share2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "@/hooks/use-toast";
+import { RadioStation } from "@/types/radio";
 
 function CollapsibleSection({ icon: Icon, title, badge, children }: { icon: React.ElementType; title: string; badge?: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -62,8 +64,11 @@ export function SettingsPage() {
   const { language, setLanguage, t } = useTranslation();
   const { isPremium, unlockWithPassword, lockPremium } = usePremium();
   const { isActive, formattedTime, startTimer, cancelTimer } = useSleepTimer();
+  const { favorites, importFavorites } = useFavoritesContext();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [premiumCode, setPremiumCode] = useState("");
   const [codeError, setCodeError] = useState(false);
+  const [radioBrowserOpen, setRadioBrowserOpen] = useState(false);
   const premiumFeatures = [
     { icon: Zap, title: t("premium.noAds"), desc: t("premium.noAdsDesc") },
     { icon: Headphones, title: t("premium.hd"), desc: t("premium.hdDesc") },
@@ -256,14 +261,171 @@ export function SettingsPage() {
         )}
       </div>
 
+      {/* Favorites management */}
+      <CollapsibleSection icon={Heart} title={t("favorites.manage")}>
+        <div className="space-y-2">
+          <Button
+            onClick={() => {
+              if (favorites.length === 0) {
+                toast({ title: t("favorites.noFavoritesToExport") });
+                return;
+              }
+              const header = "name,streamUrl,country,tags,homepage";
+              const rows = favorites.map(s =>
+                [s.name, s.streamUrl, s.country, s.tags.join(";"), s.homepage]
+                  .map(v => `"${(v || "").replace(/"/g, '""')}"`)
+                  .join(",")
+              );
+              const csv = [header, ...rows].join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "radiosphere_favorites.csv";
+              a.click();
+              URL.revokeObjectURL(url);
+              toast({ title: `✅ ${t("favorites.exported")}` });
+            }}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg text-xs gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {t("favorites.export")}
+          </Button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                try {
+                  const text = ev.target?.result as string;
+                  const lines = text.split("\n").filter(l => l.trim());
+                  const dataLines = lines.slice(1); // skip header
+                  const stations: RadioStation[] = dataLines.map((line, i) => {
+                    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g)?.map(c =>
+                      c.replace(/^"|"$/g, "").replace(/""/g, '"')
+                    ) || [];
+                    return {
+                      id: `import-${Date.now()}-${i}`,
+                      name: cols[0] || "Unknown",
+                      streamUrl: cols[1] || "",
+                      country: cols[2] || "",
+                      countryCode: "",
+                      tags: cols[3] ? cols[3].split(";").filter(Boolean) : [],
+                      language: "",
+                      codec: "",
+                      bitrate: 0,
+                      votes: 0,
+                      logo: "",
+                      homepage: cols[4] || "",
+                    };
+                  }).filter(s => s.streamUrl);
+                  const count = importFavorites(stations);
+                  toast({ title: `✅ ${count} ${t("favorites.imported")}` });
+                } catch {
+                  toast({ title: `❌ ${t("favorites.importError")}`, variant: "destructive" });
+                }
+              };
+              reader.readAsText(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg text-xs gap-1.5"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {t("favorites.import")}
+          </Button>
+
+          {typeof navigator.share === "function" && (
+            <Button
+              onClick={async () => {
+                if (favorites.length === 0) {
+                  toast({ title: t("favorites.noFavoritesToExport") });
+                  return;
+                }
+                const header = "name,streamUrl,country,tags,homepage";
+                const rows = favorites.map(s =>
+                  [s.name, s.streamUrl, s.country, s.tags.join(";"), s.homepage]
+                    .map(v => `"${(v || "").replace(/"/g, '""')}"`)
+                    .join(",")
+                );
+                const csv = [header, ...rows].join("\n");
+                const file = new File([csv], "radiosphere_favorites.csv", { type: "text/csv" });
+                try {
+                  await navigator.share({ files: [file], title: "Radio Sphere Favorites" });
+                } catch {
+                  // User cancelled
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full rounded-lg text-xs gap-1.5"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              {t("favorites.share")}
+            </Button>
+          )}
+        </div>
+      </CollapsibleSection>
+
       {/* Collapsible disclaimers */}
       {[
         { icon: Wifi, iconSize: "w-5 h-5", title: t("settings.dataWarning"), desc: t("settings.dataWarningDesc"), key: "data" },
         { icon: Database, iconSize: "w-4 h-4", title: t("settings.dataDisclaimer"), desc: t("settings.dataDisclaimerDesc"), key: "local" },
-        { icon: Globe, iconSize: "w-4 h-4", title: t("settings.radioSource"), desc: t("settings.radioSourceDesc"), key: "radio" },
       ].map(({ icon: Icon, iconSize, title, desc, key }) => (
         <CollapsibleDisclaimer key={key} icon={Icon} iconSize={iconSize} title={title} desc={desc} />
       ))}
+
+      {/* Radio Browser section with links */}
+      <button
+        onClick={() => setRadioBrowserOpen(o => !o)}
+        className="w-full rounded-xl border border-border bg-accent/50 p-4 mb-4 text-left transition-all"
+      >
+        <div className="flex items-center gap-3">
+          <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+          <h3 className="text-sm font-semibold text-foreground flex-1">{t("settings.radioSource")}</h3>
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", radioBrowserOpen && "rotate-180")} />
+        </div>
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-300 ease-in-out",
+            radioBrowserOpen ? "max-h-60 opacity-100 mt-2" : "max-h-0 opacity-0"
+          )}
+        >
+          <p className="text-xs text-muted-foreground leading-relaxed pl-[calc(theme(spacing.3)+theme(spacing.3))] mb-3">{t("settings.radioSourceDesc")}</p>
+          <div className="flex flex-col gap-2 pl-[calc(theme(spacing.3)+theme(spacing.3))]">
+            <a
+              href="https://www.radio-browser.info/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="w-3 h-3" /> {t("settings.radioSourceLink")}
+            </a>
+            <a
+              href="https://www.radio-browser.info/add"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="w-3 h-3" /> {t("settings.radioSourceAddStation")}
+            </a>
+          </div>
+        </div>
+      </button>
     </div>
   );
 }

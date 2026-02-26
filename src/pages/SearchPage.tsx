@@ -5,7 +5,7 @@ import { StationCard } from "@/components/StationCard";
 import { RadioStation } from "@/types/radio";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, X, ChevronDown, ChevronUp, Check, ArrowUpDown } from "lucide-react";
+import { Search, Loader2, X, ChevronDown, ChevronUp, Check, ArrowUpDown, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
@@ -79,11 +79,22 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
   const sortReverse = sortBy === "name" ? "false" : "true";
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (el) setShowScrollTop(el.scrollTop > 300);
+  }, []);
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const { data: results, isLoading } = useQuery({
     queryKey: ["search", query, country, genres, languages, sortBy],
     queryFn: async () => {
-      const data = await radioBrowserProvider.searchStations({
-        name: query || undefined,
+      const baseParams = {
         country: country || undefined,
         tag: genres.length ? genres.join(",") : undefined,
         language: languages.length ? languages.join(",") : undefined,
@@ -91,8 +102,21 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         offset: 0,
         order: sortBy,
         reverse: sortReverse,
-      });
-      return data;
+      };
+
+      if (query) {
+        // Search by name AND tag in parallel, then deduplicate
+        const [nameResults, tagResults] = await Promise.all([
+          radioBrowserProvider.searchStations({ ...baseParams, name: query }),
+          radioBrowserProvider.searchStations({ ...baseParams, tag: query }),
+        ]);
+        const map = new Map<string, RadioStation>();
+        for (const s of nameResults) map.set(s.id, s);
+        for (const s of tagResults) if (!map.has(s.id)) map.set(s.id, s);
+        return Array.from(map.values());
+      } else {
+        return radioBrowserProvider.searchStations(baseParams);
+      }
     },
     enabled: hasFilters,
     staleTime: 2 * 60 * 1000,
@@ -148,7 +172,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   const toggleLanguage = (l: string) => setLanguages(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-32">
+    <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
       <h1 className="text-2xl font-heading font-bold mt-6 mb-4 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{t("search.title")}</h1>
 
       <div className="relative mb-4">
@@ -261,6 +285,18 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       {!hasFilters && (
         <p className="text-sm text-muted-foreground text-center py-12">{t("search.useFilters")}</p>
       )}
+
+      {/* Scroll to top button */}
+      <button
+        onClick={scrollToTop}
+        className={cn(
+          "fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
+          showScrollTop ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
+        )}
+        aria-label="Scroll to top"
+      >
+        <ArrowUp className="w-5 h-5" />
+      </button>
     </div>
   );
 }
