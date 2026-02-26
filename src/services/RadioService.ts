@@ -102,6 +102,7 @@ export const radioBrowserProvider: RadioProvider = {
     // Keep using country name — the API supports both, and our UI uses display names
     if (params.country) query.country = params.country;
     if (params.tag) query.tag = params.tag;
+    if (params.tagList) query.tagList = params.tagList;
     if (params.language) query.language = params.language;
 
     const data = await fetchWithMirrors("stations/search", query);

@@ -29,4 +29,5 @@ export interface SearchParams {
   offset?: number;
   order?: string;
   reverse?: string;
+  tagList?: string;
 }

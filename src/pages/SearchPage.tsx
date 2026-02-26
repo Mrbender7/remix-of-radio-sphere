@@ -96,7 +96,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     queryFn: async () => {
       const baseParams = {
         country: country || undefined,
-        tag: genres.length ? genres.join(",") : undefined,
+        tagList: genres.length ? genres.join(",") : undefined,
         language: languages.length ? languages.join(",") : undefined,
         limit: PAGE_SIZE,
         offset: 0,
@@ -141,16 +141,30 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const data = await radioBrowserProvider.searchStations({
-        name: query || undefined,
+      const baseParams = {
         country: country || undefined,
-        tag: genres.length ? genres.join(",") : undefined,
+        tagList: genres.length ? genres.join(",") : undefined,
         language: languages.length ? languages.join(",") : undefined,
         limit: PAGE_SIZE,
         offset,
         order: sortBy,
         reverse: sortReverse,
-      });
+      };
+
+      let data: RadioStation[];
+      if (query) {
+        const [nameResults, tagResults] = await Promise.all([
+          radioBrowserProvider.searchStations({ ...baseParams, name: query }),
+          radioBrowserProvider.searchStations({ ...baseParams, tag: query }),
+        ]);
+        const map = new Map<string, RadioStation>();
+        for (const s of nameResults) map.set(s.id, s);
+        for (const s of tagResults) if (!map.has(s.id)) map.set(s.id, s);
+        data = Array.from(map.values());
+      } else {
+        data = await radioBrowserProvider.searchStations(baseParams);
+      }
+
       setExtraResults(prev => {
         const ids = new Set(prev.map(s => s.id));
         return [...prev, ...data.filter(s => !ids.has(s.id))];
@@ -290,7 +304,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
       <button
         onClick={scrollToTop}
         className={cn(
-          "fixed bottom-24 right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
+          "fixed bottom-40 right-4 z-50 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
           showScrollTop ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
         )}
         aria-label="Scroll to top"
