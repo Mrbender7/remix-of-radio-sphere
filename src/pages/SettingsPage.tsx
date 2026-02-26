@@ -5,6 +5,7 @@ import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
 import { Wifi, Crown, Zap, Headphones, ShieldCheck, CheckCircle, Database, Globe, ChevronDown, Moon, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, Share2, ExternalLink } from "lucide-react";
+import { UserGuideModal } from "@/components/UserGuideModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef } from "react";
@@ -380,6 +381,9 @@ export function SettingsPage() {
         </div>
       </CollapsibleSection>
 
+      {/* User Guide */}
+      <UserGuideModal />
+
       {/* Collapsible disclaimers */}
       {[
         { icon: Wifi, iconSize: "w-5 h-5", title: t("settings.dataWarning"), desc: t("settings.dataWarningDesc"), key: "data" },
@@ -440,7 +444,7 @@ export function SettingsPage() {
       </a>
 
       {/* App version */}
-      <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v2.2.7</p>
+      <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v2.2.8e</p>
     </div>
   );
 }

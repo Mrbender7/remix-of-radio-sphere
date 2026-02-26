@@ -119,6 +119,18 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Privacy
     "settings.privacyPolicy": "Politique de confidentialité",
+
+    // User Guide
+    "guide.title": "Mode d'emploi",
+    "guide.button": "Mode d'emploi",
+    "guide.home": "Accueil",
+    "guide.homeContent": "L'écran d'accueil affiche vos stations écoutées récemment, les stations populaires, vos favoris en accès rapide, les découvertes de la semaine et l'exploration par genre musical.",
+    "guide.search": "Recherche",
+    "guide.searchContent": "Recherchez une station par nom, puis filtrez par pays, genre ou langue. Triez les résultats par popularité, ordre alphabétique ou nombre de clics. Chargez plus de résultats en bas de page.",
+    "guide.favorites": "Favoris",
+    "guide.favoritesContent": "Appuyez sur le cœur d'une station pour l'ajouter à vos favoris. Depuis les réglages, vous pouvez exporter vos favoris en CSV, en importer, ou les partager.",
+    "guide.settings": "Réglages",
+    "guide.settingsContent": "Changez la langue de l'interface, activez la minuterie de sommeil, gérez vos favoris (export/import/partage), consultez les informations sur la source des stations et la politique de confidentialité.",
   },
   en: {
     // Nav
@@ -238,6 +250,18 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Privacy
     "settings.privacyPolicy": "Privacy Policy",
+
+    // User Guide
+    "guide.title": "User Guide",
+    "guide.button": "User Guide",
+    "guide.home": "Home",
+    "guide.homeContent": "The home screen shows your recently played stations, popular stations, quick access to favorites, weekly discoveries, and genre exploration.",
+    "guide.search": "Search",
+    "guide.searchContent": "Search for a station by name, then filter by country, genre, or language. Sort results by popularity, alphabetical order, or click count. Load more results at the bottom.",
+    "guide.favorites": "Favorites",
+    "guide.favoritesContent": "Tap the heart icon on a station to add it to your favorites. From settings, you can export your favorites as CSV, import them, or share them.",
+    "guide.settings": "Settings",
+    "guide.settingsContent": "Change the interface language, enable the sleep timer, manage your favorites (export/import/share), view station source information and the privacy policy.",
   },
 };
 

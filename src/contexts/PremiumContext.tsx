@@ -20,7 +20,12 @@ function verifyPassword(input: string): boolean {
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(() => {
-    try { return localStorage.getItem("radiosphere_premium") === PREMIUM_HASH; } catch { return false; }
+    // Google Play test period: default to true so all premium features are unlocked
+    try {
+      const stored = localStorage.getItem("radiosphere_premium");
+      if (stored === null) return true; // Default unlocked for test period
+      return stored === PREMIUM_HASH;
+    } catch { return true; }
   });
 
   const togglePremium = useCallback(() => {
