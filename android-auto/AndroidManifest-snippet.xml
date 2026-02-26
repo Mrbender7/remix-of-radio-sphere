@@ -15,7 +15,8 @@
 <!-- 2. MediaBrowserService — the entry point for Android Auto -->
 <service
     android:name=".RadioBrowserService"
-    android:exported="true">
+    android:exported="true"
+    android:enabled="true">
     <intent-filter>
         <action android:name="android.media.browse.MediaBrowserService" />
     </intent-filter>

@@ -146,9 +146,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         player.addListener(playerListener);
 
         mediaSession = new MediaSessionCompat(this, "RadioSphereAuto");
+        mediaSession.setFlags(
+            MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+            MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+        );
         mediaSession.setCallback(mediaSessionCallback);
         mediaSession.setActive(true);
         setSessionToken(mediaSession.getSessionToken());
+
+        // Initial playback state — AA checks this at connection to determine if the service is functional
+        updatePlaybackState(PlaybackStateCompat.STATE_NONE);
     }
 
     @Override
@@ -181,13 +188,25 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             case FAVORITES_ID: {
                 List<StationData> stations = loadStations(KEY_FAVORITES);
                 currentStations = stations;
-                result.sendResult(toMediaItems(stations));
+                if (stations.isEmpty()) {
+                    List<MediaBrowserCompat.MediaItem> empty = new ArrayList<>();
+                    empty.add(buildInfoItem("Aucun favori", "Ajoutez des favoris depuis l'app"));
+                    result.sendResult(empty);
+                } else {
+                    result.sendResult(toMediaItems(stations));
+                }
                 break;
             }
             case RECENTS_ID: {
                 List<StationData> stations = loadStations(KEY_RECENTS);
                 currentStations = stations;
-                result.sendResult(toMediaItems(stations));
+                if (stations.isEmpty()) {
+                    List<MediaBrowserCompat.MediaItem> empty = new ArrayList<>();
+                    empty.add(buildInfoItem("Aucune station recente", "Ecoutez une station pour la voir ici"));
+                    result.sendResult(empty);
+                } else {
+                    result.sendResult(toMediaItems(stations));
+                }
                 break;
             }
             case GENRES_ID: {
@@ -436,14 +455,32 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     }
 
     private List<StationData> searchStations(String query, int limit) {
+        List<StationData> nameResults = new ArrayList<>();
+        List<StationData> tagResults = new ArrayList<>();
+
         for (String mirror : API_MIRRORS) {
             try {
-                String url = mirror + "/json/stations/search?name=" + Uri.encode(query)
+                String nameUrl = mirror + "/json/stations/search?name=" + Uri.encode(query)
                     + "&limit=" + limit + "&order=votes&reverse=true&hidebroken=true";
-                return parseApiResponse(httpGet(url));
-            } catch (Exception e) { /* next */ }
+                nameResults = parseApiResponse(httpGet(nameUrl));
+                break;
+            } catch (Exception e) { /* next mirror */ }
         }
-        return new ArrayList<>();
+
+        for (String mirror : API_MIRRORS) {
+            try {
+                String tagUrl = mirror + "/json/stations/search?tag=" + Uri.encode(query)
+                    + "&limit=" + limit + "&order=votes&reverse=true&hidebroken=true";
+                tagResults = parseApiResponse(httpGet(tagUrl));
+                break;
+            } catch (Exception e) { /* next mirror */ }
+        }
+
+        // Merge and deduplicate
+        java.util.LinkedHashMap<String, StationData> map = new java.util.LinkedHashMap<>();
+        for (StationData s : nameResults) map.put(s.id, s);
+        for (StationData s : tagResults) if (!map.containsKey(s.id)) map.put(s.id, s);
+        return new ArrayList<>(map.values());
     }
 
     private String httpGet(String urlStr) throws Exception {
@@ -521,6 +558,15 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private MediaBrowserCompat.MediaItem buildBrowsableItem(String mediaId, String title, String subtitle) {
         MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
             .setMediaId(mediaId)
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .build();
+        return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
+    }
+
+    private MediaBrowserCompat.MediaItem buildInfoItem(String title, String subtitle) {
+        MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
+            .setMediaId("info:" + title)
             .setTitle(title)
             .setSubtitle(subtitle)
             .build();
