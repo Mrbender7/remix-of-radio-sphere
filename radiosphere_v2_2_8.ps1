@@ -1,5 +1,5 @@
 # radiosphere_v2_2_8.ps1
-# Android Auto v2.2.8 — MediaSession flags + tag search + audit fixes
+# Android Auto v2.2.8 -- MediaSession flags + tag search + audit fixes
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
@@ -86,14 +86,14 @@ if (Test-Path "$XmlDir/automotive_app_desc.xml") {
 }
 
 # ═══════════════════════════════════════════════════════════════════
-# 4. MANIFEST — Permissions + Services + Android Auto
+# 4. MANIFEST -- Permissions + Services + Android Auto
 # ═══════════════════════════════════════════════════════════════════
 $ManifestPath = "android/app/src/main/AndroidManifest.xml"
 if (Test-Path $ManifestPath) {
     Write-Host ">>> Manifest: Injection complete (Permissions, Services, Android Auto)..." -ForegroundColor Yellow
     $ManifestContent = Get-Content $ManifestPath -Raw
     
-    # Permissions — only add if not already present
+    # Permissions -- only add if not already present
     $PermsList = @(
         "android.permission.INTERNET",
         "android.permission.WAKE_LOCK",
@@ -143,7 +143,7 @@ if (Test-Path $ManifestPath) {
 }
 
 # ═══════════════════════════════════════════════════════════════════
-# 5. Gradle — ExoPlayer + Media Compat (NO Kotlin needed)
+# 5. Gradle -- ExoPlayer + Media Compat (NO Kotlin needed)
 # ═══════════════════════════════════════════════════════════════════
 $GradleAppPath = "android/app/build.gradle"
 if (Test-Path $GradleAppPath) {
@@ -162,7 +162,7 @@ dependencies {
 }
 
 # ═══════════════════════════════════════════════════════════════════
-# 6. Generation des fichiers natifs Android Auto (JAVA — embarques)
+# 6. Generation des fichiers natifs Android Auto (JAVA -- embarques)
 # ═══════════════════════════════════════════════════════════════════
 Write-Host ">>> Generation des fichiers natifs Android Auto (Java)..." -ForegroundColor Yellow
 
@@ -289,8 +289,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * RadioBrowserService — Android Auto MediaBrowserService for RadioSphere.
- * v2.2.6: AudioFocus management — pauses other media apps (Spotify, etc.)
+ * RadioBrowserService -- Android Auto MediaBrowserService for RadioSphere.
+ * v2.2.8: AudioFocus management -- pauses other media apps (Spotify, etc.)
  */
 public class RadioBrowserService extends MediaBrowserServiceCompat {
 
@@ -351,17 +351,17 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
         switch (focusChange) {
             case AudioManager.AUDIOFOCUS_LOSS:
-                // Another app took focus permanently — pause
+                // Another app took focus permanently -- pause
                 player.pause();
                 updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                // Temporary loss (phone call, navigation voice) — pause
+                // Temporary loss (phone call, navigation voice) -- pause
                 player.pause();
                 updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
                 break;
             case AudioManager.AUDIOFOCUS_GAIN:
-                // Regained focus — resume and restore volume
+                // Regained focus -- resume and restore volume
                 player.setVolume(1.0f);
                 player.play();
                 updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
@@ -412,7 +412,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         mediaSession.setActive(true);
         setSessionToken(mediaSession.getSessionToken());
 
-        // Initial playback state — AA checks this at connection
+        // Initial playback state -- AA checks this at connection
         updatePlaybackState(PlaybackStateCompat.STATE_NONE);
     }
 
@@ -610,7 +610,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     // ─── Playback Helpers ───────────────────────────────────────────────
 
     private void playStation(StationData station) {
-        // Request audio focus BEFORE starting playback — this pauses other media apps
+        // Request audio focus BEFORE starting playback -- this pauses other media apps
         if (!requestAudioFocus()) {
             return; // Could not get audio focus, do not play
         }
@@ -850,7 +850,7 @@ Write-Host "    RadioBrowserService.java genere avec succes (v2.2.8 + AudioFocus
 Write-Host "    Fichiers Android Auto (Java) generes avec succes!" -ForegroundColor Green
 
 # ═══════════════════════════════════════════════════════════════════
-# 7. Patch MainActivity.java — WebView + NotificationChannel + RadioAutoPlugin
+# 7. Patch MainActivity.java -- WebView + NotificationChannel + RadioAutoPlugin
 # ═══════════════════════════════════════════════════════════════════
 $MainAct = Get-ChildItem -Path "android/app/src/main/java" -Filter "MainActivity.java" -Recurse | Select-Object -First 1
 if ($MainAct) {
@@ -916,7 +916,7 @@ Write-Host "  - i18n: Toasts player et sleep timer traduits FR/EN" -ForegroundCo
 Write-Host "  - Accessibilite: CollapsibleSection sans boutons imbriques" -ForegroundColor White
 Write-Host "  - Google Play: Lien privacy policy + version dans Settings" -ForegroundColor White
 Write-Host "  - Script: capacitor.config.json sans BOM, deps explicites" -ForegroundColor White
-Write-Host "  - Zero reference iOS — code propre" -ForegroundColor White
+Write-Host "  - Zero reference iOS -- code propre" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
