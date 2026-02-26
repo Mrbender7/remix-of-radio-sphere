@@ -98,7 +98,19 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.dataDisclaimer": "Données locales",
     "settings.dataDisclaimerDesc": "Vos favoris et préférences sont stockés localement sur votre appareil. Aucune donnée personnelle n'est envoyée à un serveur.",
     "settings.radioSource": "Source des stations",
-    "settings.radioSourceDesc": "La liste des stations est fournie par Radio Browser, une API communautaire libre et gratuite qui recense plus de 30 000 radios à travers le monde.",
+    "settings.radioSourceDesc": "La liste des stations est fournie par Radio Browser, une API communautaire libre et gratuite qui recense plus de 50 000 radios à travers le monde.",
+    "settings.radioSourceLink": "Visiter Radio Browser",
+    "settings.radioSourceAddStation": "Ajouter une station",
+
+    // Favorites management
+    "favorites.manage": "Gérer les favoris",
+    "favorites.export": "Exporter en CSV",
+    "favorites.import": "Importer un CSV",
+    "favorites.share": "Partager mes favoris",
+    "favorites.exported": "Favoris exportés",
+    "favorites.imported": "favoris importés",
+    "favorites.importError": "Erreur lors de l'import",
+    "favorites.noFavoritesToExport": "Aucun favori à exporter",
   },
   en: {
     // Nav
@@ -197,7 +209,19 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.dataDisclaimer": "Local data",
     "settings.dataDisclaimerDesc": "Your favorites and preferences are stored locally on your device. No personal data is sent to any server.",
     "settings.radioSource": "Station source",
-    "settings.radioSourceDesc": "The station list is provided by Radio Browser, a free and open community API that indexes over 30,000 radio stations worldwide.",
+    "settings.radioSourceDesc": "The station list is provided by Radio Browser, a free and open community API that indexes over 50,000 radio stations worldwide.",
+    "settings.radioSourceLink": "Visit Radio Browser",
+    "settings.radioSourceAddStation": "Add a station",
+
+    // Favorites management
+    "favorites.manage": "Manage favorites",
+    "favorites.export": "Export as CSV",
+    "favorites.import": "Import CSV",
+    "favorites.share": "Share my favorites",
+    "favorites.exported": "Favorites exported",
+    "favorites.imported": "favorites imported",
+    "favorites.importError": "Import error",
+    "favorites.noFavoritesToExport": "No favorites to export",
   },
 };
 
