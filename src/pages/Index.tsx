@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { PlayerProvider, usePlayer } from "@/contexts/PlayerContext";
 import { PremiumProvider } from "@/contexts/PremiumContext";
 import { FavoritesProvider, useFavoritesContext } from "@/contexts/FavoritesContext";
-import { LanguageProvider } from "@/contexts/LanguageContext";
+import { LanguageProvider, useTranslation } from "@/contexts/LanguageContext";
 import { SleepTimerProvider } from "@/contexts/SleepTimerContext";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { MiniPlayer } from "@/components/MiniPlayer";
@@ -11,15 +11,29 @@ import { HomePage } from "@/pages/HomePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { WelcomePage } from "@/pages/WelcomePage";
 import { ExitConfirmDialog } from "@/components/ExitConfirmDialog";
 import { useBackButton } from "@/hooks/useBackButton";
+import type { Language } from "@/i18n/translations";
+
+const ONBOARDING_KEY = "radiosphere_onboarded";
+
+function hasCompletedOnboarding(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 function AppContentInner() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(!hasCompletedOnboarding());
   const { favorites, toggleFavorite, isFavorite, recent, addRecent } = useFavoritesContext();
   const { isFullScreen, closeFullScreen } = usePlayer();
+  const { setLanguage } = useTranslation();
 
   const handleGenreClick = useCallback((genre: string) => {
     setSelectedGenre(genre);
@@ -31,8 +45,30 @@ function AppContentInner() {
     setActiveTab(tab);
   }, []);
 
+  const handleWelcomeComplete = useCallback((lang: Language) => {
+    setLanguage(lang);
+    try { localStorage.setItem(ONBOARDING_KEY, "true"); } catch {}
+    setShowWelcome(false);
+  }, [setLanguage]);
+
+  const handleReopenWelcome = useCallback(() => {
+    setShowWelcome(true);
+  }, []);
+
+  const handleResetApp = useCallback(() => {
+    try {
+      localStorage.removeItem("radioflow_favorites");
+      localStorage.removeItem("radioflow_recent");
+      localStorage.removeItem("radiosphere_language");
+      localStorage.removeItem("radiosphere_premium");
+      localStorage.removeItem(ONBOARDING_KEY);
+    } catch {}
+    window.location.reload();
+  }, []);
+
   useBackButton({
     onBack: () => {
+      if (showWelcome) return;
       if (isFullScreen) {
         closeFullScreen();
       } else {
@@ -44,6 +80,10 @@ function AppContentInner() {
     isFullScreen,
   });
 
+  if (showWelcome) {
+    return <WelcomePage onComplete={handleWelcomeComplete} />;
+  }
+
   return (
       <PremiumProvider>
         <SleepTimerProvider>
@@ -52,7 +92,7 @@ function AppContentInner() {
               {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
               {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
               {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
-              {activeTab === "settings" && <SettingsPage />}
+              {activeTab === "settings" && <SettingsPage onReopenWelcome={handleReopenWelcome} onResetApp={handleResetApp} />}
             </div>
             <MiniPlayer />
             <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
