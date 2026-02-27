@@ -88,7 +88,7 @@ function AppContentInner() {
       <PremiumProvider>
         <SleepTimerProvider>
           <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden pb-14">
               {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
               {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
               {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
