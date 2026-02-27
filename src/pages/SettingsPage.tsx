@@ -4,7 +4,10 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, Car, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, Share2, ExternalLink, ShieldCheck } from "lucide-react";
+import { Wifi, Crown, Moon, Car, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import { UserGuideModal } from "@/components/UserGuideModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -310,8 +313,21 @@ export function SettingsPage() {
               );
               const csv = [header, ...rows].join("\n");
 
-              // Try blob download first, fallback to data URI for Android WebView
-              try {
+              if (Capacitor.isNativePlatform()) {
+                try {
+                  const result = await Filesystem.writeFile({
+                    path: "radiosphere_favorites.csv",
+                    data: btoa(unescape(encodeURIComponent(csv))),
+                    directory: Directory.Cache,
+                  });
+                  await Share.share({
+                    title: "Radio Sphere Favorites",
+                    url: result.uri,
+                  });
+                } catch {
+                  toast({ title: `❌ ${t("favorites.importError")}`, variant: "destructive" });
+                }
+              } else {
                 const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -321,13 +337,8 @@ export function SettingsPage() {
                 a.click();
                 document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-              } catch {
-                // Fallback: open as data URI
-                const encoded = encodeURIComponent(csv);
-                const dataUri = `data:text/csv;charset=utf-8,${encoded}`;
-                window.open(dataUri, '_blank');
+                toast({ title: `✅ ${t("favorites.exported")}` });
               }
-              toast({ title: `✅ ${t("favorites.exported")}` });
             }}
             variant="outline"
             size="sm"
@@ -390,35 +401,6 @@ export function SettingsPage() {
             {t("favorites.import")}
           </Button>
 
-          {typeof navigator.share === "function" && (
-            <Button
-              onClick={async () => {
-                if (favorites.length === 0) {
-                  toast({ title: t("favorites.noFavoritesToExport") });
-                  return;
-                }
-                const header = "name,streamUrl,country,tags,homepage";
-                const rows = favorites.map(s =>
-                  [s.name, s.streamUrl, s.country, s.tags.join(";"), s.homepage]
-                    .map(v => `"${(v || "").replace(/"/g, '""')}"`)
-                    .join(",")
-                );
-                const csv = [header, ...rows].join("\n");
-                const file = new File([csv], "radiosphere_favorites.csv", { type: "text/csv" });
-                try {
-                  await navigator.share({ files: [file], title: "Radio Sphere Favorites" });
-                } catch {
-                  // User cancelled
-                }
-              }}
-              variant="outline"
-              size="sm"
-              className="w-full rounded-lg text-xs gap-1.5"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              {t("favorites.share")}
-            </Button>
-          )}
         </div>
       </CollapsibleSection>
 
