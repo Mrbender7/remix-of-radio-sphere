@@ -61,6 +61,12 @@
 - Stations en exclusivité, podcasts, replays
 - **Ce cas justifierait le passage à un modèle d'abonnement**
 
+### 10. 📂 Collections personnalisées
+- Créer des collections thématiques dans les favoris (ex: "Chill", "Workout", "Jazz du soir")
+- Glisser-déposer des stations entre collections
+- Icône et couleur personnalisables par collection
+- **Statut** : À venir (Premium)
+
 ---
 
 ## Notes techniques

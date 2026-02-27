@@ -278,21 +278,181 @@ function Flame() {
   );
 }
 
+function PeaceFlower() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <circle cx="40" cy="40" r="18" stroke={W} strokeWidth="2.5" {...S} />
+      <line x1="40" y1="22" x2="40" y2="58" stroke={W} strokeWidth="2" {...S} />
+      <line x1="40" y1="40" x2="27" y2="53" stroke={W} strokeWidth="2" {...S} />
+      <line x1="40" y1="40" x2="53" y2="53" stroke={W} strokeWidth="2" {...S} />
+      {[0, 60, 120, 180, 240, 300].map((a, i) => (
+        <ellipse key={i} cx="40" cy="14" rx="5" ry="10" stroke={W} strokeWidth="1.5" {...S} transform={`rotate(${a} 40 40)`}>
+          <animate attributeName="ry" values="10;13;10" dur={`${2 + i * 0.2}s`} repeatCount="indefinite" />
+        </ellipse>
+      ))}
+    </svg>
+  );
+}
+
+function BluesGuitar() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <ellipse cx="30" cy="55" rx="18" ry="16" stroke={W} strokeWidth="2.5" {...S} />
+      <circle cx="30" cy="55" r="5" stroke={W} strokeWidth="1.5" {...S} />
+      <line x1="48" y1="48" x2="70" y2="10" stroke={W} strokeWidth="3" {...S} />
+      <rect x="66" y="6" width="10" height="8" rx="2" stroke={W} strokeWidth="2" {...S} />
+      {[26, 30, 34].map((x, i) => (
+        <line key={i} x1={x} y1="39" x2={x + 15} y2="15" stroke={W} strokeWidth="1" {...S} opacity="0.5">
+          <animate attributeName="x1" values={`${x};${x + 1};${x - 1};${x}`} dur={`${0.3 + i * 0.1}s`} repeatCount="indefinite" />
+        </line>
+      ))}
+    </svg>
+  );
+}
+
+function Banjo() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <circle cx="35" cy="50" r="20" stroke={W} strokeWidth="2.5" {...S} />
+      <circle cx="35" cy="50" r="8" stroke={W} strokeWidth="1.5" {...S} opacity="0.5" />
+      <line x1="55" y1="42" x2="75" y2="8" stroke={W} strokeWidth="3" {...S} />
+      <rect x="72" y="4" width="6" height="8" rx="1" stroke={W} strokeWidth="1.5" {...S} />
+      {[32, 35, 38].map((x, i) => (
+        <line key={i} x1={x} y1="30" x2={x + 12} y2="12" stroke={W} strokeWidth="1" {...S} opacity="0.6">
+          <animate attributeName="x1" values={`${x};${x + 1};${x - 1};${x}`} dur={`${0.25 + i * 0.08}s`} repeatCount="indefinite" />
+        </line>
+      ))}
+    </svg>
+  );
+}
+
+function FunkBass() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <path d="M5,40 C12,20 20,60 30,30 C40,55 50,15 60,45 C65,55 70,25 78,40" stroke={W} strokeWidth="3" {...S}>
+        <animate attributeName="d" values="M5,40 C12,20 20,60 30,30 C40,55 50,15 60,45 C65,55 70,25 78,40;M5,40 C12,55 20,20 30,50 C40,25 50,60 60,30 C65,20 70,55 78,40;M5,40 C12,20 20,60 30,30 C40,55 50,15 60,45 C65,55 70,25 78,40" dur="1.5s" repeatCount="indefinite" />
+      </path>
+      <path d="M5,55 C15,45 25,65 35,50 C45,60 55,40 65,55 C70,60 75,45 78,55" stroke={W} strokeWidth="1.5" {...S} opacity="0.4">
+        <animate attributeName="d" values="M5,55 C15,45 25,65 35,50 C45,60 55,40 65,55 C70,60 75,45 78,55;M5,55 C15,65 25,45 35,60 C45,45 55,65 65,50 C70,45 75,60 78,55;M5,55 C15,45 25,65 35,50 C45,60 55,40 65,55 C70,60 75,45 78,55" dur="2s" repeatCount="indefinite" />
+      </path>
+    </svg>
+  );
+}
+
+function Maracas() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <g>
+        <animateTransform attributeName="transform" type="rotate" values="-8 30 50;8 30 50;-8 30 50" dur="0.5s" repeatCount="indefinite" />
+        <ellipse cx="30" cy="22" rx="12" ry="16" stroke={W} strokeWidth="2.5" {...S} />
+        <line x1="30" y1="38" x2="30" y2="68" stroke={W} strokeWidth="2.5" {...S} />
+        <circle cx="26" cy="18" r="1.5" fill={W} opacity="0.5" />
+        <circle cx="34" cy="24" r="1.5" fill={W} opacity="0.5" />
+        <circle cx="28" cy="28" r="1" fill={W} opacity="0.4" />
+      </g>
+      <g>
+        <animateTransform attributeName="transform" type="rotate" values="8 55 50;-8 55 50;8 55 50" dur="0.5s" repeatCount="indefinite" />
+        <ellipse cx="55" cy="25" rx="10" ry="14" stroke={W} strokeWidth="2" {...S} />
+        <line x1="55" y1="39" x2="55" y2="65" stroke={W} strokeWidth="2" {...S} />
+        <circle cx="52" cy="22" r="1.5" fill={W} opacity="0.4" />
+        <circle cx="58" cy="28" r="1" fill={W} opacity="0.4" />
+      </g>
+    </svg>
+  );
+}
+
+function Lightning() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <polygon points="45,5 25,38 38,38 32,75 60,32 46,32" stroke={W} strokeWidth="2.5" fill={W} fillOpacity="0.15" strokeLinejoin="round">
+        <animate attributeName="opacity" values="0.6;1;0.4;1;0.6" dur="0.8s" repeatCount="indefinite" />
+      </polygon>
+      <polygon points="55,15 42,38 50,38 46,62 65,30 56,30" stroke={W} strokeWidth="1.5" fill={W} fillOpacity="0.1" strokeLinejoin="round" opacity="0.5">
+        <animate attributeName="opacity" values="0.2;0.7;0.1;0.6;0.2" dur="0.6s" repeatCount="indefinite" />
+      </polygon>
+    </svg>
+  );
+}
+
+function ReggaeWaves() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      {[25, 40, 55].map((y, i) => (
+        <path key={i} d={`M5,${y} Q20,${y - 10} 40,${y} T78,${y}`} stroke={W} strokeWidth="2.5" {...S}>
+          <animate attributeName="d" values={`M5,${y} Q20,${y - 10} 40,${y} T78,${y};M5,${y} Q20,${y + 10} 40,${y} T78,${y};M5,${y} Q20,${y - 10} 40,${y} T78,${y}`} dur={`${4 + i}s`} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur={`${4 + i}s`} repeatCount="indefinite" />
+        </path>
+      ))}
+    </svg>
+  );
+}
+
+function TechnoWave() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <polyline points="5,40 5,20 15,20 15,60 25,60 25,20 35,20 35,60 45,60 45,20 55,20 55,60 65,60 65,20 75,20 75,40" stroke={W} strokeWidth="2.5" {...S}>
+        <animate attributeName="stroke-dashoffset" values="300;0" dur="2s" repeatCount="indefinite" />
+      </polyline>
+      <polyline points="5,50 10,30 15,50 20,30 25,50 30,30 35,50 40,30 45,50 50,30 55,50 60,30 65,50 70,30 75,50" stroke={W} strokeWidth="1.5" {...S} opacity="0.35" />
+    </svg>
+  );
+}
+
+function TranceSpiral() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <path d="M40,40 C40,30 50,25 55,35 C60,45 50,55 40,50 C30,45 25,35 35,25 C45,15 60,20 62,38 C64,56 48,65 35,58 C22,51 18,32 30,20" stroke={W} strokeWidth="2.5" {...S}>
+        <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="8s" repeatCount="indefinite" />
+      </path>
+      <circle cx="40" cy="40" r="4" stroke={W} strokeWidth="2" {...S}>
+        <animate attributeName="r" values="3;6;3" dur="2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
+
+function Globe() {
+  return (
+    <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
+      <circle cx="40" cy="40" r="28" stroke={W} strokeWidth="2.5" {...S} />
+      <ellipse cx="40" cy="40" rx="12" ry="28" stroke={W} strokeWidth="1.5" {...S} />
+      <ellipse cx="40" cy="40" rx="22" ry="28" stroke={W} strokeWidth="1" {...S} opacity="0.4" />
+      <line x1="12" y1="30" x2="68" y2="30" stroke={W} strokeWidth="1.5" {...S} opacity="0.5" />
+      <line x1="12" y1="50" x2="68" y2="50" stroke={W} strokeWidth="1.5" {...S} opacity="0.5" />
+      <g>
+        <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="20s" repeatCount="indefinite" />
+        <circle cx="40" cy="12" r="2" fill={W} opacity="0.6" />
+      </g>
+    </svg>
+  );
+}
+
 const GENRE_MAP: Record<string, () => JSX.Element> = {
+  "60s": PeaceFlower,
   "70s": Vinyl,
   "80s": NeonZigzag,
   "90s": Equalizer,
   ambient: ConcentricCircles,
+  blues: BluesGuitar,
   chillout: SineWave,
   classical: GrandPiano,
+  country: Banjo,
   electronic: ElectricCircuit,
+  funk: FunkBass,
   hiphop: Microphone,
   jazz: Saxophone,
+  latin: Maracas,
+  metal: Lightning,
   news: RadioWaves,
   pop: Star,
   "r&b": HeartPulse,
+  reggae: ReggaeWaves,
   rock: RockHand,
   soul: Flame,
+  techno: TechnoWave,
+  trance: TranceSpiral,
+  world: Globe,
 };
 
 export function GenreAnimation({ genre }: GenreAnimationProps) {

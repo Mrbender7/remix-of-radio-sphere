@@ -40,6 +40,9 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.title": "Favoris",
     "favorites.empty": "Aucun favori",
     "favorites.emptyDesc": "Appuyez sur le cœur d'une station pour l'ajouter à vos favoris",
+    "favorites.sortName": "A-Z",
+    "favorites.sortCountry": "Par pays",
+    "favorites.unknownCountry": "Pays inconnu",
 
     // Premium
     "premium.title": "Radio Sphere Premium",
@@ -172,6 +175,9 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.title": "Favorites",
     "favorites.empty": "No favorites",
     "favorites.emptyDesc": "Tap the heart on a station to add it to your favorites",
+    "favorites.sortName": "A-Z",
+    "favorites.sortCountry": "By country",
+    "favorites.unknownCountry": "Unknown country",
 
     // Premium
     "premium.title": "Radio Sphere Premium",

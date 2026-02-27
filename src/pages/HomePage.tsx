@@ -8,7 +8,7 @@ import { Heart, Sparkles, RefreshCw, ChevronRight } from "lucide-react";
 import { GenreAnimation } from "@/components/GenreAnimations";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 
-const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
+const GENRES = ["60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical", "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal", "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"];
 
 interface HomePageProps {
   recent: RadioStation[];
@@ -119,20 +119,30 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
 }
 
 const GENRE_COLORS: Record<string, string> = {
+  "60s": "from-yellow-700 to-orange-400",
   "70s": "from-amber-800 to-orange-500",
   "80s": "from-fuchsia-700 to-pink-400",
   "90s": "from-cyan-700 to-teal-400",
   ambient: "from-indigo-800 to-blue-400",
+  blues: "from-blue-900 to-indigo-500",
   chillout: "from-sky-700 to-cyan-400",
   classical: "from-blue-800 to-cyan-500",
+  country: "from-yellow-800 to-amber-500",
   electronic: "from-violet-700 to-purple-400",
+  funk: "from-orange-600 to-yellow-400",
   hiphop: "from-emerald-700 to-teal-400",
   jazz: "from-amber-700 to-yellow-500",
+  latin: "from-red-600 to-yellow-500",
+  metal: "from-gray-800 to-zinc-500",
   news: "from-slate-700 to-gray-400",
   pop: "from-pink-600 to-rose-400",
   "r&b": "from-rose-700 to-pink-500",
+  reggae: "from-green-700 to-yellow-500",
   rock: "from-red-700 to-orange-500",
   soul: "from-orange-700 to-amber-400",
+  techno: "from-purple-800 to-fuchsia-500",
+  trance: "from-indigo-700 to-violet-400",
+  world: "from-teal-700 to-emerald-400",
 };
 
 function GenreCard({ genre, onClick }: { genre: string; onClick: () => void }) {
