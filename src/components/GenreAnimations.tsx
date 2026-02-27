@@ -328,19 +328,19 @@ function CowboyHat() {
   return (
     <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
       <g>
-        <animateTransform attributeName="transform" type="rotate" values="-3 40 40;3 40 40;-3 40 40" dur="3s" repeatCount="indefinite" />
-        {/* Bord large du chapeau */}
-        <ellipse cx="40" cy="52" rx="36" ry="8" stroke={W} strokeWidth="2.5" {...S} />
-        {/* Calotte avec creux au centre */}
-        <path d="M16,52 C16,42 22,28 30,30 Q35,18 40,16 Q45,18 50,30 C58,28 64,42 64,52" stroke={W} strokeWidth="2.5" {...S} />
-        {/* Creux central */}
-        <path d="M30,30 Q35,36 40,34 Q45,36 50,30" stroke={W} strokeWidth="1.5" {...S} opacity="0.5" />
-        {/* Bande décorative */}
-        <path d="M22,46 Q30,42 40,43 Q50,42 58,46" stroke={W} strokeWidth="1.5" {...S} opacity="0.6">
-          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
+        <animateTransform attributeName="transform" type="rotate" values="-3 40 44;3 40 44;-3 40 44" dur="3s" repeatCount="indefinite" />
+        {/* Bord du chapeau - bien courbé vers le haut sur les côtés */}
+        <path d="M4,54 Q12,62 40,58 Q68,62 76,54 Q68,50 40,52 Q12,50 4,54Z" stroke={W} strokeWidth="2.5" {...S} />
+        {/* Calotte haute avec pincement */}
+        <path d="M18,52 L22,26 Q28,18 40,20 Q52,18 58,26 L62,52" stroke={W} strokeWidth="2.5" {...S} />
+        {/* Sommet plat avec creux */}
+        <path d="M22,26 Q31,32 40,30 Q49,32 58,26" stroke={W} strokeWidth="2" {...S} />
+        {/* Bande du chapeau */}
+        <path d="M20,46 Q30,44 40,45 Q50,44 60,46" stroke={W} strokeWidth="2" {...S} opacity="0.6">
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite" />
         </path>
-        {/* Petite étoile sur la bande */}
-        <polygon points="40,42 41,44 43,44 41.5,45.5 42,47.5 40,46 38,47.5 38.5,45.5 37,44 39,44" fill={W} stroke="none" opacity="0.7">
+        {/* Étoile de shérif */}
+        <polygon points="40,43 41.2,45 43.5,45 41.8,46.5 42.5,48.8 40,47.2 37.5,48.8 38.2,46.5 36.5,45 38.8,45" fill={W} stroke="none" opacity="0.8">
           <animate attributeName="opacity" values="0.5;1;0.5" dur="1.5s" repeatCount="indefinite" />
         </polygon>
       </g>
