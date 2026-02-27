@@ -388,15 +388,43 @@ function Lightning() {
   );
 }
 
-function ReggaeWaves() {
+function RastaFace() {
   return (
     <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
-      {[25, 40, 55].map((y, i) => (
-        <path key={i} d={`M5,${y} Q20,${y - 10} 40,${y} T78,${y}`} stroke={W} strokeWidth="2.5" {...S}>
-          <animate attributeName="d" values={`M5,${y} Q20,${y - 10} 40,${y} T78,${y};M5,${y} Q20,${y + 10} 40,${y} T78,${y};M5,${y} Q20,${y - 10} 40,${y} T78,${y}`} dur={`${4 + i}s`} repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.4;0.9;0.4" dur={`${4 + i}s`} repeatCount="indefinite" />
-        </path>
-      ))}
+      {/* Visage rond */}
+      <circle cx="40" cy="42" r="20" stroke={W} strokeWidth="2.5" {...S} />
+      {/* Lunettes de soleil rondes */}
+      <circle cx="33" cy="40" r="5" stroke={W} strokeWidth="2" {...S} />
+      <circle cx="47" cy="40" r="5" stroke={W} strokeWidth="2" {...S} />
+      <line x1="38" y1="40" x2="42" y2="40" stroke={W} strokeWidth="1.5" {...S} />
+      {/* Sourire détendu */}
+      <path d="M34,50 Q40,56 46,50" stroke={W} strokeWidth="2" {...S}>
+        <animate attributeName="d" values="M34,50 Q40,56 46,50;M34,49 Q40,57 46,49;M34,50 Q40,56 46,50" dur="4s" repeatCount="indefinite" />
+      </path>
+      {/* Dreadlocks gauche */}
+      <path d="M22,34 Q16,40 14,54" stroke={W} strokeWidth="2.5" {...S}>
+        <animate attributeName="d" values="M22,34 Q16,40 14,54;M22,34 Q14,42 12,56;M22,34 Q16,40 14,54" dur="3s" repeatCount="indefinite" />
+      </path>
+      <path d="M24,30 Q20,38 20,56" stroke={W} strokeWidth="2" {...S} opacity="0.7">
+        <animate attributeName="d" values="M24,30 Q20,38 20,56;M24,30 Q18,40 18,58;M24,30 Q20,38 20,56" dur="3.5s" repeatCount="indefinite" />
+      </path>
+      <path d="M26,27 Q24,36 25,54" stroke={W} strokeWidth="1.5" {...S} opacity="0.5">
+        <animate attributeName="d" values="M26,27 Q24,36 25,54;M26,27 Q22,38 23,56;M26,27 Q24,36 25,54" dur="4s" repeatCount="indefinite" />
+      </path>
+      {/* Dreadlocks droite */}
+      <path d="M58,34 Q64,40 66,54" stroke={W} strokeWidth="2.5" {...S}>
+        <animate attributeName="d" values="M58,34 Q64,40 66,54;M58,34 Q66,42 68,56;M58,34 Q64,40 66,54" dur="3.2s" repeatCount="indefinite" />
+      </path>
+      <path d="M56,30 Q60,38 60,56" stroke={W} strokeWidth="2" {...S} opacity="0.7">
+        <animate attributeName="d" values="M56,30 Q60,38 60,56;M56,30 Q62,40 62,58;M56,30 Q60,38 60,56" dur="3.7s" repeatCount="indefinite" />
+      </path>
+      <path d="M54,27 Q56,36 55,54" stroke={W} strokeWidth="1.5" {...S} opacity="0.5">
+        <animate attributeName="d" values="M54,27 Q56,36 55,54;M54,27 Q58,38 57,56;M54,27 Q56,36 55,54" dur="4.2s" repeatCount="indefinite" />
+      </path>
+      {/* Bonnet rasta (petit arc au sommet) */}
+      <path d="M26,28 Q33,14 40,16 Q47,14 54,28" stroke={W} strokeWidth="2.5" {...S} />
+      <line x1="30" y1="22" x2="50" y2="22" stroke={W} strokeWidth="1" {...S} opacity="0.4" />
+      <line x1="28" y1="25" x2="52" y2="25" stroke={W} strokeWidth="1" {...S} opacity="0.3" />
     </svg>
   );
 }
@@ -461,7 +489,7 @@ const GENRE_MAP: Record<string, () => JSX.Element> = {
   news: RadioWaves,
   pop: Star,
   "r&b": HeartPulse,
-  reggae: ReggaeWaves,
+  reggae: RastaFace,
   rock: RockDevil,
   soul: Flame,
   techno: TechnoWave,
