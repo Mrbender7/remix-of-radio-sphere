@@ -124,6 +124,19 @@ const translations: Record<Language, Record<string, string>> = {
     // Privacy
     "settings.privacyPolicy": "Politique de confidentialité",
 
+    // Welcome / Reset
+    "settings.reopenWelcome": "Revoir la page de bienvenue",
+    "settings.resetApp": "Réinitialiser l'application",
+    "settings.resetAppDesc": "Supprimer tous les favoris, stations récentes et préférences",
+    "settings.resetConfirm": "Êtes-vous sûr ? Cette action est irréversible.",
+    "settings.resetDone": "Application réinitialisée",
+    "settings.resetButton": "Tout supprimer",
+
+    // Restore purchases
+    "premium.restorePurchases": "Restaurer les achats",
+    "premium.restoreSuccess": "Achats restaurés avec succès",
+    "premium.restoreNone": "Aucun achat à restaurer",
+
     // User Guide
     "guide.title": "Mode d'emploi",
     "guide.button": "Mode d'emploi",
@@ -258,6 +271,19 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Privacy
     "settings.privacyPolicy": "Privacy Policy",
+
+    // Welcome / Reset
+    "settings.reopenWelcome": "Reopen welcome page",
+    "settings.resetApp": "Reset application",
+    "settings.resetAppDesc": "Delete all favorites, recent stations, and preferences",
+    "settings.resetConfirm": "Are you sure? This action cannot be undone.",
+    "settings.resetDone": "Application reset",
+    "settings.resetButton": "Delete everything",
+
+    // Restore purchases
+    "premium.restorePurchases": "Restore purchases",
+    "premium.restoreSuccess": "Purchases restored successfully",
+    "premium.restoreNone": "No purchases to restore",
 
     // User Guide
     "guide.title": "User Guide",

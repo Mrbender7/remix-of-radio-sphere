@@ -4,7 +4,7 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, Car, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck } from "lucide-react";
+import { Wifi, Crown, Moon, Car, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck, RotateCcw, Sparkles, Trash2, RefreshCw } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -12,6 +12,17 @@ import { UserGuideModal } from "@/components/UserGuideModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useRef } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { RadioStation } from "@/types/radio";
 
@@ -66,7 +77,12 @@ function CollapsibleDisclaimer({ icon: Icon, iconSize, title, desc }: { icon: Re
   );
 }
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  onReopenWelcome?: () => void;
+  onResetApp?: () => void;
+}
+
+export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps) {
   const { language, setLanguage, t } = useTranslation();
   const { isPremium, unlockWithPassword, lockPremium } = usePremium();
   const { isActive, formattedTime, startTimer, cancelTimer } = useSleepTimer();
@@ -403,6 +419,27 @@ export function SettingsPage() {
             <p className="text-[10px] text-destructive mt-1.5">{t("premium.wrongPassword")}</p>
           )}
         </div>
+
+        {/* Restore purchases */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <Button
+            onClick={() => {
+              // In a real app this would call the Play Store billing API
+              // For now just show feedback
+              if (isPremium) {
+                toast({ title: "✅ " + t("premium.restoreSuccess") });
+              } else {
+                toast({ title: t("premium.restoreNone") });
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg text-xs gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {t("premium.restorePurchases")}
+          </Button>
+        </div>
       </CollapsibleSection>
 
       {/* User Guide */}
@@ -461,11 +498,49 @@ export function SettingsPage() {
         href="https://mrbender7.github.io/privacy-policy-radiosphere/"
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-4"
+        className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3"
       >
         <ShieldCheck className="w-3.5 h-3.5" />
         {t("settings.privacyPolicy")}
       </a>
+
+      {/* Reopen welcome page */}
+      {onReopenWelcome && (
+        <button
+          onClick={onReopenWelcome}
+          className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline mb-3 w-full"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          {t("settings.reopenWelcome")}
+        </button>
+      )}
+
+      {/* Reset app */}
+      {onResetApp && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="flex items-center justify-center gap-1.5 text-xs text-destructive hover:underline mb-4 w-full">
+              <Trash2 className="w-3.5 h-3.5" />
+              {t("settings.resetApp")}
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("settings.resetApp")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("settings.resetConfirm")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onResetApp}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t("settings.resetButton")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {/* App version */}
       <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v2.2.8e</p>
