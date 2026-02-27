@@ -274,9 +274,9 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   // v2.2.9: Listen for MediaStyle notification toggle (native MediaPlaybackService)
   useEffect(() => {
     let mediaToggleRemove: (() => void) | null = null;
-    import('@capacitor/core').then(({ registerPlugin }) => {
-      const plugin = registerPlugin<any>('RadioAutoPlugin');
-      plugin.addListener('mediaToggle', () => {
+    import('@/plugins/RadioAutoPlugin').then(({ RadioAutoPlugin }) => {
+      // Reuse the already-registered plugin instance (avoid double registration)
+      RadioAutoPlugin.addListener('mediaToggle', () => {
         console.log("[RadioSphere] mediaToggle event from native notification");
         if (isPlayingRef.current) {
           handlePause();

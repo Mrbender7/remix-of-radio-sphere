@@ -22,7 +22,7 @@ export interface RadioAutoPluginInterface {
   addListener(event: 'mediaToggle', callback: () => void): Promise<{ remove: () => void }>;
 }
 
-const RadioAutoPlugin = registerPlugin<RadioAutoPluginInterface>('RadioAutoPlugin');
+export const RadioAutoPlugin = registerPlugin<RadioAutoPluginInterface>('RadioAutoPlugin');
 
 /**
  * Check if we're running inside Capacitor on Android
