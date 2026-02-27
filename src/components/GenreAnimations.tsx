@@ -53,17 +53,33 @@ function NeonZigzag() {
 
 function Equalizer() {
   const g = "n-90s";
-  const bars = [10, 22, 34, 46, 58, 70];
-  const durs = ["0.7s", "0.5s", "0.9s", "0.6s", "0.8s", "0.55s"];
-  const heights = ["15;8;45;15", "10;5;35;10", "20;8;50;20", "12;5;40;12", "18;6;48;18", "14;8;38;14"];
   return (
     <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
       <NeonGradient id={g} />
-      {bars.map((x, i) => (
-        <line key={i} x1={x} x2={x} y1="72" y2="30" stroke={`url(#${g})`} strokeWidth="8" {...S}>
-          <animate attributeName="y2" values={heights[i]} dur={durs[i]} repeatCount="indefinite" />
-        </line>
-      ))}
+      <rect x="6" y="20" width="8" height="50" rx="2" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="height" values="50;20;40;50" dur="0.7s" repeatCount="indefinite" />
+        <animate attributeName="y" values="20;50;30;20" dur="0.7s" repeatCount="indefinite" />
+      </rect>
+      <rect x="19" y="10" width="8" height="60" rx="2" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="height" values="60;30;55;60" dur="0.5s" repeatCount="indefinite" />
+        <animate attributeName="y" values="10;40;15;10" dur="0.5s" repeatCount="indefinite" />
+      </rect>
+      <rect x="32" y="25" width="8" height="45" rx="2" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="height" values="45;15;50;45" dur="0.9s" repeatCount="indefinite" />
+        <animate attributeName="y" values="25;55;20;25" dur="0.9s" repeatCount="indefinite" />
+      </rect>
+      <rect x="45" y="15" width="8" height="55" rx="2" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="height" values="55;25;45;55" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="y" values="15;45;25;15" dur="0.6s" repeatCount="indefinite" />
+      </rect>
+      <rect x="58" y="30" width="8" height="40" rx="2" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="height" values="40;18;48;40" dur="0.8s" repeatCount="indefinite" />
+        <animate attributeName="y" values="30;52;22;30" dur="0.8s" repeatCount="indefinite" />
+      </rect>
+      <rect x="71" y="20" width="8" height="50" rx="2" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="height" values="50;28;42;50" dur="0.55s" repeatCount="indefinite" />
+        <animate attributeName="y" values="20;42;28;20" dur="0.55s" repeatCount="indefinite" />
+      </rect>
     </svg>
   );
 }
@@ -276,31 +292,35 @@ function HeartPulse() {
   );
 }
 
-function ElectricGuitar() {
+function RockHand() {
   const g = "n-rock";
   return (
     <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
       <NeonGradient id={g} />
-      {/* Neck + headstock */}
-      <line x1="58" y1="6" x2="32" y2="38" stroke={`url(#${g})`} strokeWidth="3" {...S} />
-      {/* Tuning pegs */}
-      <line x1="56" y1="4" x2="62" y2="2" stroke={`url(#${g})`} strokeWidth="2" {...S} />
-      <line x1="60" y1="8" x2="66" y2="6" stroke={`url(#${g})`} strokeWidth="2" {...S} />
-      <line x1="62" y1="14" x2="68" y2="12" stroke={`url(#${g})`} strokeWidth="2" {...S} />
-      {/* Body - SG/LP shape */}
-      <path d="M32,38 C24,38 16,44 16,54 C16,62 22,68 30,68 C34,68 36,66 38,64 L42,64 C44,66 46,68 50,68 C58,68 64,62 64,54 C64,44 56,38 48,38 Z" stroke={`url(#${g})`} strokeWidth="2.5" {...S} />
-      {/* Pickups */}
-      <line x1="34" y1="52" x2="46" y2="52" stroke={`url(#${g})`} strokeWidth="1.5" {...S} />
-      <line x1="34" y1="58" x2="46" y2="58" stroke={`url(#${g})`} strokeWidth="1.5" {...S} />
-      {/* Strings hint on neck */}
-      <line x1="36" y1="34" x2="44" y2="34" stroke={`url(#${g})`} strokeWidth="0.8" {...S} opacity="0.5" />
-      {/* Lightning bolts */}
-      <polyline points="10,22 14,30 11,32 16,42" stroke={`url(#${g})`} strokeWidth="2" {...S}>
-        <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite" />
-      </polyline>
-      <polyline points="68,28 72,36 69,38 74,46" stroke={`url(#${g})`} strokeWidth="2" {...S}>
-        <animate attributeName="opacity" values="0;1;0" dur="1.8s" repeatCount="indefinite" begin="0.4s" />
-      </polyline>
+      {/* Palm */}
+      <path d="M25,55 L25,38 C25,36 27,34 29,34 L51,34 C53,34 55,36 55,38 L55,55 C55,62 48,68 40,68 C32,68 25,62 25,55Z" stroke={`url(#${g})`} strokeWidth="2.5" {...S} />
+      {/* Index finger (up) */}
+      <path d="M29,34 L29,12 C29,10 31,8 33,8 C35,8 37,10 37,12 L37,34" stroke={`url(#${g})`} strokeWidth="2.5" {...S} />
+      {/* Pinky finger (up) */}
+      <path d="M43,34 L43,14 C43,12 45,10 47,10 C49,10 51,12 51,14 L51,34" stroke={`url(#${g})`} strokeWidth="2.5" {...S} />
+      {/* Middle + ring folded */}
+      <path d="M34,34 C34,30 36,28 38,30" stroke={`url(#${g})`} strokeWidth="1.5" {...S} opacity="0.5" />
+      <path d="M39,34 C39,30 41,28 43,30" stroke={`url(#${g})`} strokeWidth="1.5" {...S} opacity="0.5" />
+      {/* Thumb tucked */}
+      <path d="M25,42 L20,40 C18,39 18,36 20,35 L25,36" stroke={`url(#${g})`} strokeWidth="2" {...S} />
+      {/* Shockwave lines */}
+      <line x1="14" y1="10" x2="18" y2="16" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" />
+      </line>
+      <line x1="60" y1="8" x2="56" y2="14" stroke={`url(#${g})`} strokeWidth="2" {...S}>
+        <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0.3s" />
+      </line>
+      <line x1="10" y1="22" x2="16" y2="24" stroke={`url(#${g})`} strokeWidth="1.5" {...S}>
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.6s" />
+      </line>
+      <line x1="64" y1="20" x2="58" y2="22" stroke={`url(#${g})`} strokeWidth="1.5" {...S}>
+        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.9s" />
+      </line>
     </svg>
   );
 }
@@ -334,7 +354,7 @@ const GENRE_MAP: Record<string, () => JSX.Element> = {
   news: RadioWaves,
   pop: Star,
   "r&b": HeartPulse,
-  rock: ElectricGuitar,
+  rock: RockHand,
   soul: Flame,
 };
 
