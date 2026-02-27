@@ -5,7 +5,7 @@ import { ScrollableRow } from "@/components/ScrollableRow";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useWeeklyDiscoveries } from "@/hooks/useWeeklyDiscoveries";
 import { Heart, Sparkles, RefreshCw, ChevronRight } from "lucide-react";
-import { Icon } from "@iconify/react";
+import { GenreAnimation } from "@/components/GenreAnimations";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 
 const GENRES = ["70s", "80s", "90s", "ambient", "chillout", "classical", "electronic", "hiphop", "jazz", "news", "pop", "r&b", "rock", "soul"];
@@ -135,31 +135,13 @@ const GENRE_COLORS: Record<string, string> = {
   soul: "from-orange-700 to-amber-400",
 };
 
-const GENRE_ICONS: Record<string, string> = {
-  "70s": "arcticons:vinyl",
-  "80s": "ph:cassette-tape",
-  "90s": "game-icons:boombox",
-  ambient: "fluent-emoji-high-contrast:headphone",
-  chillout: "uiw:coffee",
-  classical: "game-icons:grand-piano",
-  electronic: "streamline-flex:deepfake-technology-1",
-  hiphop: "pepicons-pencil:microphone-handheld",
-  jazz: "emojione-monotone:saxophone",
-  news: "emojione-monotone:newspaper",
-  pop: "streamline-cyber:glasses-4",
-  "r&b": "glyphs:microphone-1-bold",
-  rock: "streamline-ultimate:modern-music-electric-guitar",
-  soul: "f7:flame",
-};
-
 function GenreCard({ genre, onClick }: { genre: string; onClick: () => void }) {
-  const icon = GENRE_ICONS[genre] || "mdi:music";
   return (
     <div
       className={`rounded-xl p-4 h-20 flex items-end bg-gradient-to-br ${GENRE_COLORS[genre] || "from-gray-700 to-gray-500"} cursor-pointer active:scale-95 transition-all shadow-lg border-t border-white/10 relative overflow-hidden`}
       onClick={onClick}
     >
-      <Icon icon={icon} className="absolute right-2 top-1/2 -translate-y-1/2 w-16 h-16 text-white opacity-40 rotate-[-15deg]" />
+      <GenreAnimation genre={genre} />
       <span className="text-sm font-heading font-bold text-white capitalize drop-shadow-md relative z-10">{genre}</span>
     </div>
   );
