@@ -5,6 +5,14 @@ import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
 import { Wifi, Crown, Moon, Car, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck, RotateCcw, Sparkles, Trash2, RefreshCw } from "lucide-react";
+import { LANGUAGE_OPTIONS } from "@/i18n/translations";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -110,22 +118,18 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       <div className="rounded-xl bg-accent p-4 mb-4">
         <h3 className="text-sm font-semibold text-foreground mb-1">{t("settings.language")}</h3>
         <p className="text-xs text-muted-foreground mb-3">{t("settings.languageDesc")}</p>
-        <div className="flex gap-2">
-          {(["fr", "en"] as const).map(lang => (
-            <button
-              key={lang}
-              onClick={() => setLanguage(lang)}
-              className={cn(
-                "flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all",
-                language === lang
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {lang === "fr" ? "🇫🇷 Français" : "🇬🇧 English"}
-            </button>
-          ))}
-        </div>
+        <Select value={language} onValueChange={(v) => setLanguage(v as any)}>
+          <SelectTrigger className="w-full rounded-lg bg-secondary text-foreground">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.flag} {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Sleep Timer */}
@@ -154,7 +158,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
                     "bg-secondary text-muted-foreground hover:bg-primary hover:text-primary-foreground"
                   )}
                 >
-                  {language === "fr" ? opt.labelFr : opt.labelEn}
+                  {t(`sleepTimer.${opt.minutes}`)}
                 </button>
               ))}
             </div>

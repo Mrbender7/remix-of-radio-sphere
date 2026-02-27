@@ -4,12 +4,12 @@ import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "@/contexts/LanguageContext";
 
 export const SLEEP_TIMER_OPTIONS = [
-  { minutes: 15, labelFr: "15 min", labelEn: "15 min" },
-  { minutes: 30, labelFr: "30 min", labelEn: "30 min" },
-  { minutes: 45, labelFr: "45 min", labelEn: "45 min" },
-  { minutes: 60, labelFr: "1 heure", labelEn: "1 hour" },
-  { minutes: 90, labelFr: "1h30", labelEn: "1h30" },
-  { minutes: 120, labelFr: "2 heures", labelEn: "2 hours" },
+  { minutes: 15 },
+  { minutes: 30 },
+  { minutes: 45 },
+  { minutes: 60 },
+  { minutes: 90 },
+  { minutes: 120 },
 ];
 
 interface SleepTimerContextType {
