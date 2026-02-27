@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { RadioStation } from "@/types/radio";
 import { StationCard } from "@/components/StationCard";
 import { ScrollableRow } from "@/components/ScrollableRow";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 import { useWeeklyDiscoveries } from "@/hooks/useWeeklyDiscoveries";
-import { Heart, Sparkles, RefreshCw, ChevronRight } from "lucide-react";
+import { Heart, Sparkles, RefreshCw, ChevronRight, ArrowUp } from "lucide-react";
 import { GenreAnimation } from "@/components/GenreAnimations";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 
@@ -24,6 +25,17 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
   const [favLimit, setFavLimit] = useState(10);
   const visibleFavs = favorites.slice(0, favLimit);
   const hasMoreFavs = favorites.length > favLimit;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (el) setShowScrollTop(el.scrollTop > 300);
+  }, []);
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -34,7 +46,7 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-4">
 
       {recent.length > 0 && (
         <section className="mb-6">
@@ -113,6 +125,16 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
           ))}
         </div>
       </section>
+      <button
+        onClick={scrollToTop}
+        className={cn(
+          "fixed bottom-48 right-4 z-50 w-10 h-10 rounded-full bg-primary/70 backdrop-blur-sm text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-300",
+          showScrollTop ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none"
+        )}
+        aria-label="Scroll to top"
+      >
+        <ArrowUp className="w-5 h-5" />
+      </button>
       </div>
     </div>
   );
