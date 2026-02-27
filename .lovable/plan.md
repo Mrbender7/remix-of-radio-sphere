@@ -1,59 +1,50 @@
 
 
-# Plan : Genres manquants + Tri par pays des favoris + Note Collections
+# Traduire Radio Sphere en espagnol et allemand
 
-## 1. Ajouter les 10 animations SVG manquantes
+## Objectif
+Ajouter l'espagnol (es) et l'allemand (de) comme nouvelles langues, et remplacer les sélecteurs de langue (boutons fr/en) par un menu deroulant dans les Reglages et la page de bienvenue.
 
-Ajouter dans `src/components/GenreAnimations.tsx` les 10 composants SVG suivants, en blanc avec le meme style (drop-shadow blanc, stroke round, animations SVG natives) :
+## Fichiers a modifier
 
-| Genre | Animation |
-|-------|-----------|
-| 60s | Fleur peace & love avec petales qui pulsent |
-| blues | Guitare acoustique avec cordes qui vibrent |
-| country | Banjo avec cordes vibrantes |
-| funk | Ligne de basse ondulante (waveform funky) |
-| latin | Maracas avec mouvement de secousse |
-| metal | Eclair/foudre pulsant |
-| reggae | Onde sonore relaxante (vagues lentes) |
-| techno | Forme d'onde geometrique (carree/repetitive) |
-| trance | Spirale hypnotique qui tourne |
-| world | Globe avec lignes meridiennes |
+### 1. `src/i18n/translations.ts`
+- Etendre le type `Language` : `"fr" | "en" | "es" | "de"`
+- Ajouter les blocs de traduction `es` et `de` avec toutes les cles existantes (environ 90 cles chacun)
+- Traductions completes pour chaque cle (navigation, recherche, favoris, premium, minuterie, lecteur, parametres, guide utilisateur, etc.)
 
-Ajouter ces 10 entrees dans le `GENRE_MAP`.
+### 2. `src/contexts/LanguageContext.tsx`
+- Mettre a jour `detectInitialLanguage()` pour reconnaitre `"es"` et `"de"` dans le localStorage et dans `navigator.language`
 
-Mettre a jour la liste `GENRES` dans `HomePage.tsx` pour inclure les 10 nouveaux genres : `["60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical", "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal", "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"]`.
+### 3. `src/pages/WelcomePage.tsx`
+- Remplacer les deux boutons fr/en par un **Select dropdown** (composant `Select` existant de Radix)
+- Adapter les textes statiques de la page (subtitle, label "Choisissez la langue") pour utiliser la langue selectionnee plutot que du texte bilingue en dur
+- Adapter les `FEATURES` avec `labelEs` et `labelDe` (ou passer par des cles de traduction)
+- Adapter le bouton "Commencer" / "Get started" pour les 4 langues
 
-Ajouter egalement les couleurs de fond correspondantes dans `GENRE_COLORS`.
+### 4. `src/pages/SettingsPage.tsx`
+- Remplacer les deux boutons de langue (lignes 113-128) par un **Select dropdown** avec les 4 langues
+- Adapter la reference `language === "fr" ? opt.labelFr : opt.labelEn` dans le sleep timer pour supporter les 4 langues
 
-## 2. Tri par pays dans les favoris (LibraryPage)
+### 5. `src/contexts/SleepTimerContext.tsx`
+- Ajouter `labelEs` et `labelDe` aux options du sleep timer (ou simplifier avec une cle de traduction)
 
-Modifier `src/pages/LibraryPage.tsx` pour ajouter un selecteur de tri :
-- **A-Z** (par defaut, tri actuel par nom)
-- **Par pays** (regroupe les stations par `country`, avec un sous-titre separateur pour chaque pays, tries alphabetiquement)
+---
 
-Implementation :
-- Ajouter un state `sortMode: "name" | "country"` 
-- Deux boutons toggle sous le titre "Favoris" (style identique aux boutons de tri de SearchPage : pills arrondies)
-- En mode "country" : grouper les favoris par `station.country`, trier les groupes alphabetiquement, afficher un separateur texte pour chaque pays
-- Ajouter les traductions FR/EN dans `translations.ts` : `"favorites.sortName"`, `"favorites.sortCountry"`
+## Details techniques
 
-## 3. Note future : Collections (Premium Roadmap)
+### Nouvelles langues dans le Select
+Chaque option affichera un drapeau emoji + nom :
+- `🇫🇷 Francais`
+- `🇬🇧 English`
+- `🇪🇸 Espanol`
+- `🇩🇪 Deutsch`
 
-Ajouter dans `docs/PREMIUM_ROADMAP.md` une nouvelle section dans les fonctionnalites premium futures :
+### Composant Select
+Le projet dispose deja de `src/components/ui/select.tsx` (Radix Select). Il sera utilise directement dans WelcomePage et SettingsPage.
 
-```
-### 10. Collections personnalisees
-- Creer des collections thematiques dans les favoris (ex: "Chill", "Workout", "Jazz du soir")
-- Glisser-deposer des stations entre collections
-- Icone et couleur personnalisables par collection
-- **Statut** : A venir (Premium)
-```
+### Sleep Timer
+Pour eviter de multiplier les labels par langue, les options `labelFr`/`labelEn` seront etendues avec `labelEs`/`labelDe`, et un helper simple choisira le bon label selon la langue courante.
 
-## Fichiers modifies
-
-1. `src/components/GenreAnimations.tsx` -- ajouter 10 animations SVG + entrees GENRE_MAP
-2. `src/pages/HomePage.tsx` -- etendre GENRES et GENRE_COLORS avec les 10 nouveaux genres
-3. `src/pages/LibraryPage.tsx` -- ajouter selecteur tri A-Z / par pays avec regroupement
-4. `src/i18n/translations.ts` -- ajouter traductions pour tri favoris
-5. `docs/PREMIUM_ROADMAP.md` -- ajouter note Collections
+### Volume de traductions
+Environ 90 cles x 2 nouvelles langues = ~180 nouvelles traductions a ajouter dans le fichier translations.ts.
 
