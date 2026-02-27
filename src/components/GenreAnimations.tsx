@@ -12,8 +12,8 @@ const NeonGradient = ({ id }: { id: string }) => (
   </defs>
 );
 
-const svgBase = "absolute right-1 top-1/2 -translate-y-1/2 w-16 h-16 opacity-40";
-const filterStyle: React.CSSProperties = { filter: "drop-shadow(0 0 3px #00d2ff)" };
+const svgBase = "absolute right-2 top-1/2 -translate-y-1/2 w-16 h-16 opacity-80";
+const filterStyle: React.CSSProperties = { filter: "drop-shadow(0 0 6px #00d2ff) drop-shadow(0 0 2px #9d50bb)" };
 const strokeProps = { strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
 
 function Vinyl() {
