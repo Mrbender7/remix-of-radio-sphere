@@ -240,27 +240,41 @@ function HeartPulse() {
   );
 }
 
-function RockHand() {
+function RockDevil() {
   return (
     <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
-      <path d="M25,55 L25,38 C25,36 27,34 29,34 L51,34 C53,34 55,36 55,38 L55,55 C55,62 48,68 40,68 C32,68 25,62 25,55Z" stroke={W} strokeWidth="2.5" {...S} />
-      <path d="M29,34 L29,12 C29,10 31,8 33,8 C35,8 37,10 37,12 L37,34" stroke={W} strokeWidth="2.5" {...S} />
-      <path d="M43,34 L43,14 C43,12 45,10 47,10 C49,10 51,12 51,14 L51,34" stroke={W} strokeWidth="2.5" {...S} />
-      <path d="M34,34 C34,30 36,28 38,30" stroke={W} strokeWidth="1.5" {...S} opacity="0.5" />
-      <path d="M39,34 C39,30 41,28 43,30" stroke={W} strokeWidth="1.5" {...S} opacity="0.5" />
-      <path d="M25,42 L20,40 C18,39 18,36 20,35 L25,36" stroke={W} strokeWidth="2" {...S} />
-      <line x1="14" y1="10" x2="18" y2="16" stroke={W} strokeWidth="2" {...S}>
-        <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" />
+      {/* Face ronde */}
+      <circle cx="40" cy="44" r="22" stroke={W} strokeWidth="2.5" {...S} />
+      {/* Cornes gauche */}
+      <path d="M22,30 L14,10 L28,24" stroke={W} strokeWidth="2.5" {...S}>
+        <animate attributeName="d" values="M22,30 L14,10 L28,24;M22,30 L12,8 L28,24;M22,30 L14,10 L28,24" dur="1.5s" repeatCount="indefinite" />
+      </path>
+      {/* Cornes droite */}
+      <path d="M58,30 L66,10 L52,24" stroke={W} strokeWidth="2.5" {...S}>
+        <animate attributeName="d" values="M58,30 L66,10 L52,24;M58,30 L68,8 L52,24;M58,30 L66,10 L52,24" dur="1.5s" repeatCount="indefinite" />
+      </path>
+      {/* Yeux */}
+      <circle cx="32" cy="40" r="3" fill={W} stroke="none">
+        <animate attributeName="r" values="3;3.5;3" dur="2s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="48" cy="40" r="3" fill={W} stroke="none">
+        <animate attributeName="r" values="3;3.5;3" dur="2s" repeatCount="indefinite" begin="0.2s" />
+      </circle>
+      {/* Sourire diabolique */}
+      <path d="M30,52 Q35,60 40,56 Q45,60 50,52" stroke={W} strokeWidth="2" {...S}>
+        <animate attributeName="d" values="M30,52 Q35,60 40,56 Q45,60 50,52;M30,51 Q35,62 40,55 Q45,62 50,51;M30,52 Q35,60 40,56 Q45,60 50,52" dur="3s" repeatCount="indefinite" />
+      </path>
+      {/* Sourcils malicieux */}
+      <line x1="26" y1="34" x2="35" y2="35" stroke={W} strokeWidth="2" {...S}>
+        <animate attributeName="y1" values="34;32;34" dur="2s" repeatCount="indefinite" />
       </line>
-      <line x1="60" y1="8" x2="56" y2="14" stroke={W} strokeWidth="2" {...S}>
-        <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0.3s" />
+      <line x1="54" y1="34" x2="45" y2="35" stroke={W} strokeWidth="2" {...S}>
+        <animate attributeName="y1" values="34;32;34" dur="2s" repeatCount="indefinite" />
       </line>
-      <line x1="10" y1="22" x2="16" y2="24" stroke={W} strokeWidth="1.5" {...S}>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.6s" />
-      </line>
-      <line x1="64" y1="20" x2="58" y2="22" stroke={W} strokeWidth="1.5" {...S}>
-        <animate attributeName="opacity" values="0;0.8;0" dur="2s" repeatCount="indefinite" begin="0.9s" />
-      </line>
+      {/* Petite queue pointue */}
+      <path d="M62,50 Q72,48 68,38 L70,36" stroke={W} strokeWidth="2" {...S}>
+        <animate attributeName="d" values="M62,50 Q72,48 68,38 L70,36;M62,50 Q74,46 69,36 L72,34;M62,50 Q72,48 68,38 L70,36" dur="2s" repeatCount="indefinite" />
+      </path>
     </svg>
   );
 }
@@ -448,7 +462,7 @@ const GENRE_MAP: Record<string, () => JSX.Element> = {
   pop: Star,
   "r&b": HeartPulse,
   reggae: ReggaeWaves,
-  rock: RockHand,
+  rock: RockDevil,
   soul: Flame,
   techno: TechnoWave,
   trance: TranceSpiral,
