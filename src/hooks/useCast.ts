@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { RadioStation } from "@/types/radio";
 
-const CAST_APP_ID = "65257ADB";
+const CAST_APP_ID = "65257ADB"; // Receiver URL: https://mrbender7.github.io/privacy-policy-radiosphere/receiver.html
 const SDK_URL = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 
 declare global {
