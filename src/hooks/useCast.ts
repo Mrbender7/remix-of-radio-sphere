@@ -134,12 +134,7 @@ export function useCast() {
         }
       };
 
-      if (!document.querySelector(`script[src="${SDK_URL}"]`)) {
-        const script = document.createElement("script");
-        script.src = SDK_URL;
-        script.async = true;
-        document.head.appendChild(script);
-      }
+      // SDK script is loaded via index.html <script> tag — no dynamic injection needed
     }
   }, [isNative]);
 
