@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio Sphere - Cast Receiver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      background-image: radial-gradient(ellipse at 20% 50%, hsla(220,90%,30%,0.3) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 50%, hsla(280,80%,30%,0.3) 0%, transparent 60%);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 32px 48px 0;
+    }
+    .header svg { width: 48px; height: 48px; }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, hsl(220,90%,60%), hsl(280,80%,60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Center area */
+    .center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 0 48px;
+    }
+    .genre-animation {
+      width: 250px;
+      height: 250px;
+    }
+    .genre-animation svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 8px hsla(220,90%,60%,0.5)) drop-shadow(0 0 24px hsla(280,80%,60%,0.3));
+    }
+    .station-name {
+      font-family: 'Poppins', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(135deg, hsl(220,90%,60%), hsl(280,80%,60%));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      max-width: 80%;
+      line-height: 1.2;
+    }
+    .station-tags {
+      font-size: 18px;
+      color: hsla(0,0%,100%,0.5);
+      text-align: center;
+    }
+
+    /* Bottom mini-player */
+    .mini-player {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 48px;
+      background: hsla(0,0%,100%,0.05);
+      border-top: 1px solid hsla(0,0%,100%,0.1);
+      backdrop-filter: blur(12px);
+    }
+    .mini-player-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background: hsla(220,90%,60%,0.2);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .mini-player-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .mini-player-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .mini-player-name {
+      font-weight: 600;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mini-player-status {
+      font-size: 13px;
+      color: hsla(0,0%,100%,0.4);
+    }
+    /* Animated equalizer bars */
+    .equalizer {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 24px;
+    }
+    .eq-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to top, hsl(220,90%,60%), hsl(280,80%,60%));
+    }
+    .eq-bar:nth-child(1) { animation: eq 0.5s ease-in-out infinite alternate; }
+    .eq-bar:nth-child(2) { animation: eq 0.7s ease-in-out infinite alternate; height: 16px; }
+    .eq-bar:nth-child(3) { animation: eq 0.4s ease-in-out infinite alternate; }
+    .eq-bar:nth-child(4) { animation: eq 0.6s ease-in-out infinite alternate; height: 12px; }
+    @keyframes eq {
+      0% { height: 6px; }
+      100% { height: 24px; }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 12px 48px 24px;
+      font-size: 13px;
+      color: hsla(0,0%,100%,0.25);
+    }
+
+    /* Hidden state */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <svg viewBox="0 0 80 80" fill="none">
+      <circle cx="40" cy="40" r="28" stroke="url(#lg)" stroke-width="3">
+        <animate attributeName="r" values="26;30;26" dur="4s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="40" cy="40" r="18" stroke="url(#lg)" stroke-width="2" opacity="0.6">
+        <animate attributeName="r" values="16;20;16" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="40" cy="40" r="8" stroke="url(#lg)" stroke-width="2" opacity="0.8">
+        <animate attributeName="r" values="7;10;7" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="40" cy="40" r="4" fill="url(#lg)">
+        <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <defs>
+        <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="hsl(220,90%,60%)"/>
+          <stop offset="100%" stop-color="hsl(280,80%,60%)"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <h1>Radio Sphere</h1>
+  </div>
+
+  <!-- Center -->
+  <div class="center">
+    <div class="genre-animation" id="genreAnimContainer">
+      <!-- Default radio waves animation -->
+      <svg viewBox="0 0 80 80" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="36" y1="68" x2="40" y2="28" stroke-width="2.5"/>
+        <circle cx="40" cy="26" r="3" stroke-width="2.5"/>
+        <line x1="26" y1="68" x2="46" y2="68" stroke-width="2.5"/>
+        <path d="M26,26 A14,14 0 0,1 54,26" stroke-width="2"><animate attributeName="opacity" values="0.2;1;0.2" dur="1s" repeatCount="indefinite"/></path>
+        <path d="M18,26 A22,22 0 0,1 62,26" stroke-width="2"><animate attributeName="opacity" values="0.2;1;0.2" dur="1.4s" repeatCount="indefinite"/></path>
+        <path d="M10,26 A30,30 0 0,1 70,26" stroke-width="2"><animate attributeName="opacity" values="0.2;1;0.2" dur="1.8s" repeatCount="indefinite"/></path>
+      </svg>
+    </div>
+    <div class="station-name" id="stationName">En attente...</div>
+    <div class="station-tags" id="stationTags"></div>
+  </div>
+
+  <!-- Mini Player -->
+  <div class="mini-player">
+    <div class="mini-player-icon" id="miniIcon">
+      <img id="miniIconImg" src="" alt="" style="display:none">
+    </div>
+    <div class="mini-player-info">
+      <div class="mini-player-name" id="miniName">--</div>
+      <div class="mini-player-status">En lecture</div>
+    </div>
+    <div class="equalizer">
+      <div class="eq-bar" style="height:12px"></div>
+      <div class="eq-bar" style="height:18px"></div>
+      <div class="eq-bar" style="height:8px"></div>
+      <div class="eq-bar" style="height:14px"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer" id="footerMsg">Contrôlez la lecture depuis votre téléphone</div>
+
+  <!-- Cast Receiver SDK -->
+  <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+
+  <script>
+    // ─── Genre Animation SVGs (standalone, no React) ───────────────────
+    const S = 'stroke-linecap="round" stroke-linejoin="round" fill="none"';
+    const W = 'white';
+
+    const GENRE_SVGS = {
+      "60s": `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <circle cx="40" cy="40" r="18" stroke-width="2.5"/><line x1="40" y1="22" x2="40" y2="58" stroke-width="2"/>
+        <line x1="40" y1="40" x2="27" y2="53" stroke-width="2"/><line x1="40" y1="40" x2="53" y2="53" stroke-width="2"/>
+        ${[0,60,120,180,240,300].map(a=>`<ellipse cx="40" cy="14" rx="5" ry="10" stroke-width="1.5" transform="rotate(${a} 40 40)"><animate attributeName="ry" values="10;13;10" dur="${2+a*0.003}s" repeatCount="indefinite"/></ellipse>`).join('')}
+      </svg>`,
+      "70s": `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <circle cx="40" cy="40" r="32" stroke-width="2.5"/><circle cx="40" cy="40" r="22" stroke-width="1.5"/>
+        <circle cx="40" cy="40" r="12" stroke-width="1.5"/><circle cx="40" cy="40" r="5" stroke-width="2.5"/>
+        <g><animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="6s" repeatCount="indefinite"/>
+        <line x1="40" y1="8" x2="40" y2="14" stroke-width="1" opacity="0.3"/></g>
+      </svg>`,
+      "80s": `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <polyline points="5,55 18,18 32,52 46,12 60,48 75,15" stroke-width="3"><animate attributeName="opacity" values="0.5;1;0.5" dur="1.2s" repeatCount="indefinite"/></polyline>
+        <polyline points="8,68 22,32 36,62 50,22 64,58 78,28" stroke-width="2" opacity="0.4"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="1.8s" repeatCount="indefinite"/></polyline>
+      </svg>`,
+      "90s": `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        ${[{x:6,h:50,y:20,d:.7},{x:19,h:60,y:10,d:.5},{x:32,h:45,y:25,d:.9},{x:45,h:55,y:15,d:.6},{x:58,h:40,y:30,d:.8},{x:71,h:50,y:20,d:.55}].map(b=>
+        `<rect x="${b.x}" y="${b.y}" width="8" height="${b.h}" rx="2" stroke-width="2" fill="${W}" fill-opacity="0.3">
+          <animate attributeName="height" values="${b.h};${b.h*0.4};${b.h*0.9};${b.h}" dur="${b.d}s" repeatCount="indefinite"/>
+          <animate attributeName="y" values="${b.y};${b.y+b.h*0.6};${b.y+b.h*0.1};${b.y}" dur="${b.d}s" repeatCount="indefinite"/>
+        </rect>`).join('')}
+      </svg>`,
+      ambient: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        ${[10,20,30].map((r,i)=>`<circle cx="40" cy="40" r="${r}" stroke-width="2"><animate attributeName="r" values="${r};${r+4};${r}" dur="${3+i}s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0.3;0.8" dur="${3+i}s" repeatCount="indefinite"/></circle>`).join('')}
+      </svg>`,
+      blues: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <ellipse cx="30" cy="55" rx="18" ry="16" stroke-width="2.5"/><circle cx="30" cy="55" r="5" stroke-width="1.5"/>
+        <line x1="48" y1="48" x2="70" y2="10" stroke-width="3"/><rect x="66" y="6" width="10" height="8" rx="2" stroke-width="2"/>
+      </svg>`,
+      chillout: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M2,40 Q20,15 40,40 T78,40" stroke-width="2.5"><animate attributeName="d" values="M2,40 Q20,15 40,40 T78,40;M2,40 Q20,60 40,40 T78,40;M2,40 Q20,15 40,40 T78,40" dur="3.5s" repeatCount="indefinite"/></path>
+        <path d="M2,52 Q20,28 40,52 T78,52" stroke-width="1.5" opacity="0.5"><animate attributeName="d" values="M2,52 Q20,28 40,52 T78,52;M2,52 Q20,70 40,52 T78,52;M2,52 Q20,28 40,52 T78,52" dur="4.5s" repeatCount="indefinite"/></path>
+      </svg>`,
+      classical: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M20,55 L20,25 C20,15 35,8 50,12 C62,15 68,25 68,35 L68,55 C68,58 65,60 62,60 L26,60 C23,60 20,58 20,55Z" stroke-width="2.5"/>
+        <rect x="22" y="54" width="44" height="5" rx="1" stroke-width="1.5"/>
+        <g><circle cx="14" cy="20" r="2.5" stroke-width="1.5"><animate attributeName="cy" values="22;14;22" dur="2.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;1;0.3" dur="2.5s" repeatCount="indefinite"/></circle></g>
+      </svg>`,
+      country: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <g><animateTransform attributeName="transform" type="rotate" values="-3 40 44;3 40 44;-3 40 44" dur="3s" repeatCount="indefinite"/>
+        <path d="M2,52 Q14,60 40,56 Q66,60 78,52 Q66,48 40,50 Q14,48 2,52Z" stroke-width="2.5"/>
+        <path d="M18,50 L22,26 Q28,16 40,18 Q52,16 58,26 L62,50" stroke-width="2.5"/>
+        <path d="M22,26 Q31,36 40,33 Q49,36 58,26" stroke-width="2"/></g>
+      </svg>`,
+      electronic: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <polyline points="5,40 20,40 25,15 35,65 45,25 55,55 60,40 75,40" stroke-width="2.5"><animate attributeName="stroke-dashoffset" values="200;0" dur="2s" repeatCount="indefinite"/></polyline>
+        <circle cx="40" cy="40" r="5" stroke-width="2.5"><animate attributeName="r" values="4;9;4" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/></circle>
+      </svg>`,
+      funk: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M5,40 C12,20 20,60 30,30 C40,55 50,15 60,45 C65,55 70,25 78,40" stroke-width="3">
+          <animate attributeName="d" values="M5,40 C12,20 20,60 30,30 C40,55 50,15 60,45 C65,55 70,25 78,40;M5,40 C12,55 20,20 30,50 C40,25 50,60 60,30 C65,20 70,55 78,40;M5,40 C12,20 20,60 30,30 C40,55 50,15 60,45 C65,55 70,25 78,40" dur="1.5s" repeatCount="indefinite"/></path>
+      </svg>`,
+      hiphop: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <rect x="30" y="10" width="20" height="32" rx="10" stroke-width="2.5"/>
+        <line x1="40" y1="42" x2="40" y2="60" stroke-width="2.5"/><line x1="28" y1="60" x2="52" y2="60" stroke-width="2.5"/>
+        ${[16,22,28].map((r,i)=>`<path d="M${40-r},30 A${r},${r} 0 0,0 ${40+r},30" stroke-width="1.5"><animate attributeName="opacity" values="0.1;0.8;0.1" dur="${1.2+i*0.3}s" repeatCount="indefinite"/></path>`).join('')}
+      </svg>`,
+      jazz: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M22,8 L28,8 L30,14" stroke-width="2.5"/><path d="M30,14 L32,28" stroke-width="2.5"/>
+        <path d="M32,28 C32,34 34,40 38,46 C42,52 46,56 46,62 C46,68 42,72 36,72 C30,72 26,68 26,62" stroke-width="3"/>
+        <circle cx="34" cy="34" r="2" stroke-width="1.5"/><circle cx="36" cy="42" r="2" stroke-width="1.5"/><circle cx="40" cy="50" r="2" stroke-width="1.5"/>
+        <g><ellipse cx="58" cy="20" rx="3" ry="2.5" stroke-width="1.5"><animate attributeName="cy" values="22;12;22" dur="2.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;1;0.3" dur="2.5s" repeatCount="indefinite"/></ellipse></g>
+      </svg>`,
+      latin: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <g><animateTransform attributeName="transform" type="rotate" values="-8 30 50;8 30 50;-8 30 50" dur="0.5s" repeatCount="indefinite"/>
+        <ellipse cx="30" cy="22" rx="12" ry="16" stroke-width="2.5"/><line x1="30" y1="38" x2="30" y2="68" stroke-width="2.5"/></g>
+        <g><animateTransform attributeName="transform" type="rotate" values="8 55 50;-8 55 50;8 55 50" dur="0.5s" repeatCount="indefinite"/>
+        <ellipse cx="55" cy="25" rx="10" ry="14" stroke-width="2"/><line x1="55" y1="39" x2="55" y2="65" stroke-width="2"/></g>
+      </svg>`,
+      metal: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <polygon points="45,5 25,38 38,38 32,75 60,32 46,32" stroke-width="2.5" fill="${W}" fill-opacity="0.15" stroke-linejoin="round">
+          <animate attributeName="opacity" values="0.6;1;0.4;1;0.6" dur="0.8s" repeatCount="indefinite"/></polygon>
+      </svg>`,
+      news: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <line x1="36" y1="68" x2="40" y2="28" stroke-width="2.5"/><circle cx="40" cy="26" r="3" stroke-width="2.5"/>
+        <line x1="26" y1="68" x2="46" y2="68" stroke-width="2.5"/>
+        ${[14,22,30].map((r,i)=>`<path d="M${40-r},26 A${r},${r} 0 0,1 ${40+r},26" stroke-width="2"><animate attributeName="opacity" values="0.2;1;0.2" dur="${1+i*0.4}s" repeatCount="indefinite"/></path>`).join('')}
+      </svg>`,
+      pop: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <polygon points="40,8 47,28 68,28 51,42 57,62 40,50 23,62 29,42 12,28 33,28" stroke-width="2.5">
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/></polygon>
+        ${[{x:16,y:16},{x:68,y:14},{x:65,y:56},{x:10,y:52}].map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="1.5" stroke-width="1.5"><animate attributeName="r" values="0.5;3;0.5" dur="${1.2+i*0.3}s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="${1.2+i*0.3}s" repeatCount="indefinite"/></circle>`).join('')}
+      </svg>`,
+      "r&b": `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M40,65 C25,50 8,40 8,26 C8,16 16,10 26,13 C33,15 37,20 40,25 C43,20 47,15 54,13 C64,10 72,16 72,26 C72,40 55,50 40,65Z" stroke-width="2.5">
+          <animateTransform attributeName="transform" type="scale" values="1;1.08;1" dur="1s" repeatCount="indefinite" additive="sum"/></path>
+      </svg>`,
+      reggae: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <circle cx="40" cy="42" r="20" stroke-width="2.5"/>
+        <circle cx="33" cy="40" r="5" stroke-width="2"/><circle cx="47" cy="40" r="5" stroke-width="2"/>
+        <line x1="38" y1="40" x2="42" y2="40" stroke-width="1.5"/>
+        <path d="M34,50 Q40,56 46,50" stroke-width="2"><animate attributeName="d" values="M34,50 Q40,56 46,50;M34,49 Q40,57 46,49;M34,50 Q40,56 46,50" dur="4s" repeatCount="indefinite"/></path>
+        <path d="M22,34 Q16,40 14,54" stroke-width="2.5"><animate attributeName="d" values="M22,34 Q16,40 14,54;M22,34 Q14,42 12,56;M22,34 Q16,40 14,54" dur="3s" repeatCount="indefinite"/></path>
+        <path d="M58,34 Q64,40 66,54" stroke-width="2.5"><animate attributeName="d" values="M58,34 Q64,40 66,54;M58,34 Q66,42 68,56;M58,34 Q64,40 66,54" dur="3.2s" repeatCount="indefinite"/></path>
+        <path d="M26,28 Q33,14 40,16 Q47,14 54,28" stroke-width="2.5"/>
+      </svg>`,
+      rock: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <circle cx="40" cy="44" r="22" stroke-width="2.5"/>
+        <path d="M22,30 L14,10 L28,24" stroke-width="2.5"><animate attributeName="d" values="M22,30 L14,10 L28,24;M22,30 L12,8 L28,24;M22,30 L14,10 L28,24" dur="1.5s" repeatCount="indefinite"/></path>
+        <path d="M58,30 L66,10 L52,24" stroke-width="2.5"><animate attributeName="d" values="M58,30 L66,10 L52,24;M58,30 L68,8 L52,24;M58,30 L66,10 L52,24" dur="1.5s" repeatCount="indefinite"/></path>
+        <circle cx="32" cy="40" r="3" fill="${W}"><animate attributeName="r" values="3;3.5;3" dur="2s" repeatCount="indefinite"/></circle>
+        <circle cx="48" cy="40" r="3" fill="${W}"><animate attributeName="r" values="3;3.5;3" dur="2s" repeatCount="indefinite" begin="0.2s"/></circle>
+        <path d="M30,52 Q35,60 40,56 Q45,60 50,52" stroke-width="2"/>
+      </svg>`,
+      soul: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M40,8 C46,22 62,32 58,52 C55,64 30,68 26,54 C24,44 34,44 37,50 C40,42 28,28 40,8Z" stroke-width="2.5">
+          <animate attributeName="d" values="M40,8 C46,22 62,32 58,52 C55,64 30,68 26,54 C24,44 34,44 37,50 C40,42 28,28 40,8Z;M40,10 C50,20 60,36 55,52 C52,65 32,65 28,54 C26,45 36,46 38,52 C42,40 30,26 40,10Z;M40,8 C46,22 62,32 58,52 C55,64 30,68 26,54 C24,44 34,44 37,50 C40,42 28,28 40,8Z" dur="2.5s" repeatCount="indefinite"/></path>
+      </svg>`,
+      techno: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <polyline points="5,40 5,20 15,20 15,60 25,60 25,20 35,20 35,60 45,60 45,20 55,20 55,60 65,60 65,20 75,20 75,40" stroke-width="2.5">
+          <animate attributeName="stroke-dashoffset" values="300;0" dur="2s" repeatCount="indefinite"/></polyline>
+      </svg>`,
+      trance: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <path d="M40,40 C40,30 50,25 55,35 C60,45 50,55 40,50 C30,45 25,35 35,25 C45,15 60,20 62,38 C64,56 48,65 35,58 C22,51 18,32 30,20" stroke-width="2.5">
+          <animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="8s" repeatCount="indefinite"/></path>
+        <circle cx="40" cy="40" r="4" stroke-width="2"><animate attributeName="r" values="3;6;3" dur="2s" repeatCount="indefinite"/></circle>
+      </svg>`,
+      world: `<svg viewBox="0 0 80 80" fill="none" stroke="${W}" ${S}>
+        <circle cx="40" cy="40" r="28" stroke-width="2.5"/><ellipse cx="40" cy="40" rx="12" ry="28" stroke-width="1.5"/>
+        <line x1="12" y1="30" x2="68" y2="30" stroke-width="1.5" opacity="0.5"/>
+        <line x1="12" y1="50" x2="68" y2="50" stroke-width="1.5" opacity="0.5"/>
+        <g><animateTransform attributeName="transform" type="rotate" from="0 40 40" to="360 40 40" dur="20s" repeatCount="indefinite"/>
+        <circle cx="40" cy="12" r="2" fill="${W}" opacity="0.6"/></g>
+      </svg>`
+    };
+
+    const GENRE_KEYWORDS = Object.keys(GENRE_SVGS);
+
+    function detectGenre(tags) {
+      if (!tags || !Array.isArray(tags)) return null;
+      const joined = tags.join(' ').toLowerCase();
+      for (const g of GENRE_KEYWORDS) {
+        if (joined.includes(g)) return g;
+      }
+      // Extended matching
+      const map = {
+        'hip hop': 'hiphop', 'hip-hop': 'hiphop', 'rap': 'hiphop',
+        'rnb': 'r&b', 'rhythm': 'r&b',
+        'classic': 'classical', 'orchestra': 'classical', 'symphony': 'classical',
+        'chill': 'chillout', 'lounge': 'chillout', 'relax': 'ambient',
+        'edm': 'electronic', 'house': 'electronic', 'dance': 'electronic',
+        'hard rock': 'rock', 'alternative': 'rock', 'indie': 'rock',
+        'death': 'metal', 'heavy': 'metal', 'punk': 'rock',
+        'salsa': 'latin', 'cumbia': 'latin', 'merengue': 'latin', 'bachata': 'latin',
+        'dub': 'reggae', 'ska': 'reggae',
+        'gospel': 'soul', 'motown': 'soul',
+        'disco': 'funk',
+        'information': 'news', 'talk': 'news', 'sport': 'news',
+        'psytrance': 'trance', 'progressive': 'trance',
+        'minimal': 'techno', 'industrial': 'techno'
+      };
+      for (const [key, val] of Object.entries(map)) {
+        if (joined.includes(key)) return val;
+      }
+      return null;
+    }
+
+    function setGenreAnimation(genre) {
+      const container = document.getElementById('genreAnimContainer');
+      if (genre && GENRE_SVGS[genre]) {
+        container.innerHTML = GENRE_SVGS[genre];
+      }
+      // else keep default radio waves
+    }
+
+    // ─── Cast Receiver Setup ───────────────────────────────────────────
+    const context = cast.framework.CastReceiverContext.getInstance();
+    const playerManager = context.getPlayerManager();
+
+    playerManager.setMessageInterceptor(
+      cast.framework.messages.MessageType.LOAD,
+      request => {
+        const media = request.media;
+        if (media) {
+          const title = media.metadata?.title || 'Station';
+          const imageUrl = media.metadata?.images?.[0]?.url || '';
+          const tags = media.customData?.tags || [];
+
+          // Update UI
+          document.getElementById('stationName').textContent = title;
+          document.getElementById('miniName').textContent = title;
+
+          // Tags display
+          const tagsEl = document.getElementById('stationTags');
+          if (tags.length > 0) {
+            tagsEl.textContent = tags.slice(0, 4).join(' • ');
+          } else {
+            tagsEl.textContent = '';
+          }
+
+          // Station icon
+          const iconImg = document.getElementById('miniIconImg');
+          if (imageUrl) {
+            iconImg.src = imageUrl.replace('http://', 'https://');
+            iconImg.style.display = 'block';
+            iconImg.onerror = () => { iconImg.style.display = 'none'; };
+          } else {
+            iconImg.style.display = 'none';
+          }
+
+          // Genre animation
+          const genre = detectGenre(tags);
+          setGenreAnimation(genre);
+        }
+        return request;
+      }
+    );
+
+    // Start receiver
+    context.start();
+  </script>
+</body>
+</html>
