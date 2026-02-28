@@ -32,7 +32,7 @@ function AppContentInner() {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showWelcome, setShowWelcome] = useState(!hasCompletedOnboarding());
   const { favorites, toggleFavorite, isFavorite, recent, addRecent } = useFavoritesContext();
-  const { isFullScreen, closeFullScreen } = usePlayer();
+  const { isFullScreen, closeFullScreen, currentStation } = usePlayer();
   const { setLanguage } = useTranslation();
 
   const handleGenreClick = useCallback((genre: string) => {
@@ -88,7 +88,7 @@ function AppContentInner() {
       <PremiumProvider>
         <SleepTimerProvider>
           <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
-            <div className="flex-1 flex flex-col overflow-hidden pb-14">
+            <div className={`flex-1 flex flex-col overflow-hidden ${currentStation ? 'pb-28' : 'pb-14'}`}>
               {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
               {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
               {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}

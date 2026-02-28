@@ -164,6 +164,10 @@ const translations: Record<Language, Record<string, string>> = {
     "genre.techno": "Techno",
     "genre.trance": "Trance",
     "genre.world": "World",
+    "cast.castingTo": "Diffusion sur",
+    "cast.controlFromPhone": "Contrôlez depuis votre téléphone",
+    "cast.connected": "Connecté",
+    "cast.disconnected": "Déconnecté",
   },
   en: {
     "nav.home": "Home",
@@ -320,6 +324,10 @@ const translations: Record<Language, Record<string, string>> = {
     "genre.techno": "Techno",
     "genre.trance": "Trance",
     "genre.world": "World",
+    "cast.castingTo": "Casting to",
+    "cast.controlFromPhone": "Control from your phone",
+    "cast.connected": "Connected",
+    "cast.disconnected": "Disconnected",
   },
   es: {
     "nav.home": "Inicio",
@@ -476,6 +484,10 @@ const translations: Record<Language, Record<string, string>> = {
     "genre.techno": "Techno",
     "genre.trance": "Trance",
     "genre.world": "World",
+    "cast.castingTo": "Transmitiendo en",
+    "cast.controlFromPhone": "Controla desde tu teléfono",
+    "cast.connected": "Conectado",
+    "cast.disconnected": "Desconectado",
   },
   de: {
     "nav.home": "Startseite",
@@ -632,6 +644,10 @@ const translations: Record<Language, Record<string, string>> = {
     "genre.techno": "Techno",
     "genre.trance": "Trance",
     "genre.world": "World",
+    "cast.castingTo": "Übertragung auf",
+    "cast.controlFromPhone": "Von Ihrem Telefon steuern",
+    "cast.connected": "Verbunden",
+    "cast.disconnected": "Getrennt",
   },
   ja: {
     "nav.home": "ホーム",
@@ -788,6 +804,10 @@ const translations: Record<Language, Record<string, string>> = {
     "genre.techno": "テクノ",
     "genre.trance": "トランス",
     "genre.world": "ワールド",
+    "cast.castingTo": "キャスト中",
+    "cast.controlFromPhone": "スマートフォンから操作できます",
+    "cast.connected": "接続済み",
+    "cast.disconnected": "切断",
   },
 };
 

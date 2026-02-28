@@ -1,14 +1,15 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, ExternalLink, Share2 } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, ExternalLink, Share2, Cast } from "lucide-react";
+import { CastButton } from "@/components/CastButton";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 export function FullScreenPlayer() {
-  const { currentStation, isPlaying, isBuffering, togglePlay, volume, setVolume, isFullScreen, closeFullScreen } = usePlayer();
+  const { currentStation, isPlaying, isBuffering, togglePlay, volume, setVolume, isFullScreen, closeFullScreen, isCasting, castDeviceName } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const { t } = useTranslation();
 
@@ -64,6 +65,7 @@ export function FullScreenPlayer() {
               www
             </button>
           )}
+          <CastButton />
           <button onClick={handleShare} className="p-2">
             <Share2 className="w-5 h-5 text-muted-foreground" />
           </button>
@@ -80,6 +82,14 @@ export function FullScreenPlayer() {
           )}
         </div>
       </div>
+
+      {/* Cast indicator */}
+      {isCasting && castDeviceName && (
+        <div className="flex items-center justify-center gap-2 py-2">
+          <Cast className="w-4 h-4 text-primary" />
+          <span className="text-sm text-primary font-medium">{castDeviceName}</span>
+        </div>
+      )}
 
       {/* Audio Visualizer */}
       {isPlaying && (

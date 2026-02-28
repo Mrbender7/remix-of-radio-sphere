@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useWeeklyDiscoveries } from "@/hooks/useWeeklyDiscoveries";
 import { Heart, Sparkles, RefreshCw, ChevronRight, ArrowUp } from "lucide-react";
 import { GenreAnimation } from "@/components/GenreAnimations";
+import { CastButton } from "@/components/CastButton";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 
 const GENRES = ["60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical", "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal", "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"];
@@ -40,9 +41,12 @@ export function HomePage({ recent, favorites, isFavorite, onToggleFavorite, onGe
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="bg-background px-4 pt-6 pb-4">
-        <div className="flex items-center gap-3">
-          <img src={radioSphereLogo} alt="Radio Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
-          <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap">Radio Sphere</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={radioSphereLogo} alt="Radio Sphere" className="w-12 h-12 rounded-xl mix-blend-screen animate-logo-glow" />
+            <h1 className="text-2xl font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap">Radio Sphere</h1>
+          </div>
+          <CastButton />
         </div>
       </div>
 

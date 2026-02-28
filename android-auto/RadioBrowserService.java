@@ -323,23 +323,40 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     // ─── Player Listener ────────────────────────────────────────────────
 
+    private static final String TAG = "RadioBrowserService";
+
     private final Player.Listener playerListener = new Player.Listener() {
         @Override
         public void onPlaybackStateChanged(int playbackState) {
+            android.util.Log.d(TAG, "onPlaybackStateChanged: " + playbackState
+                + " (IDLE=1, BUFFERING=2, READY=3, ENDED=4)");
             switch (playbackState) {
                 case Player.STATE_BUFFERING:
                     updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
+                    android.util.Log.d(TAG, "Stream is buffering...");
                     break;
                 case Player.STATE_READY:
                     if (player.isPlaying()) {
                         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
+                        android.util.Log.d(TAG, "Stream is now playing");
                     }
                     break;
                 case Player.STATE_ENDED:
+                    android.util.Log.w(TAG, "Stream ended unexpectedly");
+                    updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
+                    break;
                 case Player.STATE_IDLE:
+                    android.util.Log.d(TAG, "Player is idle");
                     updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
                     break;
             }
+        }
+
+        @Override
+        public void onPlayerError(com.google.android.exoplayer2.PlaybackException error) {
+            android.util.Log.e(TAG, "ExoPlayer error: " + error.getMessage()
+                + " | errorCode=" + error.errorCode, error);
+            updatePlaybackState(PlaybackStateCompat.STATE_ERROR);
         }
 
         @Override
@@ -351,12 +368,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     // ─── Playback Helpers ───────────────────────────────────────────────
 
     private void playStation(StationData station) {
+        android.util.Log.d(TAG, "playStation: " + station.name + " | URL: " + station.streamUrl);
+
         // Request audio focus BEFORE starting playback — this pauses other media apps
         if (!requestAudioFocus()) {
+            android.util.Log.w(TAG, "Could not get audio focus, aborting playback");
             return; // Could not get audio focus, do not play
         }
 
         player.stop();
+        // Use fromUri which handles redirections natively
         player.setMediaItem(MediaItem.fromUri(station.streamUrl));
         player.prepare();
         player.setVolume(1.0f); // Restore volume in case it was ducked

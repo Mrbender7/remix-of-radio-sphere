@@ -1,12 +1,12 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useRef, useEffect, useState } from "react";
-import { Play, Pause, Heart, Loader2 } from "lucide-react";
+import { Play, Pause, Heart, Loader2, Cast } from "lucide-react";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
 export function MiniPlayer() {
-  const { currentStation, isPlaying, isBuffering, togglePlay, openFullScreen } = usePlayer();
+  const { currentStation, isPlaying, isBuffering, togglePlay, openFullScreen, isCasting, castDeviceName } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -29,7 +29,8 @@ export function MiniPlayer() {
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 bg-secondary/80 backdrop-blur-lg border-t border-border cursor-pointer"
+      className="fixed left-0 right-0 z-30 flex items-center gap-3 px-4 py-2 bg-secondary/80 backdrop-blur-lg border-t border-border cursor-pointer"
+      style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
       onClick={openFullScreen}
     >
       <div className="w-10 h-10 rounded-md bg-accent flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -50,7 +51,14 @@ export function MiniPlayer() {
             }
           </p>
         </div>
-        <p className="text-xs text-muted-foreground truncate">
+        <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+          {isCasting && (
+            <>
+              <Cast className="w-3 h-3 text-primary" />
+              <span className="text-primary font-medium">{castDeviceName || 'Cast'}</span>
+              <span>•</span>
+            </>
+          )}
           {currentStation.tags.length > 0 ? currentStation.tags.slice(0, 2).join(' • ') : ''}
         </p>
       </div>

@@ -96,20 +96,9 @@ Polices chargees via Google Fonts : Inter + Poppins.
 ---
 
 EDIT : auditer le fichier ps1 pour vérifier que tout est en place et en ordre pour android auto et chrome cast + fonctionnalités de base.  
-  
-Resume des fichiers
 
+## ✅ IMPLEMENTÉ
 
-| Fichier                                    | Action                                    |
-| ------------------------------------------ | ----------------------------------------- |
-| `src/hooks/useCast.ts`                     | Creer                                     |
-| `src/components/CastButton.tsx`            | Creer                                     |
-| `public/cast-receiver.html`                | Creer (reecriture complete)               |
-| `src/contexts/PlayerContext.tsx`           | Modifier (integration Cast)               |
-| `src/components/MiniPlayer.tsx`            | Modifier (fix position + indicateur Cast) |
-| `src/components/FullScreenPlayer.tsx`      | Modifier (bouton Cast)                    |
-| `src/pages/HomePage.tsx`                   | Modifier (bouton Cast header)             |
-| `src/pages/Index.tsx`                      | Modifier (padding dynamique)              |
-| `src/i18n/translations.ts`                 | Modifier (cles cast.*)                    |
-| `android-auto/network_security_config.xml` | Creer                                     |
-| `android-auto/RadioBrowserService.java`    | Modifier (logs debug buffering)           |
+Tous les fichiers ci-dessus ont été créés/modifiés. Cast SDK configuré avec App ID `65257ADB`.
+MiniPlayer fixé au-dessus de la BottomNav. Android Auto : logs de debug ajoutés + network_security_config.xml créé.
+Cast receiver HTML complet avec les 24 animations SVG de genres.

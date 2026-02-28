@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { reportStationClick } from "@/services/RadioService";
 import { notifyNativePlaybackState } from "@/plugins/RadioAutoPlugin";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { useCast } from "@/hooks/useCast";
 
 // Note: The old Capawesome foreground service has been removed in v2.2.9.
 // Lock screen / notification controls are now handled by the native MediaPlaybackService
@@ -44,6 +45,11 @@ interface PlayerContextType extends PlayerState {
   setVolume: (v: number) => void;
   openFullScreen: () => void;
   closeFullScreen: () => void;
+  isCastAvailable: boolean;
+  isCasting: boolean;
+  castDeviceName: string | null;
+  startCast: () => void;
+  stopCast: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -56,6 +62,7 @@ export function usePlayer() {
 
 export function PlayerProvider({ children, onStationPlay }: { children: React.ReactNode; onStationPlay?: (station: RadioStation) => void }) {
   const { t } = useTranslation();
+  const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast, loadMedia: castLoadMedia, toggleCastPlayPause } = useCast();
   const audioRef = useRef<HTMLAudioElement>(globalAudio);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const isPlayingRef = useRef(false);
@@ -461,16 +468,27 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
       onStationPlay?.(station);
       reportStationClick(station.id);
       requestWakeLock();
+
+      // Send to Chromecast if casting
+      if (isCasting) {
+        castLoadMedia(station);
+      }
     } catch (e) {
       console.error("[RadioSphere] Unexpected error in play()", e);
       setState(s => ({ ...s, isPlaying: false, isBuffering: false }));
       toast({ title: t("player.unexpectedError"), description: t("player.unexpectedErrorDesc"), variant: "destructive" });
     }
-  }, [onStationPlay, requestWakeLock, releaseWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat]);
+  }, [onStationPlay, requestWakeLock, releaseWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat, isCasting, castLoadMedia]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!state.currentStation) return;
+
+    // Also toggle on Chromecast if casting
+    if (isCasting) {
+      toggleCastPlayPause();
+    }
+
     if (state.isPlaying) {
       audio.pause();
       stopSilentLoop();
@@ -500,7 +518,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
         reloadStream();
       });
     }
-  }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat, reloadStream]);
+  }, [state.isPlaying, state.currentStation, releaseWakeLock, requestWakeLock, updateMediaSession, startHeartbeat, stopHeartbeat, reloadStream, isCasting, toggleCastPlayPause]);
 
   const setVolume = useCallback((v: number) => {
     if (audioRef.current) audioRef.current.volume = v;
@@ -511,7 +529,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const closeFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: false })), []);
 
   return (
-    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen }}>
+    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, isCastAvailable, isCasting, castDeviceName, startCast, stopCast }}>
       {children}
     </PlayerContext.Provider>
   );
