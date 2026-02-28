@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { RadioStation } from "@/types/radio";
 import { registerPlugin } from "@capacitor/core";
 
-const CAST_APP_ID = "65257ADB"; // Receiver URL: https://mrbender7.github.io/privacy-policy-radiosphere/receiver.html
-const SDK_URL = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
+const CAST_APP_ID = "65257ADB";
 
 declare global {
   interface Window {
@@ -42,10 +41,19 @@ function isCapacitorNative(): boolean {
   }
 }
 
+/** Detect if the browser supports Cast (Chrome/Edge Chromium) */
+function isChromiumBrowser(): boolean {
+  const ua = navigator.userAgent;
+  return /Chrome\//.test(ua) && !/Edg\//.test(ua) || /Edg\//.test(ua);
+}
+
+export type CastUiMode = "launcher" | "native" | "fallback";
+
 export function useCast() {
   const [isCastAvailable, setIsCastAvailable] = useState(false);
   const [isCasting, setIsCasting] = useState(false);
   const [castDeviceName, setCastDeviceName] = useState<string | null>(null);
+  const [castUiMode, setCastUiMode] = useState<CastUiMode>("fallback");
   const sdkLoadedRef = useRef(false);
   const remotePlayerRef = useRef<any>(null);
   const remotePlayerControllerRef = useRef<any>(null);
@@ -58,6 +66,7 @@ export function useCast() {
     if (isNative) {
       // ─── NATIVE PATH: Use Capacitor CastPlugin ───────────────
       console.log("[RadioSphere][Cast] Native platform detected, initializing CastPlugin...");
+      setCastUiMode("native");
 
       CastPlugin.initialize()
         .then((result) => {
@@ -68,29 +77,37 @@ export function useCast() {
           console.warn("[RadioSphere][Cast] CastPlugin init error:", err);
         });
 
-      // Listen for device availability changes
       CastPlugin.addListener("castDevicesAvailable", (data: any) => {
         console.log("[RadioSphere][Cast] Devices available:", data.available);
         setIsCastAvailable(data.available);
       });
 
-      // Listen for session state changes
       CastPlugin.addListener("castStateChanged", (data: any) => {
         console.log("[RadioSphere][Cast] Session state:", data);
         setIsCasting(data.connected);
         setCastDeviceName(data.connected ? data.deviceName : null);
       });
     } else {
-      // ─── WEB PATH: Use Google Cast Sender SDK (Chrome only) ──
-      console.log("[RadioSphere][Cast] Web platform, loading Cast Sender SDK...");
+      // ─── WEB PATH ────────────────────────────────────────────
+      if (!isChromiumBrowser()) {
+        console.log("[RadioSphere][Cast] Non-Chromium browser — fallback mode");
+        setCastUiMode("fallback");
+        return;
+      }
 
-      window.__onGCastApiAvailable = (isAvailable: boolean) => {
-        console.log("[RadioSphere][Cast] __onGCastApiAvailable:", isAvailable);
-        if (!isAvailable) return;
+      // Chromium detected — try launcher mode
+      setCastUiMode("launcher");
+      console.log("[RadioSphere][Cast] Chromium browser, setting up Cast SDK...");
+
+      const initWebCastContext = () => {
         try {
           const cast = window.cast;
-          if (!cast?.framework) return;
+          if (!cast?.framework) {
+            console.warn("[RadioSphere][Cast] cast.framework not available");
+            return;
+          }
 
+          console.log("[RadioSphere][Cast] Initializing CastContext with App ID:", CAST_APP_ID);
           cast.framework.CastContext.getInstance().setOptions({
             receiverApplicationId: CAST_APP_ID,
             autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
@@ -124,17 +141,40 @@ export function useCast() {
           ctx.addEventListener(
             cast.framework.CastContextEventType.CAST_STATE_CHANGED,
             (event: any) => {
-              setIsCastAvailable(
-                event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE
-              );
+              const available = event.castState !== cast.framework.CastState.NO_DEVICES_AVAILABLE;
+              console.log("[RadioSphere][Cast] Cast state changed:", event.castState, "available:", available);
+              setIsCastAvailable(available);
             }
           );
+
+          setIsCastAvailable(true);
+          console.log("[RadioSphere][Cast] CastContext initialized successfully");
         } catch (e) {
           console.warn("[RadioSphere][Cast] SDK init error:", e);
         }
       };
 
-      // SDK script is loaded via index.html <script> tag — no dynamic injection needed
+      // Case 1: SDK already loaded (race condition fix)
+      if (window.cast?.framework) {
+        console.log("[RadioSphere][Cast] SDK already available, initializing immediately");
+        initWebCastContext();
+      }
+
+      // Case 2: Normal callback path
+      window.__onGCastApiAvailable = (isAvailable: boolean) => {
+        console.log("[RadioSphere][Cast] __onGCastApiAvailable:", isAvailable);
+        if (!isAvailable) return;
+        initWebCastContext();
+      };
+
+      // Case 3: Safety timeout — if SDK never calls back after 8s, mark unavailable
+      const safetyTimeout = setTimeout(() => {
+        if (!window.cast?.framework) {
+          console.log("[RadioSphere][Cast] Safety timeout: SDK never loaded, staying in launcher mode with low opacity");
+        }
+      }, 8000);
+
+      return () => clearTimeout(safetyTimeout);
     }
   }, [isNative]);
 
@@ -228,6 +268,7 @@ export function useCast() {
     isCastAvailable,
     isCasting,
     castDeviceName,
+    castUiMode,
     startCast,
     stopCast,
     loadMedia,

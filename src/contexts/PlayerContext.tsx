@@ -48,6 +48,7 @@ interface PlayerContextType extends PlayerState {
   isCastAvailable: boolean;
   isCasting: boolean;
   castDeviceName: string | null;
+  castUiMode: import("@/hooks/useCast").CastUiMode;
   startCast: () => void;
   stopCast: () => void;
 }
@@ -62,7 +63,7 @@ export function usePlayer() {
 
 export function PlayerProvider({ children, onStationPlay }: { children: React.ReactNode; onStationPlay?: (station: RadioStation) => void }) {
   const { t } = useTranslation();
-  const { isCastAvailable, isCasting, castDeviceName, startCast, stopCast, loadMedia: castLoadMedia, toggleCastPlayPause } = useCast();
+  const { isCastAvailable, isCasting, castDeviceName, castUiMode, startCast, stopCast, loadMedia: castLoadMedia, toggleCastPlayPause } = useCast();
   const audioRef = useRef<HTMLAudioElement>(globalAudio);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const isPlayingRef = useRef(false);
@@ -525,11 +526,18 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     setState(s => ({ ...s, volume: v }));
   }, []);
 
+  // Auto-push media to Chromecast when session starts or station changes
+  useEffect(() => {
+    if (isCasting && state.currentStation) {
+      castLoadMedia(state.currentStation);
+    }
+  }, [isCasting, state.currentStation, castLoadMedia]);
+
   const openFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: true })), []);
   const closeFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: false })), []);
 
   return (
-    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, isCastAvailable, isCasting, castDeviceName, startCast, stopCast }}>
+    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, isCastAvailable, isCasting, castDeviceName, castUiMode, startCast, stopCast }}>
       {children}
     </PlayerContext.Provider>
   );

@@ -174,6 +174,8 @@ const translations: Record<Language, Record<string, string>> = {
     "cast.controlFromPhone": "Contrôlez depuis votre téléphone",
     "cast.connected": "Connecté",
     "cast.disconnected": "Déconnecté",
+    "cast.unsupportedBrowser": "Chromecast est disponible dans Google Chrome ou l'application Android.",
+    "cast.openInChrome": "Ouvrez dans Chrome pour utiliser Chromecast",
   },
   en: {
     "nav.home": "Home",
@@ -340,6 +342,8 @@ const translations: Record<Language, Record<string, string>> = {
     "cast.controlFromPhone": "Control from your phone",
     "cast.connected": "Connected",
     "cast.disconnected": "Disconnected",
+    "cast.unsupportedBrowser": "Chromecast is available in Google Chrome or the Android app.",
+    "cast.openInChrome": "Open in Chrome to use Chromecast",
   },
   es: {
     "nav.home": "Inicio",
@@ -506,6 +510,8 @@ const translations: Record<Language, Record<string, string>> = {
     "cast.controlFromPhone": "Controla desde tu teléfono",
     "cast.connected": "Conectado",
     "cast.disconnected": "Desconectado",
+    "cast.unsupportedBrowser": "Chromecast está disponible en Google Chrome o la aplicación Android.",
+    "cast.openInChrome": "Abre en Chrome para usar Chromecast",
   },
   de: {
     "nav.home": "Startseite",
@@ -672,6 +678,8 @@ const translations: Record<Language, Record<string, string>> = {
     "cast.controlFromPhone": "Von Ihrem Telefon steuern",
     "cast.connected": "Verbunden",
     "cast.disconnected": "Getrennt",
+    "cast.unsupportedBrowser": "Chromecast ist in Google Chrome oder der Android-App verfügbar.",
+    "cast.openInChrome": "In Chrome öffnen, um Chromecast zu nutzen",
   },
   ja: {
     "nav.home": "ホーム",
@@ -838,6 +846,8 @@ const translations: Record<Language, Record<string, string>> = {
     "cast.controlFromPhone": "スマートフォンから操作できます",
     "cast.connected": "接続済み",
     "cast.disconnected": "切断",
+    "cast.unsupportedBrowser": "ChromecastはGoogle ChromeまたはAndroidアプリでご利用いただけます。",
+    "cast.openInChrome": "Chromeを開いてChromecastを使用してください",
   },
 };
 
