@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { BookOpen, Home, Search, Heart, Settings, ChevronDown } from "lucide-react";
+import { BookOpen, Home, Search, Heart, Settings, ChevronDown, Moon, Car, Cast, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [
@@ -9,6 +9,9 @@ const SECTIONS = [
   { id: "search", icon: Search, titleKey: "guide.search", contentKey: "guide.searchContent" },
   { id: "favorites", icon: Heart, titleKey: "guide.favorites", contentKey: "guide.favoritesContent" },
   { id: "settings", icon: Settings, titleKey: "guide.settings", contentKey: "guide.settingsContent" },
+  { id: "sleepTimer", icon: Moon, titleKey: "guide.sleepTimer", contentKey: "guide.sleepTimerContent", premium: true },
+  { id: "androidAuto", icon: Car, titleKey: "guide.androidAuto", contentKey: "guide.androidAutoContent", premium: true },
+  { id: "chromecast", icon: Cast, titleKey: "guide.chromecast", contentKey: "guide.chromecastContent", premium: true },
 ] as const;
 
 export function UserGuideModal() {
@@ -35,8 +38,9 @@ export function UserGuideModal() {
         </DialogHeader>
 
         <div className="space-y-2 mt-2">
-          {SECTIONS.map(({ id, icon: Icon, titleKey, contentKey }) => {
+          {SECTIONS.map(({ id, icon: Icon, titleKey, contentKey, ...rest }) => {
             const isOpen = openSection === id;
+            const isPremium = 'premium' in rest && rest.premium;
             return (
               <div key={id} className="rounded-xl bg-accent overflow-hidden">
                 <button
@@ -46,6 +50,7 @@ export function UserGuideModal() {
                 >
                   <Icon className="w-4.5 h-4.5 text-primary shrink-0" />
                   <span className="text-sm font-semibold text-foreground flex-1">{t(titleKey)}</span>
+                  {isPremium && <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                   <ChevronDown
                     className={cn(
                       "w-4 h-4 text-muted-foreground transition-transform duration-300",
