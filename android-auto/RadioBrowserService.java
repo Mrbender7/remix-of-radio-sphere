@@ -6,16 +6,20 @@ import android.media.AudioFocusRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media.MediaBrowserServiceCompat;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Player;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -29,13 +33,12 @@ import java.util.List;
 /**
  * RadioBrowserService — Android Auto MediaBrowserService for RadioSphere.
  *
- * Provides browse tree (Favorites, Recents, Genres) and voice search.
- * Reads favorites/recents from SharedPreferences (synced from WebView via RadioAutoPlugin).
- * Uses ExoPlayer for native audio playback independent of the WebView.
- * Manages AudioFocus to pause other media apps when playback starts.
+ * v2.3.0: Stream URL resolution (redirects + m3u/pls parsing),
+ *         local artwork fallback, protocol fallback on buffering timeout.
  */
 public class RadioBrowserService extends MediaBrowserServiceCompat {
 
+    private static final String TAG = "RadioBrowserService";
     private static final String ROOT_ID = "root";
     private static final String FAVORITES_ID = "favorites";
     private static final String RECENTS_ID = "recents";
@@ -61,14 +64,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         "https://nl1.api.radio-browser.info"
     };
 
-    private static final String DEFAULT_ARTWORK = "https://placehold.co/512x512/1a1a2e/e94560?text=RadioSphere";
-
     private MediaSessionCompat mediaSession;
     private ExoPlayer player;
     private AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
     private List<StationData> currentStations = new ArrayList<>();
     private int currentIndex = -1;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable bufferingTimeoutRunnable;
+    private StationData currentStation;
+    private boolean triedProtocolFallback = false;
 
     private static class StationData {
         final String id;
@@ -93,23 +98,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
         switch (focusChange) {
             case AudioManager.AUDIOFOCUS_LOSS:
-                // Another app took focus permanently — stop
-                player.pause();
-                updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
-                break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                // Temporary loss (phone call, navigation voice) — pause
                 player.pause();
                 updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
                 break;
             case AudioManager.AUDIOFOCUS_GAIN:
-                // Regained focus — resume and restore volume
                 player.setVolume(1.0f);
                 player.play();
                 updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                // Duck volume (e.g. navigation instruction)
                 player.setVolume(0.2f);
                 break;
         }
@@ -153,13 +151,12 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         mediaSession.setCallback(mediaSessionCallback);
         mediaSession.setActive(true);
         setSessionToken(mediaSession.getSessionToken());
-
-        // Initial playback state — AA checks this at connection to determine if the service is functional
         updatePlaybackState(PlaybackStateCompat.STATE_NONE);
     }
 
     @Override
     public void onDestroy() {
+        cancelBufferingTimeout();
         abandonAudioFocus();
         player.release();
         mediaSession.release();
@@ -323,40 +320,48 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     // ─── Player Listener ────────────────────────────────────────────────
 
-    private static final String TAG = "RadioBrowserService";
-
     private final Player.Listener playerListener = new Player.Listener() {
         @Override
         public void onPlaybackStateChanged(int playbackState) {
-            android.util.Log.d(TAG, "onPlaybackStateChanged: " + playbackState
+            Log.d(TAG, "onPlaybackStateChanged: " + playbackState
                 + " (IDLE=1, BUFFERING=2, READY=3, ENDED=4)");
             switch (playbackState) {
                 case Player.STATE_BUFFERING:
                     updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
-                    android.util.Log.d(TAG, "Stream is buffering...");
+                    Log.d(TAG, "Stream is buffering...");
+                    startBufferingTimeout();
                     break;
                 case Player.STATE_READY:
+                    cancelBufferingTimeout();
+                    triedProtocolFallback = false;
                     if (player.isPlaying()) {
                         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
-                        android.util.Log.d(TAG, "Stream is now playing");
+                        Log.d(TAG, "Stream is now playing");
                     }
                     break;
                 case Player.STATE_ENDED:
-                    android.util.Log.w(TAG, "Stream ended unexpectedly");
+                    cancelBufferingTimeout();
+                    Log.w(TAG, "Stream ended unexpectedly");
                     updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
                     break;
                 case Player.STATE_IDLE:
-                    android.util.Log.d(TAG, "Player is idle");
-                    updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
+                    cancelBufferingTimeout();
+                    Log.d(TAG, "Player is idle");
                     break;
             }
         }
 
         @Override
-        public void onPlayerError(com.google.android.exoplayer2.PlaybackException error) {
-            android.util.Log.e(TAG, "ExoPlayer error: " + error.getMessage()
+        public void onPlayerError(PlaybackException error) {
+            cancelBufferingTimeout();
+            Log.e(TAG, "ExoPlayer error: " + error.getMessage()
                 + " | errorCode=" + error.errorCode, error);
-            updatePlaybackState(PlaybackStateCompat.STATE_ERROR);
+            // Try protocol fallback on error
+            if (!triedProtocolFallback && currentStation != null) {
+                tryProtocolFallback();
+            } else {
+                updatePlaybackState(PlaybackStateCompat.STATE_ERROR);
+            }
         }
 
         @Override
@@ -365,37 +370,178 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         }
     };
 
+    // ─── Buffering Timeout & Protocol Fallback ──────────────────────────
+
+    private void startBufferingTimeout() {
+        cancelBufferingTimeout();
+        bufferingTimeoutRunnable = () -> {
+            Log.w(TAG, "Buffering timeout (10s) — trying protocol fallback");
+            if (currentStation != null && !triedProtocolFallback) {
+                tryProtocolFallback();
+            }
+        };
+        handler.postDelayed(bufferingTimeoutRunnable, 10000);
+    }
+
+    private void cancelBufferingTimeout() {
+        if (bufferingTimeoutRunnable != null) {
+            handler.removeCallbacks(bufferingTimeoutRunnable);
+            bufferingTimeoutRunnable = null;
+        }
+    }
+
+    private void tryProtocolFallback() {
+        triedProtocolFallback = true;
+        if (currentStation == null) return;
+        String url = currentStation.streamUrl;
+        String fallbackUrl;
+        if (url.startsWith("https://")) {
+            fallbackUrl = url.replace("https://", "http://");
+        } else if (url.startsWith("http://")) {
+            fallbackUrl = url.replace("http://", "https://");
+        } else {
+            return;
+        }
+        Log.d(TAG, "Protocol fallback: " + url + " -> " + fallbackUrl);
+        player.stop();
+        player.setMediaItem(MediaItem.fromUri(fallbackUrl));
+        player.prepare();
+        player.play();
+    }
+
+    // ─── Stream URL Resolution ──────────────────────────────────────────
+
+    /**
+     * Resolves a stream URL by following redirects (up to 5 levels)
+     * and parsing .m3u / .pls playlists to get the actual stream URL.
+     */
+    private String resolveStreamUrl(String urlStr) {
+        Log.d(TAG, "resolveStreamUrl: " + urlStr);
+        try {
+            String resolved = followRedirects(urlStr, 5);
+            // Check if it's a playlist
+            String lower = resolved.toLowerCase();
+            if (lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains("m3u")) {
+                String fromPlaylist = parseM3uPlaylist(resolved);
+                if (fromPlaylist != null) {
+                    Log.d(TAG, "Resolved from M3U: " + fromPlaylist);
+                    return fromPlaylist;
+                }
+            } else if (lower.endsWith(".pls") || lower.contains("pls")) {
+                String fromPlaylist = parsePlsPlaylist(resolved);
+                if (fromPlaylist != null) {
+                    Log.d(TAG, "Resolved from PLS: " + fromPlaylist);
+                    return fromPlaylist;
+                }
+            }
+            Log.d(TAG, "Resolved URL: " + resolved);
+            return resolved;
+        } catch (Exception e) {
+            Log.w(TAG, "resolveStreamUrl failed, using original: " + e.getMessage());
+            return urlStr;
+        }
+    }
+
+    private String followRedirects(String urlStr, int maxRedirects) throws Exception {
+        String current = urlStr;
+        for (int i = 0; i < maxRedirects; i++) {
+            HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            int code = conn.getResponseCode();
+            if (code >= 300 && code < 400) {
+                String location = conn.getHeaderField("Location");
+                conn.disconnect();
+                if (location == null || location.isEmpty()) break;
+                // Handle relative URLs
+                if (location.startsWith("/")) {
+                    URL base = new URL(current);
+                    location = base.getProtocol() + "://" + base.getHost() + location;
+                }
+                Log.d(TAG, "Redirect " + code + ": " + current + " -> " + location);
+                current = location;
+            } else {
+                conn.disconnect();
+                break;
+            }
+        }
+        return current;
+    }
+
+    private String parseM3uPlaylist(String urlStr) {
+        try {
+            String content = httpGet(urlStr);
+            String[] lines = content.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (!line.isEmpty() && !line.startsWith("#")) {
+                    return line;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseM3uPlaylist error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private String parsePlsPlaylist(String urlStr) {
+        try {
+            String content = httpGet(urlStr);
+            String[] lines = content.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (line.toLowerCase().startsWith("file1=")) {
+                    return line.substring(6).trim();
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parsePlsPlaylist error: " + e.getMessage());
+        }
+        return null;
+    }
+
     // ─── Playback Helpers ───────────────────────────────────────────────
 
     private void playStation(StationData station) {
-        android.util.Log.d(TAG, "playStation: " + station.name + " | URL: " + station.streamUrl);
+        Log.d(TAG, "playStation: " + station.name + " | URL: " + station.streamUrl);
+        currentStation = station;
+        triedProtocolFallback = false;
+        cancelBufferingTimeout();
 
-        // Request audio focus BEFORE starting playback — this pauses other media apps
         if (!requestAudioFocus()) {
-            android.util.Log.w(TAG, "Could not get audio focus, aborting playback");
-            return; // Could not get audio focus, do not play
+            Log.w(TAG, "Could not get audio focus, aborting playback");
+            return;
         }
 
-        player.stop();
-        // Use fromUri which handles redirections natively
-        player.setMediaItem(MediaItem.fromUri(station.streamUrl));
-        player.prepare();
-        player.setVolume(1.0f); // Restore volume in case it was ducked
-        player.play();
+        // Resolve URL in background then play
+        new Thread(() -> {
+            String resolvedUrl = resolveStreamUrl(station.streamUrl);
+            Log.d(TAG, "Playing resolved URL: " + resolvedUrl);
 
-        String artworkUrl = (station.logo != null && !station.logo.isEmpty())
-            ? station.logo.replace("http://", "https://")
-            : DEFAULT_ARTWORK;
-        Uri artworkUri = Uri.parse(artworkUrl);
+            handler.post(() -> {
+                player.stop();
+                player.setMediaItem(MediaItem.fromUri(resolvedUrl));
+                player.prepare();
+                player.setVolume(1.0f);
+                player.play();
+            });
+        }).start();
 
-        String artist = "Radio Sphere";
-        String album = "Live";
+        // Use local app icon as artwork fallback
+        Uri artworkUri;
+        if (station.logo != null && !station.logo.isEmpty()) {
+            artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
+        } else {
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+        }
 
         MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, station.id)
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, station.name)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Radio Sphere")
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Live")
             .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, artworkUri.toString())
             .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, artworkUri.toString())
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, artworkUri.toString())
@@ -449,7 +595,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 }
             }
         } catch (Exception e) {
-            // ignore
+            Log.e(TAG, "parseStationsJson error", e);
         }
         return list;
     }
@@ -487,7 +633,6 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             } catch (Exception e) { /* next mirror */ }
         }
 
-        // Merge and deduplicate
         java.util.LinkedHashMap<String, StationData> map = new java.util.LinkedHashMap<>();
         for (StationData s : nameResults) map.put(s.id, s);
         for (StationData s : tagResults) if (!map.containsKey(s.id)) map.put(s.id, s);
@@ -499,10 +644,11 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         conn.setRequestMethod("GET");
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
+        conn.setInstanceFollowRedirects(true);
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = reader.readLine()) != null) sb.append(line);
+        while ((line = reader.readLine()) != null) sb.append(line).append("\n");
         reader.close();
         conn.disconnect();
         return sb.toString();
@@ -526,7 +672,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                     ));
                 }
             }
-        } catch (Exception e) { /* ignore */ }
+        } catch (Exception e) {
+            Log.e(TAG, "parseApiResponse error", e);
+        }
         return list;
     }
 
@@ -539,16 +687,18 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     }
 
     private MediaBrowserCompat.MediaItem stationToMediaItem(StationData station) {
-        String artworkUrl = (station.logo != null && !station.logo.isEmpty())
-            ? station.logo.replace("http://", "https://") : DEFAULT_ARTWORK;
-
-        String subtitle = "Radio Sphere";
+        Uri artworkUri;
+        if (station.logo != null && !station.logo.isEmpty()) {
+            artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
+        } else {
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+        }
 
         MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
             .setMediaId(STATION_PREFIX + station.id)
             .setTitle(station.name)
-            .setSubtitle(subtitle)
-            .setIconUri(Uri.parse(artworkUrl))
+            .setSubtitle("Radio Sphere")
+            .setIconUri(artworkUri)
             .build();
 
         return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);

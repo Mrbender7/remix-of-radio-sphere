@@ -1,10 +1,10 @@
 # radiosphere_v2_3_0.ps1
-# v2.3.0 -- Chromecast integration + Android Auto debug logs + network_security_config
+# v2.3.0 -- Chromecast native plugin + Android Auto stream resolution + local artwork
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
-Write-Host ">>> Lancement du Master Fix v2.3.0 - Chromecast + Android Auto fixes" -ForegroundColor Cyan
+Write-Host ">>> Lancement du Master Fix v2.3.0 - Chromecast natif + Android Auto fixes" -ForegroundColor Cyan
 
 if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
 git clone $RepoUrl
@@ -86,7 +86,7 @@ if (Test-Path "$XmlDir/automotive_app_desc.xml") {
 }
 
 # ===================================================================
-# 3c. Generation network_security_config.xml (v2.3.0 -- cleartext HTTP for streams)
+# 3c. Generation network_security_config.xml
 # ===================================================================
 Write-Host ">>> Generation network_security_config.xml..." -ForegroundColor Yellow
 $NetSecContent = @'
@@ -103,14 +103,14 @@ $NetSecContent = @'
 Write-Host "    network_security_config.xml genere avec succes" -ForegroundColor Green
 
 # ===================================================================
-# 4. MANIFEST -- Permissions + Services + Android Auto + networkSecurityConfig
+# 4. MANIFEST -- Permissions + Services + Android Auto + Cast + MediaPlayback
 # ===================================================================
 $ManifestPath = "android/app/src/main/AndroidManifest.xml"
 if (Test-Path $ManifestPath) {
-    Write-Host ">>> Manifest: Injection complete (Permissions, Services, Android Auto, MediaPlayback, networkSecurityConfig)..." -ForegroundColor Yellow
+    Write-Host ">>> Manifest: Injection complete (Permissions, Services, Android Auto, Cast, MediaPlayback)..." -ForegroundColor Yellow
     $ManifestContent = Get-Content $ManifestPath -Raw
     
-    # Permissions -- only add if not already present
+    # Permissions
     $PermsList = @(
         "android.permission.INTERNET",
         "android.permission.WAKE_LOCK",
@@ -137,12 +137,12 @@ if (Test-Path $ManifestPath) {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:usesCleartextTraffic="true"'
     }
 
-    # networkSecurityConfig (v2.3.0)
+    # networkSecurityConfig
     if ($ManifestContent -notmatch 'networkSecurityConfig') {
         $ManifestContent = $ManifestContent -replace '<application', '<application android:networkSecurityConfig="@xml/network_security_config"'
     }
     
-    # Foreground service + Android Auto MediaBrowserService + MediaPlaybackService + MediaToggleReceiver
+    # Services + Cast OptionsProvider
     $ServiceDecl = @"
     <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
     <service android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" android:foregroundServiceType="mediaPlayback" />
@@ -159,6 +159,11 @@ if (Test-Path $ManifestPath) {
             <action android:name="android.media.browse.MediaBrowserService" />
         </intent-filter>
     </service>
+
+    <!-- v2.3.0: Chromecast CastOptionsProvider -->
+    <meta-data
+        android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+        android:value="__ACTUAL_PACKAGE__.CastOptionsProvider" />
 
     <!-- v2.2.9: MediaStyle lock screen notification service -->
     <service
@@ -181,11 +186,11 @@ if (Test-Path $ManifestPath) {
 }
 
 # ===================================================================
-# 5. Gradle -- ExoPlayer + Media Compat
+# 5. Gradle -- ExoPlayer + Media Compat + Cast Framework + MediaRouter
 # ===================================================================
 $GradleAppPath = "android/app/build.gradle"
 if (Test-Path $GradleAppPath) {
-    Write-Host ">>> Gradle: ExoPlayer + Media Compat (Java only)..." -ForegroundColor Yellow
+    Write-Host ">>> Gradle: ExoPlayer + Media Compat + Cast Framework..." -ForegroundColor Yellow
     $GradleContent = Get-Content $GradleAppPath -Raw
     $DepsBlock = @"
 dependencies {
@@ -194,13 +199,17 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
     // Media Compat for MediaBrowserService, MediaSession & MediaStyle notification
     implementation 'androidx.media:media:1.7.0'
+    // v2.3.0: Chromecast native SDK
+    implementation 'com.google.android.gms:play-services-cast-framework:22.0.0'
+    // MediaRouter for Cast device discovery dialog
+    implementation 'androidx.mediarouter:mediarouter:1.7.0'
 "@
     $GradleContent = $GradleContent -replace 'dependencies \{', $DepsBlock
     [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $GradleAppPath), $GradleContent, $UTF8NoBOM)
 }
 
 # ===================================================================
-# 6. Generation des fichiers natifs (JAVA -- embarques)
+# 6. Generation des fichiers natifs (JAVA)
 # ===================================================================
 Write-Host ">>> Generation des fichiers natifs (Java)..." -ForegroundColor Yellow
 
@@ -227,7 +236,15 @@ if ($MainActSearch) {
     }
 }
 
-# --- RadioAutoPlugin.java (v2.2.9 -- launches MediaPlaybackService) ---
+# Fix Manifest placeholder for CastOptionsProvider package
+if (Test-Path $ManifestPath) {
+    $ManifestContent = Get-Content $ManifestPath -Raw
+    $ManifestContent = $ManifestContent -replace '__ACTUAL_PACKAGE__', $ActualPackage
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location).Path $ManifestPath), $ManifestContent, $UTF8NoBOM)
+    Write-Host "    Manifest: CastOptionsProvider package set to $ActualPackage" -ForegroundColor DarkGray
+}
+
+# --- RadioAutoPlugin.java (v2.2.9) ---
 Write-Host "    Generation RadioAutoPlugin.java (v2.2.9)..." -ForegroundColor DarkGray
 $RadioAutoPluginJava = @'
 package __PACKAGE__;
@@ -504,8 +521,261 @@ $MediaToggleReceiverJava = $MediaToggleReceiverJava -replace '__PACKAGE__', $Act
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "MediaToggleReceiver.java"), $MediaToggleReceiverJava, $UTF8NoBOM)
 Write-Host "    MediaToggleReceiver.java genere avec succes" -ForegroundColor Green
 
-# --- RadioBrowserService.java (v2.3.0 -- debug logs + onPlayerError) ---
-Write-Host "    Generation RadioBrowserService.java (v2.3.0 -- debug logs)..." -ForegroundColor DarkGray
+# --- CastPlugin.java (v2.3.0 -- NEW) ---
+Write-Host "    Generation CastPlugin.java (v2.3.0 -- Chromecast natif)..." -ForegroundColor DarkGray
+$CastPluginJava = @'
+package __PACKAGE__;
+
+import android.util.Log;
+import androidx.annotation.NonNull;
+import androidx.mediarouter.media.MediaRouteSelector;
+import androidx.mediarouter.media.MediaRouter;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.android.gms.cast.CastMediaControlIntent;
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.MediaLoadRequestData;
+import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.framework.CastContext;
+import com.google.android.gms.cast.framework.CastSession;
+import com.google.android.gms.cast.framework.SessionManager;
+import com.google.android.gms.cast.framework.SessionManagerListener;
+import com.google.android.gms.cast.framework.media.RemoteMediaClient;
+import com.google.android.gms.common.images.WebImage;
+import android.net.Uri;
+
+@CapacitorPlugin(name = "CastPlugin")
+public class CastPlugin extends Plugin {
+
+    private static final String TAG = "CastPlugin";
+    private static final String CAST_APP_ID = "65257ADB";
+
+    private CastContext castContext;
+    private MediaRouter mediaRouter;
+    private MediaRouteSelector mediaRouteSelector;
+    private boolean devicesAvailable = false;
+
+    private final SessionManagerListener<CastSession> sessionListener = new SessionManagerListener<CastSession>() {
+        @Override public void onSessionStarting(@NonNull CastSession s) { Log.d(TAG, "Session starting..."); }
+        @Override public void onSessionStarted(@NonNull CastSession session, @NonNull String id) {
+            Log.d(TAG, "Session started: " + id);
+            JSObject data = new JSObject();
+            data.put("connected", true);
+            data.put("deviceName", session.getCastDevice() != null ? session.getCastDevice().getFriendlyName() : "Chromecast");
+            notifyListeners("castStateChanged", data);
+        }
+        @Override public void onSessionStartFailed(@NonNull CastSession s, int err) {
+            Log.e(TAG, "Session start failed: " + err);
+            JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
+            notifyListeners("castStateChanged", data);
+        }
+        @Override public void onSessionEnding(@NonNull CastSession s) {}
+        @Override public void onSessionEnded(@NonNull CastSession s, int err) {
+            Log.d(TAG, "Session ended");
+            JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
+            notifyListeners("castStateChanged", data);
+        }
+        @Override public void onSessionResuming(@NonNull CastSession s, @NonNull String id) {}
+        @Override public void onSessionResumed(@NonNull CastSession session, boolean wasSuspended) {
+            Log.d(TAG, "Session resumed");
+            JSObject data = new JSObject();
+            data.put("connected", true);
+            data.put("deviceName", session.getCastDevice() != null ? session.getCastDevice().getFriendlyName() : "Chromecast");
+            notifyListeners("castStateChanged", data);
+        }
+        @Override public void onSessionResumeFailed(@NonNull CastSession s, int err) {}
+        @Override public void onSessionSuspended(@NonNull CastSession s, int reason) {}
+    };
+
+    private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
+        @Override public void onRouteAdded(@NonNull MediaRouter router, @NonNull MediaRouter.RouteInfo route) {
+            Log.d(TAG, "Route added: " + route.getName());
+            updateDeviceAvailability(router);
+        }
+        @Override public void onRouteRemoved(@NonNull MediaRouter router, @NonNull MediaRouter.RouteInfo route) {
+            Log.d(TAG, "Route removed: " + route.getName());
+            updateDeviceAvailability(router);
+        }
+        @Override public void onRouteChanged(@NonNull MediaRouter router, @NonNull MediaRouter.RouteInfo route) {
+            updateDeviceAvailability(router);
+        }
+    };
+
+    private void updateDeviceAvailability(MediaRouter router) {
+        boolean hasDevices = false;
+        for (MediaRouter.RouteInfo route : router.getRoutes()) {
+            if (route.matchesSelector(mediaRouteSelector) && !route.isDefault()) {
+                hasDevices = true; break;
+            }
+        }
+        if (hasDevices != devicesAvailable) {
+            devicesAvailable = hasDevices;
+            Log.d(TAG, "Devices available: " + devicesAvailable);
+            JSObject data = new JSObject(); data.put("available", devicesAvailable);
+            notifyListeners("castDevicesAvailable", data);
+        }
+    }
+
+    @PluginMethod
+    public void initialize(PluginCall call) {
+        try {
+            getActivity().runOnUiThread(() -> {
+                try {
+                    castContext = CastContext.getSharedInstance(getContext());
+                    SessionManager sm = castContext.getSessionManager();
+                    sm.addSessionManagerListener(sessionListener, CastSession.class);
+                    mediaRouteSelector = new MediaRouteSelector.Builder()
+                        .addControlCategory(CastMediaControlIntent.categoryForCast(CAST_APP_ID)).build();
+                    mediaRouter = MediaRouter.getInstance(getContext());
+                    mediaRouter.addCallback(mediaRouteSelector, mediaRouterCallback,
+                        MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY);
+                    Log.d(TAG, "Cast SDK initialized");
+                    JSObject result = new JSObject();
+                    result.put("initialized", true); result.put("available", devicesAvailable);
+                    call.resolve(result);
+                } catch (Exception e) {
+                    Log.e(TAG, "Cast init error", e);
+                    call.reject("Cast init failed: " + e.getMessage());
+                }
+            });
+        } catch (Exception e) { call.reject("Cast init failed: " + e.getMessage()); }
+    }
+
+    @PluginMethod
+    public void requestSession(PluginCall call) {
+        try {
+            getActivity().runOnUiThread(() -> {
+                try {
+                    if (mediaRouter != null) {
+                        androidx.mediarouter.app.MediaRouteChooserDialog dialog =
+                            new androidx.mediarouter.app.MediaRouteChooserDialog(getActivity());
+                        dialog.setRouteSelector(mediaRouteSelector);
+                        dialog.show();
+                    }
+                    call.resolve();
+                } catch (Exception e) { call.reject("requestSession failed: " + e.getMessage()); }
+            });
+        } catch (Exception e) { call.reject("requestSession failed: " + e.getMessage()); }
+    }
+
+    @PluginMethod
+    public void endSession(PluginCall call) {
+        try {
+            getActivity().runOnUiThread(() -> {
+                try {
+                    if (castContext != null) {
+                        CastSession session = castContext.getSessionManager().getCurrentCastSession();
+                        if (session != null) castContext.getSessionManager().endCurrentSession(true);
+                    }
+                    call.resolve();
+                } catch (Exception e) { call.reject("endSession failed: " + e.getMessage()); }
+            });
+        } catch (Exception e) { call.reject("endSession failed: " + e.getMessage()); }
+    }
+
+    @PluginMethod
+    public void loadMedia(PluginCall call) {
+        String streamUrl = call.getString("streamUrl", "");
+        String title = call.getString("title", "Radio Sphere");
+        String logo = call.getString("logo", "");
+        String tags = call.getString("tags", "");
+        String stationId = call.getString("stationId", "");
+        try {
+            getActivity().runOnUiThread(() -> {
+                try {
+                    CastSession session = castContext != null ?
+                        castContext.getSessionManager().getCurrentCastSession() : null;
+                    if (session == null) { call.reject("No Cast session"); return; }
+                    RemoteMediaClient rmc = session.getRemoteMediaClient();
+                    if (rmc == null) { call.reject("No remote media client"); return; }
+                    MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
+                    metadata.putString(MediaMetadata.KEY_TITLE, title);
+                    metadata.putString(MediaMetadata.KEY_ARTIST, "Radio Sphere");
+                    if (logo != null && !logo.isEmpty()) {
+                        metadata.addImage(new WebImage(Uri.parse(logo.replace("http://", "https://"))));
+                    }
+                    org.json.JSONObject customData = new org.json.JSONObject();
+                    try { customData.put("tags", tags); customData.put("stationId", stationId); } catch (Exception e) {}
+                    MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
+                        .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
+                        .setContentType("audio/mpeg")
+                        .setMetadata(metadata)
+                        .setCustomData(customData).build();
+                    MediaLoadRequestData loadReq = new MediaLoadRequestData.Builder()
+                        .setMediaInfo(mediaInfo).setAutoplay(true).build();
+                    rmc.load(loadReq);
+                    Log.d(TAG, "Media loaded: " + title);
+                    call.resolve();
+                } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
+            });
+        } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
+    }
+
+    @PluginMethod
+    public void togglePlayPause(PluginCall call) {
+        try {
+            getActivity().runOnUiThread(() -> {
+                try {
+                    CastSession session = castContext != null ?
+                        castContext.getSessionManager().getCurrentCastSession() : null;
+                    if (session == null) { call.resolve(); return; }
+                    RemoteMediaClient client = session.getRemoteMediaClient();
+                    if (client == null) { call.resolve(); return; }
+                    if (client.isPlaying()) { client.pause(); } else { client.play(); }
+                    call.resolve();
+                } catch (Exception e) { call.reject("togglePlayPause failed: " + e.getMessage()); }
+            });
+        } catch (Exception e) { call.reject("togglePlayPause failed: " + e.getMessage()); }
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (castContext != null) castContext.getSessionManager().removeSessionManagerListener(sessionListener, CastSession.class);
+        if (mediaRouter != null) mediaRouter.removeCallback(mediaRouterCallback);
+        super.handleOnDestroy();
+    }
+}
+'@
+$CastPluginJava = $CastPluginJava -replace '__PACKAGE__', $ActualPackage
+[System.IO.File]::WriteAllText((Join-Path $PackageDir "CastPlugin.java"), $CastPluginJava, $UTF8NoBOM)
+Write-Host "    CastPlugin.java genere avec succes (v2.3.0)" -ForegroundColor Green
+
+# --- CastOptionsProvider.java (v2.3.0 -- NEW) ---
+Write-Host "    Generation CastOptionsProvider.java (v2.3.0)..." -ForegroundColor DarkGray
+$CastOptionsProviderJava = @'
+package __PACKAGE__;
+
+import android.content.Context;
+import com.google.android.gms.cast.framework.CastOptions;
+import com.google.android.gms.cast.framework.OptionsProvider;
+import com.google.android.gms.cast.framework.SessionProvider;
+import java.util.List;
+
+public class CastOptionsProvider implements OptionsProvider {
+    private static final String CAST_APP_ID = "65257ADB";
+
+    @Override
+    public CastOptions getCastOptions(Context context) {
+        return new CastOptions.Builder()
+            .setReceiverApplicationId(CAST_APP_ID)
+            .build();
+    }
+
+    @Override
+    public List<SessionProvider> getAdditionalSessionProviders(Context context) {
+        return null;
+    }
+}
+'@
+$CastOptionsProviderJava = $CastOptionsProviderJava -replace '__PACKAGE__', $ActualPackage
+[System.IO.File]::WriteAllText((Join-Path $PackageDir "CastOptionsProvider.java"), $CastOptionsProviderJava, $UTF8NoBOM)
+Write-Host "    CastOptionsProvider.java genere avec succes (v2.3.0)" -ForegroundColor Green
+
+# --- RadioBrowserService.java (v2.3.0 -- stream resolution + local artwork) ---
+Write-Host "    Generation RadioBrowserService.java (v2.3.0 -- stream resolution + local artwork)..." -ForegroundColor DarkGray
 $RadioBrowserServiceJava = @'
 package __PACKAGE__;
 
@@ -515,6 +785,8 @@ import android.media.AudioFocusRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -563,14 +835,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         "https://nl1.api.radio-browser.info"
     };
 
-    private static final String DEFAULT_ARTWORK = "https://placehold.co/512x512/1a1a2e/e94560?text=RadioSphere";
-
     private MediaSessionCompat mediaSession;
     private ExoPlayer player;
     private AudioManager audioManager;
     private AudioFocusRequest audioFocusRequest;
     private List<StationData> currentStations = new ArrayList<>();
     private int currentIndex = -1;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable bufferingTimeoutRunnable;
+    private StationData currentStation;
+    private boolean triedProtocolFallback = false;
 
     private static class StationData {
         final String id, name, streamUrl, logo, country, tags;
@@ -588,8 +862,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 updatePlaybackState(PlaybackStateCompat.STATE_PAUSED);
                 break;
             case AudioManager.AUDIOFOCUS_GAIN:
-                player.setVolume(1.0f);
-                player.play();
+                player.setVolume(1.0f); player.play();
                 updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
                 break;
             case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
@@ -637,6 +910,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     @Override
     public void onDestroy() {
+        cancelBufferingTimeout();
         abandonAudioFocus();
         player.release();
         mediaSession.release();
@@ -752,7 +1026,6 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         }
     };
 
-    // v2.3.0: Enhanced player listener with debug logs + error handling
     private final Player.Listener playerListener = new Player.Listener() {
         @Override
         public void onPlaybackStateChanged(int playbackState) {
@@ -760,29 +1033,37 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             switch (playbackState) {
                 case Player.STATE_BUFFERING:
                     updatePlaybackState(PlaybackStateCompat.STATE_BUFFERING);
-                    Log.d(TAG, "Stream is buffering...");
+                    startBufferingTimeout();
                     break;
                 case Player.STATE_READY:
+                    cancelBufferingTimeout();
+                    triedProtocolFallback = false;
                     if (player.isPlaying()) {
                         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING);
                         Log.d(TAG, "Stream is now playing");
                     }
                     break;
                 case Player.STATE_ENDED:
+                    cancelBufferingTimeout();
                     Log.w(TAG, "Stream ended unexpectedly");
                     updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
                     break;
                 case Player.STATE_IDLE:
+                    cancelBufferingTimeout();
                     Log.d(TAG, "Player is idle");
-                    updatePlaybackState(PlaybackStateCompat.STATE_STOPPED);
                     break;
             }
         }
 
         @Override
         public void onPlayerError(PlaybackException error) {
+            cancelBufferingTimeout();
             Log.e(TAG, "ExoPlayer error: " + error.getMessage() + " | errorCode=" + error.errorCode, error);
-            updatePlaybackState(PlaybackStateCompat.STATE_ERROR);
+            if (!triedProtocolFallback && currentStation != null) {
+                tryProtocolFallback();
+            } else {
+                updatePlaybackState(PlaybackStateCompat.STATE_ERROR);
+            }
         }
 
         @Override
@@ -791,17 +1072,133 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         }
     };
 
+    // ─── Buffering Timeout & Protocol Fallback ──────────────────────────
+
+    private void startBufferingTimeout() {
+        cancelBufferingTimeout();
+        bufferingTimeoutRunnable = () -> {
+            Log.w(TAG, "Buffering timeout (10s) -- trying protocol fallback");
+            if (currentStation != null && !triedProtocolFallback) tryProtocolFallback();
+        };
+        handler.postDelayed(bufferingTimeoutRunnable, 10000);
+    }
+
+    private void cancelBufferingTimeout() {
+        if (bufferingTimeoutRunnable != null) {
+            handler.removeCallbacks(bufferingTimeoutRunnable);
+            bufferingTimeoutRunnable = null;
+        }
+    }
+
+    private void tryProtocolFallback() {
+        triedProtocolFallback = true;
+        if (currentStation == null) return;
+        String url = currentStation.streamUrl;
+        String fallbackUrl;
+        if (url.startsWith("https://")) { fallbackUrl = url.replace("https://", "http://"); }
+        else if (url.startsWith("http://")) { fallbackUrl = url.replace("http://", "https://"); }
+        else { return; }
+        Log.d(TAG, "Protocol fallback: " + url + " -> " + fallbackUrl);
+        player.stop();
+        player.setMediaItem(MediaItem.fromUri(fallbackUrl));
+        player.prepare(); player.play();
+    }
+
+    // ─── Stream URL Resolution ──────────────────────────────────────────
+
+    private String resolveStreamUrl(String urlStr) {
+        Log.d(TAG, "resolveStreamUrl: " + urlStr);
+        try {
+            String resolved = followRedirects(urlStr, 5);
+            String lower = resolved.toLowerCase();
+            if (lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains(".m3u")) {
+                String fromPlaylist = parseM3uPlaylist(resolved);
+                if (fromPlaylist != null) { Log.d(TAG, "Resolved M3U: " + fromPlaylist); return fromPlaylist; }
+            } else if (lower.endsWith(".pls") || lower.contains(".pls")) {
+                String fromPlaylist = parsePlsPlaylist(resolved);
+                if (fromPlaylist != null) { Log.d(TAG, "Resolved PLS: " + fromPlaylist); return fromPlaylist; }
+            }
+            Log.d(TAG, "Resolved URL: " + resolved);
+            return resolved;
+        } catch (Exception e) {
+            Log.w(TAG, "resolveStreamUrl failed: " + e.getMessage());
+            return urlStr;
+        }
+    }
+
+    private String followRedirects(String urlStr, int maxRedirects) throws Exception {
+        String current = urlStr;
+        for (int i = 0; i < maxRedirects; i++) {
+            HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(5000); conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            int code = conn.getResponseCode();
+            if (code >= 300 && code < 400) {
+                String location = conn.getHeaderField("Location");
+                conn.disconnect();
+                if (location == null || location.isEmpty()) break;
+                if (location.startsWith("/")) {
+                    URL base = new URL(current);
+                    location = base.getProtocol() + "://" + base.getHost() + location;
+                }
+                Log.d(TAG, "Redirect " + code + ": " + current + " -> " + location);
+                current = location;
+            } else { conn.disconnect(); break; }
+        }
+        return current;
+    }
+
+    private String parseM3uPlaylist(String urlStr) {
+        try {
+            String content = httpGet(urlStr);
+            for (String line : content.split("\n")) {
+                line = line.trim();
+                if (!line.isEmpty() && !line.startsWith("#")) return line;
+            }
+        } catch (Exception e) { Log.w(TAG, "parseM3u error: " + e.getMessage()); }
+        return null;
+    }
+
+    private String parsePlsPlaylist(String urlStr) {
+        try {
+            String content = httpGet(urlStr);
+            for (String line : content.split("\n")) {
+                line = line.trim();
+                if (line.toLowerCase().startsWith("file1=")) return line.substring(6).trim();
+            }
+        } catch (Exception e) { Log.w(TAG, "parsePls error: " + e.getMessage()); }
+        return null;
+    }
+
+    // ─── Playback ───────────────────────────────────────────────────────
+
     private void playStation(StationData station) {
         Log.d(TAG, "playStation: " + station.name + " | URL: " + station.streamUrl);
+        currentStation = station;
+        triedProtocolFallback = false;
+        cancelBufferingTimeout();
         if (!requestAudioFocus()) { Log.w(TAG, "Could not get audio focus"); return; }
-        player.stop();
-        player.setMediaItem(MediaItem.fromUri(station.streamUrl));
-        player.prepare();
-        player.setVolume(1.0f);
-        player.play();
-        String artworkUrl = (station.logo != null && !station.logo.isEmpty())
-            ? station.logo.replace("http://", "https://") : DEFAULT_ARTWORK;
-        Uri artworkUri = Uri.parse(artworkUrl);
+
+        // Resolve URL in background
+        new Thread(() -> {
+            String resolvedUrl = resolveStreamUrl(station.streamUrl);
+            Log.d(TAG, "Playing resolved URL: " + resolvedUrl);
+            handler.post(() -> {
+                player.stop();
+                player.setMediaItem(MediaItem.fromUri(resolvedUrl));
+                player.prepare(); player.setVolume(1.0f); player.play();
+            });
+        }).start();
+
+        // Local artwork fallback
+        Uri artworkUri;
+        if (station.logo != null && !station.logo.isEmpty()) {
+            artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
+        } else {
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+        }
+
         MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, station.id)
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, station.name)
@@ -882,10 +1279,11 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private String httpGet(String urlStr) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
         conn.setRequestMethod("GET"); conn.setConnectTimeout(5000); conn.setReadTimeout(5000);
+        conn.setInstanceFollowRedirects(true);
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder sb = new StringBuilder();
         String line;
-        while ((line = reader.readLine()) != null) sb.append(line);
+        while ((line = reader.readLine()) != null) sb.append(line).append("\n");
         reader.close(); conn.disconnect();
         return sb.toString();
     }
@@ -913,11 +1311,15 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     }
 
     private MediaBrowserCompat.MediaItem stationToMediaItem(StationData station) {
-        String artworkUrl = (station.logo != null && !station.logo.isEmpty())
-            ? station.logo.replace("http://", "https://") : DEFAULT_ARTWORK;
+        Uri artworkUri;
+        if (station.logo != null && !station.logo.isEmpty()) {
+            artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
+        } else {
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+        }
         MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
             .setMediaId(STATION_PREFIX + station.id).setTitle(station.name)
-            .setSubtitle("Radio Sphere").setIconUri(Uri.parse(artworkUrl)).build();
+            .setSubtitle("Radio Sphere").setIconUri(artworkUri).build();
         return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
     }
 
@@ -936,26 +1338,30 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 '@
 $RadioBrowserServiceJava = $RadioBrowserServiceJava -replace '__PACKAGE__', $ActualPackage
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioBrowserService.java"), $RadioBrowserServiceJava, $UTF8NoBOM)
-Write-Host "    RadioBrowserService.java genere avec succes (v2.3.0 -- debug logs)" -ForegroundColor Green
+Write-Host "    RadioBrowserService.java genere avec succes (v2.3.0 -- stream resolution + local artwork)" -ForegroundColor Green
 
 Write-Host "    Tous les fichiers Java generes avec succes!" -ForegroundColor Green
 
 # ===================================================================
-# 7. Patch MainActivity.java -- WebView + NotificationChannel + RadioAutoPlugin
+# 7. Patch MainActivity.java -- WebView + NotificationChannel + RadioAutoPlugin + CastPlugin
 # ===================================================================
 $MainAct = Get-ChildItem -Path "android/app/src/main/java" -Filter "MainActivity.java" -Recurse | Select-Object -First 1
 if ($MainAct) {
-    Write-Host ">>> Patch Java MainActivity (WebView + NotifChannel + RadioAutoPlugin)..." -ForegroundColor Yellow
+    Write-Host ">>> Patch Java MainActivity (WebView + NotifChannel + RadioAutoPlugin + CastPlugin)..." -ForegroundColor Yellow
     $Java = Get-Content $MainAct.FullName -Raw
 
     if ($Java -notmatch 'RadioAutoPlugin') {
         $Java = $Java -replace '(import .+BridgeActivity;)', "`$1`nimport $ActualPackage.RadioAutoPlugin;"
+    }
+    if ($Java -notmatch 'CastPlugin') {
+        $Java = $Java -replace '(import .+BridgeActivity;)', "`$1`nimport $ActualPackage.CastPlugin;"
     }
 
     $OnCreatePatch = @"
   @Override
   public void onCreate(android.os.Bundle savedInstanceState) {
     registerPlugin(RadioAutoPlugin.class);
+    registerPlugin(CastPlugin.class);
     super.onCreate(savedInstanceState);
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
         android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(android.content.Context.NOTIFICATION_SERVICE);
@@ -993,28 +1399,38 @@ npx cap sync
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host ">>> Script v2.3.0 Termine ! Chromecast + Android Auto fixes" -ForegroundColor Green
+Write-Host ">>> Script v2.3.0 Termine ! Chromecast natif + Android Auto fixes" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "CHANGEMENTS v2.3.0 (sur base v2.2.9) :" -ForegroundColor Yellow
-Write-Host "  - NOUVEAU: network_security_config.xml -- autorise HTTP cleartext pour streams" -ForegroundColor White
-Write-Host "  - MODIFIE: AndroidManifest.xml -- networkSecurityConfig ajoute" -ForegroundColor White
-Write-Host "  - MODIFIE: RadioBrowserService.java -- logs debug + onPlayerError" -ForegroundColor White
-Write-Host "  - Chromecast integre cote web (useCast.ts, CastButton.tsx)" -ForegroundColor White
-Write-Host "  - Cast receiver: https://mrbender7.github.io/privacy-policy-radiosphere/receiver.html" -ForegroundColor White
-Write-Host "  - App ID Cast: 65257ADB" -ForegroundColor White
+Write-Host "CHANGEMENTS v2.3.0 :" -ForegroundColor Yellow
+Write-Host "  CHROMECAST (NOUVEAU) :" -ForegroundColor Cyan
+Write-Host "    - CastPlugin.java : plugin Capacitor natif (play-services-cast-framework)" -ForegroundColor White
+Write-Host "    - CastOptionsProvider.java : requis par le Cast framework Android" -ForegroundColor White
+Write-Host "    - useCast.ts : detection plateforme, bridge natif Android / SDK web Chrome" -ForegroundColor White
+Write-Host "    - Gradle : play-services-cast-framework:22.0.0 + mediarouter:1.7.0" -ForegroundColor White
+Write-Host "    - Manifest : CastOptionsProvider meta-data" -ForegroundColor White
+Write-Host "    - MainActivity : registerPlugin(CastPlugin.class)" -ForegroundColor White
+Write-Host "    - Receiver: https://mrbender7.github.io/privacy-policy-radiosphere/receiver.html" -ForegroundColor White
+Write-Host "    - App ID Cast: 65257ADB" -ForegroundColor White
 Write-Host ""
-Write-Host "INCHANGE depuis v2.2.9 :" -ForegroundColor Yellow
-Write-Host "  - RadioAutoPlugin.java, MediaPlaybackService.java, MediaToggleReceiver.java" -ForegroundColor White
-Write-Host "  - AudioFocus, notification channel, WebView settings" -ForegroundColor White
+Write-Host "  ANDROID AUTO (AMELIORE) :" -ForegroundColor Cyan
+Write-Host "    - RadioBrowserService: resolveStreamUrl() -- suit redirections HTTP/HTTPS (5 niveaux)" -ForegroundColor White
+Write-Host "    - RadioBrowserService: parse playlists .m3u et .pls automatiquement" -ForegroundColor White
+Write-Host "    - RadioBrowserService: fallback protocole HTTP<->HTTPS apres 10s de buffering" -ForegroundColor White
+Write-Host "    - RadioBrowserService: artwork local (mipmap/ic_launcher) pour stations sans logo" -ForegroundColor White
+Write-Host "    - network_security_config.xml: autorise HTTP cleartext" -ForegroundColor White
+Write-Host ""
+Write-Host "  INCHANGE depuis v2.2.9 :" -ForegroundColor Yellow
+Write-Host "    - RadioAutoPlugin.java, MediaPlaybackService.java, MediaToggleReceiver.java" -ForegroundColor White
+Write-Host "    - AudioFocus, notification channel, WebView settings" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
 Write-Host "ETAPES SUIVANTES :" -ForegroundColor Yellow
 Write-Host "  1. npx cap open android" -ForegroundColor White
 Write-Host "  2. Build APK dans Android Studio" -ForegroundColor White
-Write-Host "  3. Tester Chromecast (bouton Cast visible si appareil detecte)" -ForegroundColor White
-Write-Host "  4. Tester Android Auto (verifier les logs dans Logcat: RadioBrowserService)" -ForegroundColor White
-Write-Host "  5. Verifier que le MiniPlayer est visible au-dessus de la BottomNav" -ForegroundColor White
+Write-Host "  3. Tester Chromecast (le bouton Cast doit apparaitre si Chromecast sur le reseau)" -ForegroundColor White
+Write-Host "  4. Tester Android Auto (stations avec redirections/playlists, artwork local)" -ForegroundColor White
+Write-Host "  5. Logcat: filtrer par 'RadioBrowserService' et 'CastPlugin' pour debug" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan
