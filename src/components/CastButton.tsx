@@ -1,6 +1,6 @@
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useEffect, useRef, useState } from "react";
-import { Cast } from "lucide-react";
+import { Cast, Loader2 } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
  * The icon is ALWAYS visible regardless of SDK state.
  */
 export function CastButton({ className = "" }: { className?: string }) {
-  const { isCastAvailable, isCasting, castUiMode, startCast, stopCast } = usePlayer();
+  const { isCastAvailable, isCasting, castUiMode, castInitState, startCast, stopCast } = usePlayer();
   const { t } = useTranslation();
   const launcherRef = useRef<HTMLElement>(null);
   const [launcherReady, setLauncherReady] = useState(false);
@@ -60,8 +60,17 @@ export function CastButton({ className = "" }: { className?: string }) {
       : "text-muted-foreground hover:text-foreground"
   } ${className}`;
 
+  // ─── MODE: INITIALIZING — show loading spinner ─────────────────
+  if (castInitState === "initializing") {
+    return (
+      <div className={`${baseClass} opacity-50 cursor-wait`} aria-label="Cast loading...">
+        <Loader2 className="w-5 h-5 animate-spin" />
+      </div>
+    );
+  }
+
   // ─── MODE: NATIVE (Capacitor APK) ─────────────────────────────
-  if (castUiMode === "native") {
+  if (castUiMode === "native" && castInitState === "ready") {
     return (
       <button
         onClick={(e) => {

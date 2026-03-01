@@ -1,10 +1,10 @@
-# radiosphere_v2_4_5.ps1
-# v2.4.5 -- Cast: no forced HTTPS, audio/*, localAudioControl events, unified RadioSphereSession
+# radiosphere_v2_4_6.ps1
+# v2.4.6 -- Cast: exact user CastPlugin.java, audio/mpeg, ACCESS_COARSE_LOCATION, UI loading state
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
-Write-Host ">>> Lancement du Master Fix v2.4.5 - Cast audio + Android Auto unification" -ForegroundColor Cyan
+Write-Host ">>> Lancement du Master Fix v2.4.6 - Cast sync + Android Auto" -ForegroundColor Cyan
 
 if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
 git clone $RepoUrl
@@ -546,8 +546,8 @@ $MediaToggleReceiverJava = $MediaToggleReceiverJava -replace '__PACKAGE__', $Act
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "MediaToggleReceiver.java"), $MediaToggleReceiverJava, $UTF8NoBOM)
 Write-Host "    MediaToggleReceiver.java genere avec succes" -ForegroundColor Green
 
-# --- CastPlugin.java (v2.4.2 -- DEFAULT_MEDIA_RECEIVER, runtime permissions, diagnostic) ---
-Write-Host "    Generation CastPlugin.java (v2.4.2 -- discovery fix)..." -ForegroundColor DarkGray
+# --- CastPlugin.java (v2.4.6 -- exact user-provided code) ---
+Write-Host "    Generation CastPlugin.java (v2.4.6 -- user-provided)..." -ForegroundColor DarkGray
 $CastPluginJava = @'
 package __PACKAGE__;
 
@@ -579,315 +579,75 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.google.android.gms.common.images.WebImage;
 import android.net.Uri;
 
-@CapacitorPlugin(
-    name = "CastPlugin",
-    permissions = {
-        @Permission(
-            alias = "network",
-            strings = {
-                "android.permission.ACCESS_FINE_LOCATION",
-                "android.permission.NEARBY_WIFI_DEVICES"
-            }
-        )
-    }
-)
+@CapacitorPlugin(name = "CastPlugin", permissions = { @Permission(alias = "network", strings = { "android.permission.ACCESS_FINE_LOCATION", "android.permission.NEARBY_WIFI_DEVICES" }) })
 public class CastPlugin extends Plugin {
-
     private static final String TAG = "CastPlugin";
-    // v2.4.2: Use DEFAULT receiver for maximum compatibility during discovery
     private static final String CAST_APP_ID = "65257ADB";
-
     private CastContext castContext;
     private MediaRouter mediaRouter;
     private MediaRouteSelector mediaRouteSelector;
     private boolean devicesAvailable = false;
     private PluginCall savedInitCall = null;
-
     private final SessionManagerListener<CastSession> sessionListener = new SessionManagerListener<CastSession>() {
-        @Override public void onSessionStarting(@NonNull CastSession s) { Log.d(TAG, "Session starting..."); }
+        @Override public void onSessionStarting(@NonNull CastSession s) {}
         @Override public void onSessionStarted(@NonNull CastSession session, @NonNull String id) {
-            Log.d(TAG, "Session started: " + id);
-            JSObject data = new JSObject();
-            data.put("connected", true);
+            JSObject data = new JSObject(); data.put("connected", true);
             data.put("deviceName", session.getCastDevice() != null ? session.getCastDevice().getFriendlyName() : "Chromecast");
             notifyListeners("castStateChanged", data);
-            // v2.4.5: Notify JS to pause local audio immediately
-            JSObject audioPause = new JSObject();
-            audioPause.put("action", "pauseLocal");
-            notifyListeners("localAudioControl", audioPause);
-            Log.d(TAG, "Sent localAudioControl:pauseLocal to JS");
+            JSObject p = new JSObject(); p.put("action", "pauseLocal"); notifyListeners("localAudioControl", p);
         }
-        @Override public void onSessionStartFailed(@NonNull CastSession s, int err) {
-            Log.e(TAG, "Session start failed: " + err);
-            JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
-            notifyListeners("castStateChanged", data);
-        }
+        @Override public void onSessionStartFailed(@NonNull CastSession s, int e) { JSObject d = new JSObject(); d.put("connected", false); notifyListeners("castStateChanged", d); }
         @Override public void onSessionEnding(@NonNull CastSession s) {}
-        @Override public void onSessionEnded(@NonNull CastSession s, int err) {
-            Log.d(TAG, "Session ended");
-            JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
-            notifyListeners("castStateChanged", data);
-            // v2.4.5: Notify JS to resume local audio
-            JSObject audioResume = new JSObject();
-            audioResume.put("action", "resumeLocal");
-            notifyListeners("localAudioControl", audioResume);
-            Log.d(TAG, "Sent localAudioControl:resumeLocal to JS");
+        @Override public void onSessionEnded(@NonNull CastSession s, int e) {
+            JSObject d = new JSObject(); d.put("connected", false); notifyListeners("castStateChanged", d);
+            JSObject r = new JSObject(); r.put("action", "resumeLocal"); notifyListeners("localAudioControl", r);
         }
-        @Override public void onSessionResumed(@NonNull CastSession session, boolean wasSuspended) {
-            Log.d(TAG, "Session resumed");
-            JSObject data = new JSObject();
-            data.put("connected", true);
-            data.put("deviceName", session.getCastDevice() != null ? session.getCastDevice().getFriendlyName() : "Chromecast");
-            notifyListeners("castStateChanged", data);
+        @Override public void onSessionResuming(@NonNull CastSession s, @NonNull String id) {}
+        @Override public void onSessionResumed(@NonNull CastSession s, boolean w) {
+            JSObject d = new JSObject(); d.put("connected", true); d.put("deviceName", s.getCastDevice() != null ? s.getCastDevice().getFriendlyName() : "Chromecast");
+            notifyListeners("castStateChanged", d);
         }
-        @Override public void onSessionResumeFailed(@NonNull CastSession s, int err) {}
-        @Override public void onSessionSuspended(@NonNull CastSession s, int reason) {}
+        @Override public void onSessionResumeFailed(@NonNull CastSession s, int e) {}
+        @Override public void onSessionSuspended(@NonNull CastSession s, int r) {}
     };
-
     private final MediaRouter.Callback mediaRouterCallback = new MediaRouter.Callback() {
-        @Override public void onRouteAdded(@NonNull MediaRouter router, @NonNull MediaRouter.RouteInfo route) {
-            Log.d(TAG, "Route added: " + route.getName());
-            updateDeviceAvailability(router);
-        }
-        @Override public void onRouteRemoved(@NonNull MediaRouter router, @NonNull MediaRouter.RouteInfo route) {
-            Log.d(TAG, "Route removed: " + route.getName());
-            updateDeviceAvailability(router);
-        }
-        @Override public void onRouteChanged(@NonNull MediaRouter router, @NonNull MediaRouter.RouteInfo route) {
-            updateDeviceAvailability(router);
-        }
+        @Override public void onRouteAdded(@NonNull MediaRouter r, @NonNull MediaRouter.RouteInfo o) { updateDeviceAvailability(r); }
+        @Override public void onRouteRemoved(@NonNull MediaRouter r, @NonNull MediaRouter.RouteInfo o) { updateDeviceAvailability(r); }
+        @Override public void onRouteChanged(@NonNull MediaRouter r, @NonNull MediaRouter.RouteInfo o) { updateDeviceAvailability(r); }
     };
-
-    // v2.4.2: Enhanced diagnostic logging
     private void updateDeviceAvailability(MediaRouter router) {
-        int totalRoutes = router.getRoutes().size();
-        int matchingRoutes = 0;
-        boolean hasDevices = false;
-
-        for (MediaRouter.RouteInfo route : router.getRoutes()) {
-            if (route.matchesSelector(mediaRouteSelector) && !route.isDefault()) {
-                hasDevices = true;
-                matchingRoutes++;
-                Log.d(TAG, "  Cast-compatible route: " + route.getName() + " [" + route.getDescription() + "]");
-            }
-        }
-
-        Log.d(TAG, "Scan details: Total routes=" + totalRoutes + ", matching=" + matchingRoutes + ", AppID=" + CAST_APP_ID);
-
-        if (hasDevices != devicesAvailable) {
-            devicesAvailable = hasDevices;
-            Log.d(TAG, "Devices available changed: " + devicesAvailable);
-            JSObject data = new JSObject(); data.put("available", devicesAvailable);
-            notifyListeners("castDevicesAvailable", data);
-        }
+        boolean has = false; for (MediaRouter.RouteInfo r : router.getRoutes()) { if (r.matchesSelector(mediaRouteSelector) && !r.isDefault()) { has = true; break; } }
+        if (has != devicesAvailable) { devicesAvailable = has; JSObject d = new JSObject(); d.put("available", has); notifyListeners("castDevicesAvailable", d); }
     }
-
-    // v2.4.2: Permission helpers
-    private boolean hasDiscoveryPermissions() {
-        Context ctx = getContext();
-        if (Build.VERSION.SDK_INT >= 33) {
-            return ContextCompat.checkSelfPermission(ctx, "android.permission.NEARBY_WIFI_DEVICES") == PackageManager.PERMISSION_GRANTED;
-        }
-        return ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    @PluginMethod
-    public void checkDiscoveryPermissions(PluginCall call) {
-        JSObject result = new JSObject();
-        result.put("granted", hasDiscoveryPermissions());
-        result.put("apiLevel", Build.VERSION.SDK_INT);
-        call.resolve(result);
-    }
-
-    @PluginMethod
-    public void requestDiscoveryPermissions(PluginCall call) {
-        if (hasDiscoveryPermissions()) {
-            JSObject result = new JSObject();
-            result.put("granted", true);
-            call.resolve(result);
-            return;
-        }
-        requestPermissionForAlias("network", call, "networkPermissionCallback");
-    }
-
-    @PermissionCallback
-    private void networkPermissionCallback(PluginCall call) {
-        boolean granted = hasDiscoveryPermissions();
-        Log.d(TAG, "Network permission callback - granted: " + granted);
-        JSObject result = new JSObject();
-        result.put("granted", granted);
-        call.resolve(result);
-
-        // If this was triggered from initialize, resume it
-        if (granted && savedInitCall != null) {
-            PluginCall saved = savedInitCall;
-            savedInitCall = null;
-            doInitialize(saved);
-        }
-    }
-
-    @PluginMethod
-    public void initialize(PluginCall call) {
-        // v2.4.2: Check permissions before initializing Cast SDK
-        if (!hasDiscoveryPermissions()) {
-            Log.d(TAG, "initialize — permissions missing, requesting...");
-            savedInitCall = call;
-            requestPermissionForAlias("network", call, "networkPermissionCallback");
-            return;
-        }
-        doInitialize(call);
-    }
-
-    private void doInitialize(PluginCall call) {
-        try {
-            getActivity().runOnUiThread(() -> {
-                try {
-                    Log.d(TAG, "Initializing Cast SDK with AppID: " + CAST_APP_ID);
-                    castContext = CastContext.getSharedInstance(getContext());
-                    SessionManager sm = castContext.getSessionManager();
-                    sm.addSessionManagerListener(sessionListener, CastSession.class);
-
-                    // v2.4.2: Use DEFAULT_MEDIA_RECEIVER for broadest device discovery
-                    mediaRouteSelector = new MediaRouteSelector.Builder()
-                        .addControlCategory(CastMediaControlIntent.categoryForCast(
-                            CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
-                        .build();
-
-                    mediaRouter = MediaRouter.getInstance(getContext());
-                    mediaRouter.addCallback(mediaRouteSelector, mediaRouterCallback,
-                        MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY | MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
-
-                    // Immediate diagnostic scan
-                    updateDeviceAvailability(mediaRouter);
-
-                    boolean permsOk = hasDiscoveryPermissions();
-                    Log.d(TAG, "Cast SDK initialized — perms=" + permsOk + ", apiLevel=" + Build.VERSION.SDK_INT);
-
-                    JSObject result = new JSObject();
-                    result.put("initialized", true);
-                    result.put("available", devicesAvailable);
-                    result.put("permissionsGranted", permsOk);
-                    result.put("appId", CAST_APP_ID);
-                    call.resolve(result);
-                } catch (Exception e) {
-                    Log.e(TAG, "Cast init error", e);
-                    call.reject("Cast init failed: " + e.getMessage());
-                }
-            });
-        } catch (Exception e) { call.reject("Cast init failed: " + e.getMessage()); }
-    }
-
-    @PluginMethod
-    public void requestSession(PluginCall call) {
-        // v2.4.2: Ensure permissions before showing chooser
-        if (!hasDiscoveryPermissions()) {
-            Log.d(TAG, "requestSession — permissions missing, requesting...");
-            requestPermissionForAlias("network", call, "networkPermissionCallback");
-            return;
-        }
-        try {
-            getActivity().runOnUiThread(() -> {
-                try {
-                    if (mediaRouter != null && mediaRouteSelector != null) {
-                        updateDeviceAvailability(mediaRouter);
-                        androidx.mediarouter.app.MediaRouteChooserDialog dialog =
-                            new androidx.mediarouter.app.MediaRouteChooserDialog(getActivity());
-                        dialog.setRouteSelector(mediaRouteSelector);
-                        dialog.show();
-                    } else {
-                        call.reject("Cast not initialized");
-                        return;
-                    }
-                    call.resolve();
-                } catch (Exception e) { call.reject("requestSession failed: " + e.getMessage()); }
-            });
-        } catch (Exception e) { call.reject("requestSession failed: " + e.getMessage()); }
-    }
-
-    @PluginMethod
-    public void endSession(PluginCall call) {
-        try {
-            getActivity().runOnUiThread(() -> {
-                try {
-                    if (castContext != null) {
-                        CastSession session = castContext.getSessionManager().getCurrentCastSession();
-                        if (session != null) castContext.getSessionManager().endCurrentSession(true);
-                    }
-                    call.resolve();
-                } catch (Exception e) { call.reject("endSession failed: " + e.getMessage()); }
-            });
-        } catch (Exception e) { call.reject("endSession failed: " + e.getMessage()); }
-    }
-
-    @PluginMethod
-    public void loadMedia(PluginCall call) {
-        String streamUrl = call.getString("streamUrl", "");
-        String title = call.getString("title", "Radio Sphere");
-        String logo = call.getString("logo", "");
-        String tags = call.getString("tags", "");
-        String stationId = call.getString("stationId", "");
-        try {
-            getActivity().runOnUiThread(() -> {
-                try {
-                    CastSession session = castContext != null ?
-                        castContext.getSessionManager().getCurrentCastSession() : null;
-                    if (session == null) { call.reject("No Cast session"); return; }
-                    RemoteMediaClient rmc = session.getRemoteMediaClient();
-                    if (rmc == null) { call.reject("No remote media client"); return; }
-                    MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
-                    metadata.putString(MediaMetadata.KEY_TITLE, title);
-                    metadata.putString(MediaMetadata.KEY_ARTIST, "Radio Sphere");
-                    if (logo != null && !logo.isEmpty()) {
-                        metadata.addImage(new WebImage(Uri.parse(logo.replace("http://", "https://"))));
-                    }
-                    org.json.JSONObject customData = new org.json.JSONObject();
-                    try { customData.put("tags", tags); customData.put("stationId", stationId); } catch (Exception e) {}
-
-                    // v2.4.5: Log original URL, no forced HTTPS
-                    Log.d(TAG, "Loading URL to Cast: " + streamUrl);
-
-                    MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
-                        .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
-                        .setContentType("audio/*")
-                        .setMetadata(metadata)
-                        .setCustomData(customData).build();
-                    MediaLoadRequestData loadReq = new MediaLoadRequestData.Builder()
-                        .setMediaInfo(mediaInfo).setAutoplay(true).build();
-                    rmc.load(loadReq);
-                    call.resolve();
-                } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
-            });
-        } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
-    }
-
-    @PluginMethod
-    public void togglePlayPause(PluginCall call) {
-        try {
-            getActivity().runOnUiThread(() -> {
-                try {
-                    CastSession session = castContext != null ?
-                        castContext.getSessionManager().getCurrentCastSession() : null;
-                    if (session == null) { call.resolve(); return; }
-                    RemoteMediaClient client = session.getRemoteMediaClient();
-                    if (client == null) { call.resolve(); return; }
-                    if (client.isPlaying()) { client.pause(); } else { client.play(); }
-                    call.resolve();
-                } catch (Exception e) { call.reject("togglePlayPause failed: " + e.getMessage()); }
-            });
-        } catch (Exception e) { call.reject("togglePlayPause failed: " + e.getMessage()); }
-    }
-
-    @Override
-    protected void handleOnDestroy() {
-        if (castContext != null) castContext.getSessionManager().removeSessionManagerListener(sessionListener, CastSession.class);
-        if (mediaRouter != null) mediaRouter.removeCallback(mediaRouterCallback);
-        super.handleOnDestroy();
-    }
+    private boolean hasPerms() { Context c = getContext(); if (Build.VERSION.SDK_INT >= 33) return ContextCompat.checkSelfPermission(c, "android.permission.NEARBY_WIFI_DEVICES") == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(c, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED; }
+    @PluginMethod public void checkDiscoveryPermissions(PluginCall call) { JSObject r = new JSObject(); r.put("granted", hasPerms()); call.resolve(r); }
+    @PluginMethod public void requestDiscoveryPermissions(PluginCall call) { if (hasPerms()) { JSObject r = new JSObject(); r.put("granted", true); call.resolve(r); return; } requestPermissionForAlias("network", call, "networkPermissionCallback"); }
+    @PermissionCallback private void networkPermissionCallback(PluginCall call) { boolean g = hasPerms(); JSObject r = new JSObject(); r.put("granted", g); call.resolve(r); if (g && savedInitCall != null) { PluginCall s = savedInitCall; savedInitCall = null; doInitialize(s); } }
+    @PluginMethod public void initialize(PluginCall call) { if (!hasPerms()) { savedInitCall = call; requestPermissionForAlias("network", call, "networkPermissionCallback"); return; } doInitialize(call); }
+    private void doInitialize(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { castContext = CastContext.getSharedInstance(getContext()); castContext.getSessionManager().addSessionManagerListener(sessionListener, CastSession.class);
+        mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CAST_APP_ID)).build();
+        mediaRouter = MediaRouter.getInstance(getContext()); mediaRouter.addCallback(mediaRouteSelector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY | MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
+        updateDeviceAvailability(mediaRouter); JSObject res = new JSObject(); res.put("initialized", true); res.put("available", devicesAvailable); call.resolve(res);
+        } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
+    @PluginMethod public void requestSession(PluginCall call) { if (!hasPerms()) { requestPermissionForAlias("network", call, "networkPermissionCallback"); return; }
+        try { getActivity().runOnUiThread(() -> { try { if (mediaRouter != null) { androidx.mediarouter.app.MediaRouteChooserDialog d = new androidx.mediarouter.app.MediaRouteChooserDialog(getActivity()); d.setRouteSelector(mediaRouteSelector); d.show(); call.resolve(); } else { call.reject("Not init"); } } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
+    @PluginMethod public void endSession(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { if (castContext != null) { CastSession s = castContext.getSessionManager().getCurrentCastSession(); if (s != null) castContext.getSessionManager().endCurrentSession(true); } call.resolve(); } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
+    @PluginMethod public void loadMedia(PluginCall call) { String u = call.getString("streamUrl", ""); String t = call.getString("title", "Radio Sphere"); String l = call.getString("logo", "");
+        Log.d(TAG, "Loading URL to Cast: " + u);
+        try { getActivity().runOnUiThread(() -> { try { CastSession s = castContext != null ? castContext.getSessionManager().getCurrentCastSession() : null; if (s == null) { call.reject("No session"); return; }
+        RemoteMediaClient r = s.getRemoteMediaClient(); if (r == null) { call.reject("No client"); return; }
+        MediaMetadata m = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK); m.putString(MediaMetadata.KEY_TITLE, t); m.putString(MediaMetadata.KEY_ARTIST, "Radio Sphere"); if (!l.isEmpty()) m.addImage(new WebImage(Uri.parse(l.replace("http://", "https://"))));
+        MediaInfo info = new MediaInfo.Builder(u).setStreamType(MediaInfo.STREAM_TYPE_LIVE).setContentType("audio/mpeg").setMetadata(m).build();
+        r.load(new MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true).build()); call.resolve();
+        } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
+    @PluginMethod public void togglePlayPause(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { CastSession s = castContext != null ? castContext.getSessionManager().getCurrentCastSession() : null; if (s != null && s.getRemoteMediaClient() != null) { RemoteMediaClient c = s.getRemoteMediaClient(); if (c.isPlaying()) c.pause(); else c.play(); } call.resolve(); } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
+    @Override protected void handleOnDestroy() { if (castContext != null) castContext.getSessionManager().removeSessionManagerListener(sessionListener, CastSession.class); if (mediaRouter != null) mediaRouter.removeCallback(mediaRouterCallback); super.handleOnDestroy(); }
 }
 '@
 $CastPluginJava = $CastPluginJava -replace '__PACKAGE__', $ActualPackage
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "CastPlugin.java"), $CastPluginJava, $UTF8NoBOM)
-Write-Host "    CastPlugin.java genere avec succes (v2.4.2 -- discovery fix)" -ForegroundColor Green
+Write-Host "    CastPlugin.java genere avec succes (v2.4.6)" -ForegroundColor Green
 
 # --- CastOptionsProvider.java (v2.4.2 -- DEFAULT_MEDIA_RECEIVER) ---
 Write-Host "    Generation CastOptionsProvider.java (v2.4.2)..." -ForegroundColor DarkGray
@@ -1537,32 +1297,30 @@ npx cap sync
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host ">>> Script v2.4.2 Termine ! Cast discovery fix" -ForegroundColor Green
+Write-Host ">>> Script v2.4.6 Termine ! Cast sync + Android Auto" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "CHANGEMENTS v2.4.2 (depuis v2.4.0) :" -ForegroundColor Yellow
+Write-Host "CHANGEMENTS v2.4.6 :" -ForegroundColor Yellow
 Write-Host "  CAST :" -ForegroundColor Cyan
-Write-Host "    - CastPlugin.java : App ID production 65257ADB (recepteur personnalise)" -ForegroundColor White
-Write-Host "    - CastPlugin.java : @Permission(alias='network') avec ACCESS_FINE_LOCATION + NEARBY_WIFI_DEVICES" -ForegroundColor White
-Write-Host "    - CastPlugin.java : check permissions runtime AVANT CastContext.init + requestSession" -ForegroundColor White
-Write-Host "    - CastPlugin.java : diagnostic 'Scan details: Total routes=X, matching=Y, AppID=Z'" -ForegroundColor White
-Write-Host "    - CastPlugin.java : CALLBACK_FLAG_PERFORM_ACTIVE_SCAN pour scan actif" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Code exact fourni par l'utilisateur (compile sans erreur)" -ForegroundColor White
+Write-Host "    - CastPlugin.java : App ID production 65257ADB" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Content-Type 'audio/mpeg'" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Log 'Loading URL to Cast: ...' avant rmc.load()" -ForegroundColor White
+Write-Host "    - CastPlugin.java : events localAudioControl (pauseLocal/resumeLocal)" -ForegroundColor White
+Write-Host "    - CastPlugin.java : MediaRouteChooserDialog pour requestSession" -ForegroundColor White
 Write-Host "    - CastOptionsProvider.java : App ID production 65257ADB" -ForegroundColor White
 Write-Host "    - Manifest : + ACCESS_COARSE_LOCATION (vieux Chromecasts / mDNS)" -ForegroundColor White
 Write-Host ""
+Write-Host "  FRONTEND :" -ForegroundColor Cyan
+Write-Host "    - useCast.ts : logs castDevicesAvailable + castStateChanged + localAudioControl" -ForegroundColor White
+Write-Host "    - useCast.ts : loadMedia envoie URL sans modification" -ForegroundColor White
+Write-Host "    - CastButton.tsx : etat 'Chargement' (spinner) si castInitState=initializing" -ForegroundColor White
+Write-Host "    - CastButton.tsx : clic bloque tant que castInitState != ready" -ForegroundColor White
+Write-Host "    - PlayerContext.tsx : castInitState expose dans le contexte" -ForegroundColor White
+Write-Host ""
 Write-Host "  ANDROID AUTO :" -ForegroundColor Cyan
 Write-Host "    - RadioBrowserService + MediaPlaybackService : MediaSession unifiee 'RadioSphereSession'" -ForegroundColor White
-Write-Host "    - MediaPlaybackService : action MediaBrowserService ajoutee au Manifest" -ForegroundColor White
 Write-Host "    - Manifest : meta-data SmallIcon pour notifications AA" -ForegroundColor White
-Write-Host ""
-Write-Host "  AUDIO LOCAL :" -ForegroundColor Cyan
-Write-Host "    - PlayerContext : pause audio local lors du Cast connect, resume au disconnect" -ForegroundColor White
-Write-Host ""
-Write-Host "  CAST MEDIA v2.4.5 :" -ForegroundColor Cyan
-Write-Host "    - CastPlugin.java : pas de HTTPS force, URL originale conservee" -ForegroundColor White
-Write-Host "    - CastPlugin.java : Content-Type 'audio/*' (AAC/OGG/MPEG auto)" -ForegroundColor White
-Write-Host "    - CastPlugin.java : Log 'Loading URL to Cast: ...' avant rmc.load()" -ForegroundColor White
-Write-Host "    - CastPlugin.java : events localAudioControl (pauseLocal/resumeLocal)" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
@@ -1572,9 +1330,7 @@ Write-Host ""
 Write-Host "DIAGNOSTIC CHROMECAST :" -ForegroundColor Yellow
 Write-Host "  1. Logcat filtre 'CastPlugin'" -ForegroundColor White
 Write-Host "  2. Chercher 'Loading URL to Cast: ...' pour verifier l'URL envoyee" -ForegroundColor White
-Write-Host "  3. Chercher 'Scan details: Total routes=X'" -ForegroundColor White
-Write-Host "  4. Si matching > 0, les Chromecasts sont visibles" -ForegroundColor White
-Write-Host "  5. Verifier 'Network permission callback - granted: true'" -ForegroundColor White
-Write-Host "  6. App ID utilise : 65257ADB (recepteur personnalise RadioSphere)" -ForegroundColor White
+Write-Host "  3. Verifier les events castDevicesAvailable et castStateChanged" -ForegroundColor White
+Write-Host "  4. App ID utilise : 65257ADB (recepteur personnalise RadioSphere)" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan

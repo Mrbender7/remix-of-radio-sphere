@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { RadioStation } from "@/types/radio";
 import { registerPlugin } from "@capacitor/core";
 
-// Use CC1AD845 (default test receiver) for debugging discovery.
-// Switch to "65257ADB" once custom receiver is confirmed in Cast console.
+// Production App ID for RadioSphere custom receiver
 const CAST_APP_ID = "65257ADB";
 
 declare global {
@@ -81,6 +80,7 @@ export function useCast() {
       plugin.initialize()
         .then((result) => {
           console.log("[RadioSphere][Cast] CastPlugin initialized:", JSON.stringify(result));
+          console.log("[RadioSphere][Cast] initialized=" + result.initialized + ", available=" + result.available + ", appId=" + (result.appId || "N/A"));
           setIsCastAvailable(result.available);
           setPermissionsGranted(result.permissionsGranted ?? false);
           setCastInitState("ready");
@@ -102,14 +102,20 @@ export function useCast() {
         });
 
       plugin.addListener("castDevicesAvailable", (data: any) => {
-        console.log("[RadioSphere][Cast] Devices available:", data.available);
+        console.log("[RadioSphere][Cast] castDevicesAvailable event:", JSON.stringify(data));
         setIsCastAvailable(data.available);
       });
 
       plugin.addListener("castStateChanged", (data: any) => {
-        console.log("[RadioSphere][Cast] Session state:", JSON.stringify(data));
+        console.log("[RadioSphere][Cast] castStateChanged event:", JSON.stringify(data));
         setIsCasting(data.connected);
         setCastDeviceName(data.connected ? data.deviceName : null);
+      });
+
+      // v2.4.6: Listen for localAudioControl events from native plugin
+      plugin.addListener("localAudioControl", (data: any) => {
+        console.log("[RadioSphere][Cast] localAudioControl event:", JSON.stringify(data));
+        // This event is handled by PlayerContext via isCasting state change
       });
 
       return;
@@ -223,7 +229,6 @@ export function useCast() {
   const startCast = useCallback(async () => {
     if (isNative) {
       const plugin = getCastPlugin();
-      // Plugin-side requestSession handles permissions automatically
       try {
         await plugin.requestSession();
       } catch (e) {
@@ -255,6 +260,8 @@ export function useCast() {
   const loadMedia = useCallback(
     (station: RadioStation) => {
       if (isNative) {
+        // v2.4.6: Send streamUrl without modification — plugin handles content type
+        console.log("[RadioSphere][Cast] loadMedia (native):", station.name, "URL:", station.streamUrl);
         getCastPlugin().loadMedia({
           streamUrl: station.streamUrl,
           title: station.name,

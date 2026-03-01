@@ -49,6 +49,7 @@ interface PlayerContextType extends PlayerState {
   isCasting: boolean;
   castDeviceName: string | null;
   castUiMode: import("@/hooks/useCast").CastUiMode;
+  castInitState: import("@/hooks/useCast").CastInitState;
   startCast: () => void;
   stopCast: () => void;
 }
@@ -63,7 +64,7 @@ export function usePlayer() {
 
 export function PlayerProvider({ children, onStationPlay }: { children: React.ReactNode; onStationPlay?: (station: RadioStation) => void }) {
   const { t } = useTranslation();
-  const { isCastAvailable, isCasting, castDeviceName, castUiMode, startCast, stopCast, loadMedia: castLoadMedia, toggleCastPlayPause } = useCast();
+  const { isCastAvailable, isCasting, castDeviceName, castUiMode, castInitState, startCast, stopCast, loadMedia: castLoadMedia, toggleCastPlayPause } = useCast();
   const audioRef = useRef<HTMLAudioElement>(globalAudio);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const isPlayingRef = useRef(false);
@@ -564,7 +565,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   const closeFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: false })), []);
 
   return (
-    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, isCastAvailable, isCasting, castDeviceName, castUiMode, startCast, stopCast }}>
+    <PlayerContext.Provider value={{ ...state, play, togglePlay, setVolume, openFullScreen, closeFullScreen, isCastAvailable, isCasting, castDeviceName, castUiMode, castInitState, startCast, stopCast }}>
       {children}
     </PlayerContext.Provider>
   );
