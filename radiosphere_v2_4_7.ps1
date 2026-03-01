@@ -1,10 +1,10 @@
-# radiosphere_v2_4_6.ps1
-# v2.4.6 -- Cast: exact user CastPlugin.java, audio/mpeg, ACCESS_COARSE_LOCATION, UI loading state
+# radiosphere_v2_4_7.ps1
+# v2.4.7 -- Cast: DEFAULT_MEDIA_RECEIVER everywhere, dual perms Android 13+, audio/* content type
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
-Write-Host ">>> Lancement du Master Fix v2.4.6 - Cast sync + Android Auto" -ForegroundColor Cyan
+Write-Host ">>> Lancement du Master Fix v2.4.7 - Cast DEFAULT_MEDIA_RECEIVER + Android Auto" -ForegroundColor Cyan
 
 if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
 git clone $RepoUrl
@@ -582,7 +582,7 @@ import android.net.Uri;
 @CapacitorPlugin(name = "CastPlugin", permissions = { @Permission(alias = "network", strings = { "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.NEARBY_WIFI_DEVICES" }) })
 public class CastPlugin extends Plugin {
     private static final String TAG = "CastPlugin";
-    private static final String CAST_APP_ID = "65257ADB";
+    private static final String CAST_APP_ID = CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID;
     private CastContext castContext;
     private MediaRouter mediaRouter;
     private MediaRouteSelector mediaRouteSelector;
@@ -619,13 +619,13 @@ public class CastPlugin extends Plugin {
         boolean has = false; for (MediaRouter.RouteInfo r : router.getRoutes()) { if (r.matchesSelector(mediaRouteSelector) && !r.isDefault()) { has = true; break; } }
         if (has != devicesAvailable) { devicesAvailable = has; JSObject d = new JSObject(); d.put("available", has); notifyListeners("castDevicesAvailable", d); }
     }
-    private boolean hasPerms() { Context c = getContext(); if (Build.VERSION.SDK_INT >= 33) return ContextCompat.checkSelfPermission(c, "android.permission.NEARBY_WIFI_DEVICES") == PackageManager.PERMISSION_GRANTED;
+    private boolean hasPerms() { Context c = getContext(); if (Build.VERSION.SDK_INT >= 33) { boolean nearby = ContextCompat.checkSelfPermission(c, "android.permission.NEARBY_WIFI_DEVICES") == PackageManager.PERMISSION_GRANTED; boolean fine = ContextCompat.checkSelfPermission(c, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED; return nearby && fine; }
         return ContextCompat.checkSelfPermission(c, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(c, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED; }
     @PluginMethod public void checkDiscoveryPermissions(PluginCall call) { JSObject r = new JSObject(); r.put("granted", hasPerms()); call.resolve(r); }
     @PluginMethod public void requestDiscoveryPermissions(PluginCall call) { if (hasPerms()) { JSObject r = new JSObject(); r.put("granted", true); call.resolve(r); return; } requestPermissionForAlias("network", call, "networkPermissionCallback"); }
     @PermissionCallback private void networkPermissionCallback(PluginCall call) { boolean g = hasPerms(); JSObject r = new JSObject(); r.put("granted", g); call.resolve(r); if (g && savedInitCall != null) { PluginCall s = savedInitCall; savedInitCall = null; doInitialize(s); } }
     @PluginMethod public void initialize(PluginCall call) { if (!hasPerms()) { savedInitCall = call; requestPermissionForAlias("network", call, "networkPermissionCallback"); return; } doInitialize(call); }
-    private void doInitialize(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { castContext = CastContext.getSharedInstance(getContext()); castContext.getSessionManager().addSessionManagerListener(sessionListener, CastSession.class);
+    private void doInitialize(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { castContext = CastContext.getSharedInstance(getContext()); Log.d(TAG, "CastContext status: " + (castContext != null)); castContext.getSessionManager().addSessionManagerListener(sessionListener, CastSession.class);
         mediaRouteSelector = new MediaRouteSelector.Builder().addControlCategory(CastMediaControlIntent.categoryForCast(CAST_APP_ID)).build();
         mediaRouter = MediaRouter.getInstance(getContext()); mediaRouter.addCallback(mediaRouteSelector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY | MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
         updateDeviceAvailability(mediaRouter); JSObject res = new JSObject(); res.put("initialized", true); res.put("available", devicesAvailable); call.resolve(res);
@@ -638,7 +638,7 @@ public class CastPlugin extends Plugin {
         try { getActivity().runOnUiThread(() -> { try { CastSession s = castContext != null ? castContext.getSessionManager().getCurrentCastSession() : null; if (s == null) { call.reject("No session"); return; }
         RemoteMediaClient r = s.getRemoteMediaClient(); if (r == null) { call.reject("No client"); return; }
         MediaMetadata m = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK); m.putString(MediaMetadata.KEY_TITLE, t); m.putString(MediaMetadata.KEY_ARTIST, "Radio Sphere"); if (!l.isEmpty()) m.addImage(new WebImage(Uri.parse(l.replace("http://", "https://"))));
-        MediaInfo info = new MediaInfo.Builder(u).setStreamType(MediaInfo.STREAM_TYPE_LIVE).setContentType("audio/mpeg").setMetadata(m).build();
+        MediaInfo info = new MediaInfo.Builder(u).setStreamType(MediaInfo.STREAM_TYPE_LIVE).setContentType("audio/*").setMetadata(m).build();
         r.load(new MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true).build()); call.resolve();
         } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
     @PluginMethod public void togglePlayPause(PluginCall call) { try { getActivity().runOnUiThread(() -> { try { CastSession s = castContext != null ? castContext.getSessionManager().getCurrentCastSession() : null; if (s != null && s.getRemoteMediaClient() != null) { RemoteMediaClient c = s.getRemoteMediaClient(); if (c.isPlaying()) c.pause(); else c.play(); } call.resolve(); } catch (Exception e) { call.reject(e.getMessage()); } }); } catch (Exception e) { call.reject(e.getMessage()); } }
@@ -647,10 +647,10 @@ public class CastPlugin extends Plugin {
 '@
 $CastPluginJava = $CastPluginJava -replace '__PACKAGE__', $ActualPackage
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "CastPlugin.java"), $CastPluginJava, $UTF8NoBOM)
-Write-Host "    CastPlugin.java genere avec succes (v2.4.6)" -ForegroundColor Green
+Write-Host "    CastPlugin.java genere avec succes (v2.4.7)" -ForegroundColor Green
 
-# --- CastOptionsProvider.java (v2.4.2 -- DEFAULT_MEDIA_RECEIVER) ---
-Write-Host "    Generation CastOptionsProvider.java (v2.4.2)..." -ForegroundColor DarkGray
+# --- CastOptionsProvider.java (v2.4.7 -- DEFAULT_MEDIA_RECEIVER) ---
+Write-Host "    Generation CastOptionsProvider.java (v2.4.7)..." -ForegroundColor DarkGray
 $CastOptionsProviderJava = @'
 package __PACKAGE__;
 
@@ -666,7 +666,7 @@ public class CastOptionsProvider implements OptionsProvider {
     @Override
     public CastOptions getCastOptions(Context context) {
         return new CastOptions.Builder()
-            .setReceiverApplicationId("65257ADB")
+            .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
             .build();
     }
 
@@ -678,7 +678,7 @@ public class CastOptionsProvider implements OptionsProvider {
 '@
 $CastOptionsProviderJava = $CastOptionsProviderJava -replace '__PACKAGE__', $ActualPackage
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "CastOptionsProvider.java"), $CastOptionsProviderJava, $UTF8NoBOM)
-Write-Host "    CastOptionsProvider.java genere avec succes (v2.4.2)" -ForegroundColor Green
+Write-Host "    CastOptionsProvider.java genere avec succes (v2.4.7)" -ForegroundColor Green
 
 # --- RadioBrowserService.java (v2.3.0 -- stream resolution + local artwork) ---
 Write-Host "    Generation RadioBrowserService.java (v2.3.0 -- stream resolution + local artwork)..." -ForegroundColor DarkGray

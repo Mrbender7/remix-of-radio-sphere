@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { RadioStation } from "@/types/radio";
 import { registerPlugin } from "@capacitor/core";
 
-// Production App ID for RadioSphere custom receiver
-const CAST_APP_ID = "65257ADB";
+// v2.4.7: Use Google Default Media Receiver for universal compatibility
+const CAST_APP_ID = "CC1AD845";
 
 declare global {
   interface Window {
