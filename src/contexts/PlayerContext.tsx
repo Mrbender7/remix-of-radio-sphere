@@ -527,8 +527,27 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
   }, []);
 
   // Auto-push media to Chromecast when session starts or station changes
+  // Also pause/resume local audio on Cast connect/disconnect
   const lastCastStationIdRef = useRef<string | null>(null);
+  const wasCastingRef = useRef(false);
   useEffect(() => {
+    const audio = audioRef.current;
+
+    if (isCasting && !wasCastingRef.current) {
+      // Cast just connected → pause local audio
+      console.log("[RadioSphere] Cast connected — pausing local audio");
+      audio.pause();
+      stopSilentLoop();
+    } else if (!isCasting && wasCastingRef.current) {
+      // Cast just disconnected → resume local audio if we were playing
+      console.log("[RadioSphere] Cast disconnected — resuming local audio");
+      if (state.isPlaying && state.currentStation) {
+        audio.play().catch(() => {});
+        startSilentLoop();
+      }
+    }
+    wasCastingRef.current = isCasting;
+
     if (isCasting && state.currentStation) {
       // Guard: don't re-push the same station
       if (lastCastStationIdRef.current !== state.currentStation.id) {
@@ -539,7 +558,7 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     if (!isCasting) {
       lastCastStationIdRef.current = null;
     }
-  }, [isCasting, state.currentStation, castLoadMedia]);
+  }, [isCasting, state.currentStation, state.isPlaying, castLoadMedia]);
 
   const openFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: true })), []);
   const closeFullScreen = useCallback(() => setState(s => ({ ...s, isFullScreen: false })), []);

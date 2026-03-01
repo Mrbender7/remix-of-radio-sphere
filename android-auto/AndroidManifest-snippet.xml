@@ -45,11 +45,18 @@
 <service
     android:name=".RadioBrowserService"
     android:exported="true"
-    android:enabled="true">
+    android:enabled="true"
+    android:label="@string/app_name"
+    android:icon="@mipmap/ic_launcher">
     <intent-filter>
         <action android:name="android.media.browse.MediaBrowserService" />
     </intent-filter>
 </service>
+
+<!-- Android Auto notification icon -->
+<meta-data
+    android:name="com.google.android.gms.car.notification.SmallIcon"
+    android:resource="@drawable/ic_notification" />
 
 <!-- 3. Chromecast — CastOptionsProvider (OBLIGATOIRE pour Cast SDK) -->
 <meta-data

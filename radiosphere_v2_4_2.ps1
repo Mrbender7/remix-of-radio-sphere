@@ -168,11 +168,18 @@ if (Test-Path $ManifestPath) {
     <service
         android:name=".RadioBrowserService"
         android:exported="true"
-        android:enabled="true">
+        android:enabled="true"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher">
         <intent-filter>
             <action android:name="android.media.browse.MediaBrowserService" />
         </intent-filter>
     </service>
+
+    <!-- Android Auto notification icon -->
+    <meta-data
+        android:name="com.google.android.gms.car.notification.SmallIcon"
+        android:resource="@drawable/ic_notification" />
 
     <!-- v2.4.0: Chromecast CastOptionsProvider (OBLIGATOIRE) -->
     <meta-data
@@ -583,7 +590,7 @@ public class CastPlugin extends Plugin {
 
     private static final String TAG = "CastPlugin";
     // v2.4.2: Use DEFAULT receiver for maximum compatibility during discovery
-    private static final String CAST_APP_ID = CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID;
+    private static final String CAST_APP_ID = "65257ADB";
 
     private CastContext castContext;
     private MediaRouter mediaRouter;
@@ -692,7 +699,7 @@ public class CastPlugin extends Plugin {
     @PermissionCallback
     private void networkPermissionCallback(PluginCall call) {
         boolean granted = hasDiscoveryPermissions();
-        Log.d(TAG, "Network permission callback — granted: " + granted);
+        Log.d(TAG, "Network permission callback - granted: " + granted);
         JSObject result = new JSObject();
         result.put("granted", granted);
         call.resolve(result);
@@ -882,7 +889,7 @@ public class CastOptionsProvider implements OptionsProvider {
     @Override
     public CastOptions getCastOptions(Context context) {
         return new CastOptions.Builder()
-            .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
+            .setReceiverApplicationId("65257ADB")
             .build();
     }
 
@@ -1019,7 +1026,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         player = new ExoPlayer.Builder(this).build();
         player.addListener(playerListener);
-        mediaSession = new MediaSessionCompat(this, "RadioSphereAuto");
+        mediaSession = new MediaSessionCompat(this, "RadioSphereMedia");
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
             MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -1517,19 +1524,27 @@ Write-Host ">>> Script v2.4.2 Termine ! Cast discovery fix" -ForegroundColor Gre
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "CHANGEMENTS v2.4.2 (depuis v2.4.0) :" -ForegroundColor Yellow
-Write-Host "  CAST DISCOVERY FIX :" -ForegroundColor Cyan
-Write-Host "    - CastPlugin.java : DEFAULT_MEDIA_RECEIVER_APPLICATION_ID (detecte TOUS les Chromecasts)" -ForegroundColor White
+Write-Host "  CAST :" -ForegroundColor Cyan
+Write-Host "    - CastPlugin.java : App ID production 65257ADB (recepteur personnalise)" -ForegroundColor White
 Write-Host "    - CastPlugin.java : @Permission(alias='network') avec ACCESS_FINE_LOCATION + NEARBY_WIFI_DEVICES" -ForegroundColor White
 Write-Host "    - CastPlugin.java : check permissions runtime AVANT CastContext.init + requestSession" -ForegroundColor White
 Write-Host "    - CastPlugin.java : diagnostic 'Scan details: Total routes=X, matching=Y, AppID=Z'" -ForegroundColor White
 Write-Host "    - CastPlugin.java : CALLBACK_FLAG_PERFORM_ACTIVE_SCAN pour scan actif" -ForegroundColor White
-Write-Host "    - CastOptionsProvider.java : DEFAULT_MEDIA_RECEIVER_APPLICATION_ID (alignement)" -ForegroundColor White
+Write-Host "    - CastOptionsProvider.java : App ID production 65257ADB" -ForegroundColor White
 Write-Host "    - Manifest : + ACCESS_COARSE_LOCATION (vieux Chromecasts / mDNS)" -ForegroundColor White
 Write-Host ""
-Write-Host "  ANDROID AUTO (INCHANGE depuis v2.3.0) :" -ForegroundColor Cyan
-Write-Host "    - RadioBrowserService: resolveStreamUrl, playlists, fallback protocole, artwork local" -ForegroundColor White
+Write-Host "  ANDROID AUTO :" -ForegroundColor Cyan
+Write-Host "    - RadioBrowserService : label, icon sur le service (visibilite AA)" -ForegroundColor White
+Write-Host "    - RadioBrowserService : MediaSession unifiee 'RadioSphereMedia'" -ForegroundColor White
+Write-Host "    - Manifest : meta-data SmallIcon pour notifications AA" -ForegroundColor White
+Write-Host ""
+Write-Host "  AUDIO LOCAL :" -ForegroundColor Cyan
+Write-Host "    - PlayerContext : pause audio local lors du Cast connect, resume au disconnect" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
+Write-Host ""
+Write-Host "ANDROID AUTO : Activer 'Sources inconnues' dans Parametres > Developpeur" -ForegroundColor Yellow
+Write-Host "               de l'app Android Auto sur le smartphone" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "DIAGNOSTIC CHROMECAST :" -ForegroundColor Yellow
 Write-Host "  1. Logcat filtre 'CastPlugin'" -ForegroundColor White
@@ -1537,5 +1552,6 @@ Write-Host "  2. Chercher 'Scan details: Total routes=X'" -ForegroundColor White
 Write-Host "  3. Si Total routes > 2, le scan fonctionne (routes reseau detectees)" -ForegroundColor White
 Write-Host "  4. Si matching > 0, les Chromecasts sont visibles" -ForegroundColor White
 Write-Host "  5. Verifier 'Network permission callback - granted: true'" -ForegroundColor White
+Write-Host "  6. App ID utilise : 65257ADB (recepteur personnalise RadioSphere)" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan
