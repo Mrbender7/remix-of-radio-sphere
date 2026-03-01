@@ -52,8 +52,8 @@ import android.net.Uri;
 public class CastPlugin extends Plugin {
 
     private static final String TAG = "CastPlugin";
-    // v2.4.2: Use DEFAULT receiver for maximum compatibility during discovery
-    private static final String CAST_APP_ID = CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID;
+    // Production custom receiver
+    private static final String CAST_APP_ID = "65257ADB";
 
     private CastContext castContext;
     private MediaRouter mediaRouter;

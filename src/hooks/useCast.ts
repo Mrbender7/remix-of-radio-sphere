@@ -4,7 +4,7 @@ import { registerPlugin } from "@capacitor/core";
 
 // Use CC1AD845 (default test receiver) for debugging discovery.
 // Switch to "65257ADB" once custom receiver is confirmed in Cast console.
-const CAST_APP_ID = "CC1AD845";
+const CAST_APP_ID = "65257ADB";
 
 declare global {
   interface Window {
