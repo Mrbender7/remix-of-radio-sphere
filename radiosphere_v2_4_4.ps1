@@ -1,10 +1,10 @@
 # radiosphere_v2_4_2.ps1
-# v2.4.2 -- Cast discovery fix: DEFAULT_MEDIA_RECEIVER, runtime permissions, diagnostic logging
+# v2.4.4 -- Cast playback fix: HTTPS forced, audio/* MIME, diagnostic logging
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
-Write-Host ">>> Lancement du Master Fix v2.4.2 - Cast discovery fix" -ForegroundColor Cyan
+Write-Host ">>> Lancement du Master Fix v2.4.4 - Cast playback fix (HTTPS + MIME)" -ForegroundColor Cyan
 
 if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
 git clone $RepoUrl
@@ -812,6 +812,8 @@ public class CastPlugin extends Plugin {
         String logo = call.getString("logo", "");
         String tags = call.getString("tags", "");
         String stationId = call.getString("stationId", "");
+        // v2.4.4: Force HTTPS for Chromecast compatibility
+        String safeUrl = streamUrl.replace("http://", "https://");
         try {
             getActivity().runOnUiThread(() -> {
                 try {
@@ -828,15 +830,15 @@ public class CastPlugin extends Plugin {
                     }
                     org.json.JSONObject customData = new org.json.JSONObject();
                     try { customData.put("tags", tags); customData.put("stationId", stationId); } catch (Exception e) {}
-                    MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
+                    MediaInfo mediaInfo = new MediaInfo.Builder(safeUrl)
                         .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
-                        .setContentType("audio/mpeg")
+                        .setContentType("audio/*")
                         .setMetadata(metadata)
                         .setCustomData(customData).build();
                     MediaLoadRequestData loadReq = new MediaLoadRequestData.Builder()
                         .setMediaInfo(mediaInfo).setAutoplay(true).build();
+                    Log.d(TAG, "Casting URL: " + safeUrl + " | Title: " + title);
                     rmc.load(loadReq);
-                    Log.d(TAG, "Media loaded: " + title);
                     call.resolve();
                 } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
             });
@@ -1541,6 +1543,11 @@ Write-Host ""
 Write-Host "  AUDIO LOCAL :" -ForegroundColor Cyan
 Write-Host "    - PlayerContext : pause audio local lors du Cast connect, resume au disconnect" -ForegroundColor White
 Write-Host ""
+Write-Host "  CAST MEDIA v2.4.4 :" -ForegroundColor Cyan
+Write-Host "    - CastPlugin.java : HTTPS force sur les URLs de stream (safeUrl)" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Content-Type 'audio/*' au lieu de 'audio/mpeg' (AAC/OGG support)" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Log diagnostic 'Casting URL: ...' avant rmc.load()" -ForegroundColor White
+Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
 Write-Host "ANDROID AUTO : Activer 'Sources inconnues' dans Parametres > Developpeur" -ForegroundColor Yellow
@@ -1548,8 +1555,8 @@ Write-Host "               de l'app Android Auto sur le smartphone" -ForegroundC
 Write-Host ""
 Write-Host "DIAGNOSTIC CHROMECAST :" -ForegroundColor Yellow
 Write-Host "  1. Logcat filtre 'CastPlugin'" -ForegroundColor White
-Write-Host "  2. Chercher 'Scan details: Total routes=X'" -ForegroundColor White
-Write-Host "  3. Si Total routes > 2, le scan fonctionne (routes reseau detectees)" -ForegroundColor White
+Write-Host "  2. Chercher 'Casting URL: https://...' pour verifier l'URL envoyee" -ForegroundColor White
+Write-Host "  3. Chercher 'Scan details: Total routes=X'" -ForegroundColor White
 Write-Host "  4. Si matching > 0, les Chromecasts sont visibles" -ForegroundColor White
 Write-Host "  5. Verifier 'Network permission callback - granted: true'" -ForegroundColor White
 Write-Host "  6. App ID utilise : 65257ADB (recepteur personnalise RadioSphere)" -ForegroundColor White

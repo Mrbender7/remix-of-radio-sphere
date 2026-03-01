@@ -279,6 +279,8 @@ public class CastPlugin extends Plugin {
         String logo = call.getString("logo", "");
         String tags = call.getString("tags", "");
         String stationId = call.getString("stationId", "");
+        // v2.4.4: Force HTTPS for Chromecast compatibility
+        String safeUrl = streamUrl.replace("http://", "https://");
         try {
             getActivity().runOnUiThread(() -> {
                 try {
@@ -295,15 +297,15 @@ public class CastPlugin extends Plugin {
                     }
                     org.json.JSONObject customData = new org.json.JSONObject();
                     try { customData.put("tags", tags); customData.put("stationId", stationId); } catch (Exception e) {}
-                    MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
+                    MediaInfo mediaInfo = new MediaInfo.Builder(safeUrl)
                         .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
-                        .setContentType("audio/mpeg")
+                        .setContentType("audio/*")
                         .setMetadata(metadata)
                         .setCustomData(customData).build();
                     MediaLoadRequestData loadReq = new MediaLoadRequestData.Builder()
                         .setMediaInfo(mediaInfo).setAutoplay(true).build();
+                    Log.d(TAG, "Casting URL: " + safeUrl + " | Title: " + title);
                     rmc.load(loadReq);
-                    Log.d(TAG, "Media loaded: " + title);
                     call.resolve();
                 } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
             });
