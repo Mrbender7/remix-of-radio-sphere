@@ -8,15 +8,14 @@ import com.google.android.gms.cast.framework.SessionProvider;
 import java.util.List;
 
 /**
- * CastOptionsProvider v2.4.2 — Required by Google Cast framework.
- * Uses custom RadioSphere receiver (65257ADB).
+ * CastOptionsProvider v2.4.7 — Uses DEFAULT_MEDIA_RECEIVER for universal compatibility.
  */
 public class CastOptionsProvider implements OptionsProvider {
 
     @Override
     public CastOptions getCastOptions(Context context) {
         return new CastOptions.Builder()
-            .setReceiverApplicationId("65257ADB")
+            .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
             .build();
     }
 

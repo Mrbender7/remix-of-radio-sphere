@@ -53,8 +53,8 @@ import android.net.Uri;
 public class CastPlugin extends Plugin {
 
     private static final String TAG = "CastPlugin";
-    // Production custom receiver
-    private static final String CAST_APP_ID = "65257ADB";
+    // v2.4.7: Use DEFAULT_MEDIA_RECEIVER for universal compatibility
+    private static final String CAST_APP_ID = CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID;
 
     private CastContext castContext;
     private MediaRouter mediaRouter;
@@ -152,7 +152,10 @@ public class CastPlugin extends Plugin {
     private boolean hasDiscoveryPermissions() {
         Context ctx = getContext();
         if (Build.VERSION.SDK_INT >= 33) {
-            return ContextCompat.checkSelfPermission(ctx, "android.permission.NEARBY_WIFI_DEVICES") == PackageManager.PERMISSION_GRANTED;
+            // v2.4.7: Android 13+ requires BOTH permissions for mDNS-based Cast discovery
+            boolean nearby = ContextCompat.checkSelfPermission(ctx, "android.permission.NEARBY_WIFI_DEVICES") == PackageManager.PERMISSION_GRANTED;
+            boolean fine = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+            return nearby && fine;
         }
         boolean fineGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         boolean coarseGranted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
@@ -212,6 +215,7 @@ public class CastPlugin extends Plugin {
                 try {
                     Log.d(TAG, "Initializing Cast SDK with AppID: " + CAST_APP_ID);
                     castContext = CastContext.getSharedInstance(getContext());
+                    Log.d(TAG, "CastContext status: " + (castContext != null));
                     SessionManager sm = castContext.getSessionManager();
                     sm.addSessionManagerListener(sessionListener, CastSession.class);
 
