@@ -19,6 +19,7 @@
 
 <!-- Découverte réseau local (Cast SDK) -->
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
 <!-- Android 13+ : obligatoire pour découverte mDNS/Cast -->
 <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
