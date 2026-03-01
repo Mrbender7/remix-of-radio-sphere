@@ -70,6 +70,11 @@ public class CastPlugin extends Plugin {
             data.put("connected", true);
             data.put("deviceName", session.getCastDevice() != null ? session.getCastDevice().getFriendlyName() : "Chromecast");
             notifyListeners("castStateChanged", data);
+            // v2.4.5: Notify JS to pause local audio immediately
+            JSObject audioPause = new JSObject();
+            audioPause.put("action", "pauseLocal");
+            notifyListeners("localAudioControl", audioPause);
+            Log.d(TAG, "Sent localAudioControl:pauseLocal to JS");
         }
         @Override public void onSessionStartFailed(@NonNull CastSession s, int err) {
             Log.e(TAG, "Session start failed: " + err);
@@ -81,6 +86,11 @@ public class CastPlugin extends Plugin {
             Log.d(TAG, "Session ended");
             JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
             notifyListeners("castStateChanged", data);
+            // v2.4.5: Notify JS to resume local audio
+            JSObject audioResume = new JSObject();
+            audioResume.put("action", "resumeLocal");
+            notifyListeners("localAudioControl", audioResume);
+            Log.d(TAG, "Sent localAudioControl:resumeLocal to JS");
         }
         @Override public void onSessionResuming(@NonNull CastSession s, @NonNull String id) {}
         @Override public void onSessionResumed(@NonNull CastSession session, boolean wasSuspended) {
@@ -279,8 +289,6 @@ public class CastPlugin extends Plugin {
         String logo = call.getString("logo", "");
         String tags = call.getString("tags", "");
         String stationId = call.getString("stationId", "");
-        // v2.4.4: Force HTTPS for Chromecast compatibility
-        String safeUrl = streamUrl.replace("http://", "https://");
         try {
             getActivity().runOnUiThread(() -> {
                 try {
@@ -297,14 +305,19 @@ public class CastPlugin extends Plugin {
                     }
                     org.json.JSONObject customData = new org.json.JSONObject();
                     try { customData.put("tags", tags); customData.put("stationId", stationId); } catch (Exception e) {}
-                    MediaInfo mediaInfo = new MediaInfo.Builder(safeUrl)
+
+                    // v2.4.5: Log original URL for diagnostics, keep as-is (no forced HTTPS)
+                    // If your Cast App ID supports cleartext, HTTP will work.
+                    // If not, try HTTPS variant of the stream URL.
+                    Log.d(TAG, "Loading URL to Cast: " + streamUrl);
+
+                    MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
                         .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
                         .setContentType("audio/*")
                         .setMetadata(metadata)
                         .setCustomData(customData).build();
                     MediaLoadRequestData loadReq = new MediaLoadRequestData.Builder()
                         .setMediaInfo(mediaInfo).setAutoplay(true).build();
-                    Log.d(TAG, "Casting URL: " + safeUrl + " | Title: " + title);
                     rmc.load(loadReq);
                     call.resolve();
                 } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }

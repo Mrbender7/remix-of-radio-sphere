@@ -1,10 +1,10 @@
-# radiosphere_v2_4_2.ps1
-# v2.4.4 -- Cast playback fix: HTTPS forced, audio/* MIME, diagnostic logging
+# radiosphere_v2_4_5.ps1
+# v2.4.5 -- Cast: no forced HTTPS, audio/*, localAudioControl events, unified RadioSphereSession
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
-Write-Host ">>> Lancement du Master Fix v2.4.4 - Cast playback fix (HTTPS + MIME)" -ForegroundColor Cyan
+Write-Host ">>> Lancement du Master Fix v2.4.5 - Cast audio + Android Auto unification" -ForegroundColor Cyan
 
 if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
 git clone $RepoUrl
@@ -186,11 +186,16 @@ if (Test-Path $ManifestPath) {
         android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
         android:value="__ACTUAL_PACKAGE__.CastOptionsProvider" />
 
-    <!-- v2.2.9: MediaStyle lock screen notification service -->
+    <!-- v2.4.5: MediaPlaybackService with MediaBrowserService action for unified AA -->
     <service
         android:name=".MediaPlaybackService"
-        android:exported="false"
-        android:foregroundServiceType="mediaPlayback" />
+        android:exported="true"
+        android:enabled="true"
+        android:foregroundServiceType="mediaPlayback">
+        <intent-filter>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent-filter>
+    </service>
 
     <!-- v2.2.9: Broadcast receiver for notification toggle -->
     <receiver
@@ -406,7 +411,7 @@ public class MediaPlaybackService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        mediaSession = new MediaSessionCompat(this, "RadioSphereMedia");
+        mediaSession = new MediaSessionCompat(this, "RadioSphereSession");
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
             MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -606,6 +611,11 @@ public class CastPlugin extends Plugin {
             data.put("connected", true);
             data.put("deviceName", session.getCastDevice() != null ? session.getCastDevice().getFriendlyName() : "Chromecast");
             notifyListeners("castStateChanged", data);
+            // v2.4.5: Notify JS to pause local audio immediately
+            JSObject audioPause = new JSObject();
+            audioPause.put("action", "pauseLocal");
+            notifyListeners("localAudioControl", audioPause);
+            Log.d(TAG, "Sent localAudioControl:pauseLocal to JS");
         }
         @Override public void onSessionStartFailed(@NonNull CastSession s, int err) {
             Log.e(TAG, "Session start failed: " + err);
@@ -617,8 +627,12 @@ public class CastPlugin extends Plugin {
             Log.d(TAG, "Session ended");
             JSObject data = new JSObject(); data.put("connected", false); data.put("deviceName", "");
             notifyListeners("castStateChanged", data);
+            // v2.4.5: Notify JS to resume local audio
+            JSObject audioResume = new JSObject();
+            audioResume.put("action", "resumeLocal");
+            notifyListeners("localAudioControl", audioResume);
+            Log.d(TAG, "Sent localAudioControl:resumeLocal to JS");
         }
-        @Override public void onSessionResuming(@NonNull CastSession s, @NonNull String id) {}
         @Override public void onSessionResumed(@NonNull CastSession session, boolean wasSuspended) {
             Log.d(TAG, "Session resumed");
             JSObject data = new JSObject();
@@ -812,8 +826,6 @@ public class CastPlugin extends Plugin {
         String logo = call.getString("logo", "");
         String tags = call.getString("tags", "");
         String stationId = call.getString("stationId", "");
-        // v2.4.4: Force HTTPS for Chromecast compatibility
-        String safeUrl = streamUrl.replace("http://", "https://");
         try {
             getActivity().runOnUiThread(() -> {
                 try {
@@ -830,14 +842,17 @@ public class CastPlugin extends Plugin {
                     }
                     org.json.JSONObject customData = new org.json.JSONObject();
                     try { customData.put("tags", tags); customData.put("stationId", stationId); } catch (Exception e) {}
-                    MediaInfo mediaInfo = new MediaInfo.Builder(safeUrl)
+
+                    // v2.4.5: Log original URL, no forced HTTPS
+                    Log.d(TAG, "Loading URL to Cast: " + streamUrl);
+
+                    MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
                         .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
                         .setContentType("audio/*")
                         .setMetadata(metadata)
                         .setCustomData(customData).build();
                     MediaLoadRequestData loadReq = new MediaLoadRequestData.Builder()
                         .setMediaInfo(mediaInfo).setAutoplay(true).build();
-                    Log.d(TAG, "Casting URL: " + safeUrl + " | Title: " + title);
                     rmc.load(loadReq);
                     call.resolve();
                 } catch (Exception e) { call.reject("loadMedia failed: " + e.getMessage()); }
@@ -1028,7 +1043,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         player = new ExoPlayer.Builder(this).build();
         player.addListener(playerListener);
-        mediaSession = new MediaSessionCompat(this, "RadioSphereMedia");
+        mediaSession = new MediaSessionCompat(this, "RadioSphereSession");
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
             MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -1536,17 +1551,18 @@ Write-Host "    - CastOptionsProvider.java : App ID production 65257ADB" -Foregr
 Write-Host "    - Manifest : + ACCESS_COARSE_LOCATION (vieux Chromecasts / mDNS)" -ForegroundColor White
 Write-Host ""
 Write-Host "  ANDROID AUTO :" -ForegroundColor Cyan
-Write-Host "    - RadioBrowserService : label, icon sur le service (visibilite AA)" -ForegroundColor White
-Write-Host "    - RadioBrowserService : MediaSession unifiee 'RadioSphereMedia'" -ForegroundColor White
+Write-Host "    - RadioBrowserService + MediaPlaybackService : MediaSession unifiee 'RadioSphereSession'" -ForegroundColor White
+Write-Host "    - MediaPlaybackService : action MediaBrowserService ajoutee au Manifest" -ForegroundColor White
 Write-Host "    - Manifest : meta-data SmallIcon pour notifications AA" -ForegroundColor White
 Write-Host ""
 Write-Host "  AUDIO LOCAL :" -ForegroundColor Cyan
 Write-Host "    - PlayerContext : pause audio local lors du Cast connect, resume au disconnect" -ForegroundColor White
 Write-Host ""
-Write-Host "  CAST MEDIA v2.4.4 :" -ForegroundColor Cyan
-Write-Host "    - CastPlugin.java : HTTPS force sur les URLs de stream (safeUrl)" -ForegroundColor White
-Write-Host "    - CastPlugin.java : Content-Type 'audio/*' au lieu de 'audio/mpeg' (AAC/OGG support)" -ForegroundColor White
-Write-Host "    - CastPlugin.java : Log diagnostic 'Casting URL: ...' avant rmc.load()" -ForegroundColor White
+Write-Host "  CAST MEDIA v2.4.5 :" -ForegroundColor Cyan
+Write-Host "    - CastPlugin.java : pas de HTTPS force, URL originale conservee" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Content-Type 'audio/*' (AAC/OGG/MPEG auto)" -ForegroundColor White
+Write-Host "    - CastPlugin.java : Log 'Loading URL to Cast: ...' avant rmc.load()" -ForegroundColor White
+Write-Host "    - CastPlugin.java : events localAudioControl (pauseLocal/resumeLocal)" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
@@ -1555,7 +1571,7 @@ Write-Host "               de l'app Android Auto sur le smartphone" -ForegroundC
 Write-Host ""
 Write-Host "DIAGNOSTIC CHROMECAST :" -ForegroundColor Yellow
 Write-Host "  1. Logcat filtre 'CastPlugin'" -ForegroundColor White
-Write-Host "  2. Chercher 'Casting URL: https://...' pour verifier l'URL envoyee" -ForegroundColor White
+Write-Host "  2. Chercher 'Loading URL to Cast: ...' pour verifier l'URL envoyee" -ForegroundColor White
 Write-Host "  3. Chercher 'Scan details: Total routes=X'" -ForegroundColor White
 Write-Host "  4. Si matching > 0, les Chromecasts sont visibles" -ForegroundColor White
 Write-Host "  5. Verifier 'Network permission callback - granted: true'" -ForegroundColor White

@@ -50,7 +50,7 @@ public class MediaPlaybackService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        mediaSession = new MediaSessionCompat(this, "RadioSphereMedia");
+        mediaSession = new MediaSessionCompat(this, "RadioSphereSession");
         mediaSession.setFlags(
             MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
             MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
