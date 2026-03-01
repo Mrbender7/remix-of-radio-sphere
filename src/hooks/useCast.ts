@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { RadioStation } from "@/types/radio";
 import { registerPlugin } from "@capacitor/core";
 
-const CAST_APP_ID = "65257ADB";
+// Use CC1AD845 (default test receiver) for debugging discovery.
+// Switch to "65257ADB" once custom receiver is confirmed in Cast console.
+const CAST_APP_ID = "CC1AD845";
 
 declare global {
   interface Window {
@@ -17,7 +19,7 @@ declare global {
 
 // ─── Native Capacitor Cast Plugin interface ─────────────────────────
 interface CastPluginInterface {
-  initialize(): Promise<{ initialized: boolean; available: boolean }>;
+  initialize(): Promise<{ initialized: boolean; available: boolean; permissionsGranted?: boolean; appId?: string }>;
   requestSession(): Promise<void>;
   endSession(): Promise<void>;
   loadMedia(options: {
@@ -28,6 +30,8 @@ interface CastPluginInterface {
     stationId: string;
   }): Promise<void>;
   togglePlayPause(): Promise<void>;
+  checkDiscoveryPermissions(): Promise<{ granted: boolean; apiLevel: number }>;
+  requestDiscoveryPermissions(): Promise<{ granted: boolean }>;
   addListener(event: string, callback: (data: any) => void): Promise<{ remove: () => void }>;
 }
 
@@ -57,6 +61,7 @@ export function useCast() {
   const [castDeviceName, setCastDeviceName] = useState<string | null>(null);
   const [castUiMode, setCastUiMode] = useState<CastUiMode>("fallback");
   const [castInitState, setCastInitState] = useState<CastInitState>("idle");
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
   const initDoneRef = useRef(false);
   const remotePlayerRef = useRef<any>(null);
   const remotePlayerControllerRef = useRef<any>(null);
@@ -75,9 +80,21 @@ export function useCast() {
       const plugin = getCastPlugin();
       plugin.initialize()
         .then((result) => {
-          console.log("[RadioSphere][Cast] CastPlugin initialized:", result);
+          console.log("[RadioSphere][Cast] CastPlugin initialized:", JSON.stringify(result));
           setIsCastAvailable(result.available);
+          setPermissionsGranted(result.permissionsGranted ?? false);
           setCastInitState("ready");
+
+          // If permissions not granted, request them proactively
+          if (!result.permissionsGranted) {
+            console.log("[RadioSphere][Cast] Permissions not granted, requesting...");
+            plugin.requestDiscoveryPermissions()
+              .then((permResult) => {
+                console.log("[RadioSphere][Cast] Permission request result:", JSON.stringify(permResult));
+                setPermissionsGranted(permResult.granted);
+              })
+              .catch((e) => console.warn("[RadioSphere][Cast] Permission request error:", e));
+          }
         })
         .catch((err) => {
           console.warn("[RadioSphere][Cast] CastPlugin init error:", err);
@@ -90,7 +107,7 @@ export function useCast() {
       });
 
       plugin.addListener("castStateChanged", (data: any) => {
-        console.log("[RadioSphere][Cast] Session state:", data);
+        console.log("[RadioSphere][Cast] Session state:", JSON.stringify(data));
         setIsCasting(data.connected);
         setCastDeviceName(data.connected ? data.deviceName : null);
       });
@@ -101,7 +118,6 @@ export function useCast() {
     // ─── WEB PATH ────────────────────────────────────────────────
     console.log("[RadioSphere][Cast] Web platform, initializing Cast SDK...");
 
-    // Idempotent init — called exactly once when framework is ready
     let webInitDone = false;
     const initWebCastContext = () => {
       if (webInitDone) return;
@@ -159,6 +175,7 @@ export function useCast() {
         setCastUiMode("launcher");
         setCastInitState("ready");
         setIsCastAvailable(true);
+        setPermissionsGranted(true);
         console.log("[RadioSphere][Cast] CastContext initialized ✓");
       } catch (e) {
         console.warn("[RadioSphere][Cast] SDK init error:", e);
@@ -167,13 +184,11 @@ export function useCast() {
       }
     };
 
-    // Entry 1: SDK already loaded (race condition fix + bridge flag)
     if (window.cast?.framework || window.__castSdkReady) {
       console.log("[RadioSphere][Cast] SDK already available, init immediately");
       initWebCastContext();
     }
 
-    // Entry 2: Normal callback
     const prevCallback = window.__onGCastApiAvailable;
     window.__onGCastApiAvailable = (isAvailable: boolean) => {
       console.log("[RadioSphere][Cast] __onGCastApiAvailable:", isAvailable);
@@ -185,14 +200,12 @@ export function useCast() {
       }
     };
 
-    // Entry 3: Listen for custom bridge event
     const handleBridgeEvent = () => {
       console.log("[RadioSphere][Cast] castSdkReady event received");
       initWebCastContext();
     };
     window.addEventListener("castSdkReady", handleBridgeEvent);
 
-    // Entry 4: Safety timeout — if nothing fires after 10s, go fallback
     const safetyTimeout = setTimeout(() => {
       if (!webInitDone) {
         console.log("[RadioSphere][Cast] Safety timeout: SDK never loaded → fallback");
@@ -207,11 +220,15 @@ export function useCast() {
     };
   }, [isNative]);
 
-  const startCast = useCallback(() => {
+  const startCast = useCallback(async () => {
     if (isNative) {
-      getCastPlugin().requestSession().catch((e) =>
-        console.warn("[RadioSphere][Cast] requestSession error:", e)
-      );
+      const plugin = getCastPlugin();
+      // Plugin-side requestSession handles permissions automatically
+      try {
+        await plugin.requestSession();
+      } catch (e) {
+        console.warn("[RadioSphere][Cast] requestSession error:", e);
+      }
     } else {
       try {
         window.cast?.framework?.CastContext?.getInstance()?.requestSession();
@@ -299,6 +316,7 @@ export function useCast() {
     castDeviceName,
     castUiMode,
     castInitState,
+    permissionsGranted,
     startCast,
     stopCast,
     loadMedia,

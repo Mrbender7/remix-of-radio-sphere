@@ -111,6 +111,7 @@ if (Test-Path $ManifestPath) {
     $ManifestContent = Get-Content $ManifestPath -Raw
     
     # Permissions
+    # --- Simple permissions (name-only) ---
     $PermsList = @(
         "android.permission.INTERNET",
         "android.permission.WAKE_LOCK",
@@ -120,7 +121,8 @@ if (Test-Path $ManifestPath) {
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_WIFI_STATE",
-        "android.permission.CHANGE_WIFI_MULTICAST_STATE"
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE",
+        "android.permission.ACCESS_FINE_LOCATION"
     )
     $PermsToAdd = ""
     foreach ($perm in $PermsList) {
@@ -130,6 +132,14 @@ if (Test-Path $ManifestPath) {
         } else {
             Write-Host "    = Permission deja presente: $perm" -ForegroundColor DarkGray
         }
+    }
+
+    # --- Special permission: NEARBY_WIFI_DEVICES (Android 13+, requires usesPermissionFlags) ---
+    if ($ManifestContent -notmatch 'NEARBY_WIFI_DEVICES') {
+        $PermsToAdd += '    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation" />' + "`n"
+        Write-Host "    + Permission: NEARBY_WIFI_DEVICES (Android 13+, neverForLocation)" -ForegroundColor DarkGray
+    } else {
+        Write-Host "    = Permission deja presente: NEARBY_WIFI_DEVICES" -ForegroundColor DarkGray
     }
     if ($PermsToAdd.Length -gt 0) {
         $ManifestContent = $ManifestContent -replace '(<manifest[^>]*>)', "`$1`n$PermsToAdd"
@@ -1414,7 +1424,9 @@ Write-Host "    - PlayerContext.tsx : guard anti-doublons loadMedia (lastCastSta
 Write-Host "    - Gradle : play-services-cast-framework:21.4.0 + mediarouter:1.7.0" -ForegroundColor White
 Write-Host "    - Manifest : CastOptionsProvider meta-data (OBLIGATOIRE)" -ForegroundColor White
 Write-Host "    - Manifest : ACCESS_NETWORK_STATE + ACCESS_WIFI_STATE + CHANGE_WIFI_MULTICAST_STATE (decouverte Cast)" -ForegroundColor White
-Write-Host "    - App ID Cast: 65257ADB" -ForegroundColor White
+Write-Host "    - Manifest : NEARBY_WIFI_DEVICES (Android 13+, neverForLocation) + ACCESS_FINE_LOCATION" -ForegroundColor White
+Write-Host "    - CastPlugin.java : permissions runtime Cast (location/nearby) + diagnostic routes" -ForegroundColor White
+Write-Host "    - App ID Cast: CC1AD845 (test) / 65257ADB (production)" -ForegroundColor White
 Write-Host ""
 Write-Host "  ANDROID AUTO (INCHANGE depuis v2.3.0) :" -ForegroundColor Cyan
 Write-Host "    - RadioBrowserService: resolveStreamUrl, playlists, fallback protocole, artwork local" -ForegroundColor White

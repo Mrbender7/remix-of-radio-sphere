@@ -1,4 +1,4 @@
-# RadioSphere — Android Auto Setup Guide
+# RadioSphere — Android Auto & Chromecast Setup Guide
 
 ## Prérequis
 
@@ -25,19 +25,49 @@ dependencies {
 }
 ```
 
-## Étape 2 : Copier les fichiers natifs
+## Étape 2 : Permissions dans AndroidManifest.xml
+
+Ajoutez ces permissions au niveau `<manifest>` (avant `<application>`) :
+
+```xml
+<!-- Réseau de base -->
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+<!-- Découverte réseau local (Cast) -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+<!-- Android 13+ : requis pour la découverte Wi-Fi locale (mDNS/Cast) -->
+<uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+    android:usesPermissionFlags="neverForLocation" />
+
+<!-- Services & notifications -->
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+```
+
+> **Note Android 13+ :** La permission `NEARBY_WIFI_DEVICES` est **obligatoire** pour que le SDK Cast puisse scanner le réseau local. Sans elle, aucun appareil Chromecast ne sera détecté. Le `CastPlugin` gère automatiquement la demande runtime de cette permission.
+
+## Étape 3 : Copier les fichiers natifs
 
 Copiez les fichiers suivants dans votre projet Android :
 
 ```
 android-auto/RadioBrowserService.kt  →  android/app/src/main/java/app/lovable/radiosphere/RadioBrowserService.kt
 android-auto/RadioAutoPlugin.kt      →  android/app/src/main/java/app/lovable/radiosphere/RadioAutoPlugin.kt
+android-auto/CastPlugin.java         →  android/app/src/main/java/com/radiosphere/app/CastPlugin.java
+android-auto/CastOptionsProvider.java →  android/app/src/main/java/com/radiosphere/app/CastOptionsProvider.java
 android-auto/res/xml/automotive_app_desc.xml  →  android/app/src/main/res/xml/automotive_app_desc.xml
 ```
 
-## Étape 3 : Modifier AndroidManifest.xml
+## Étape 4 : Modifier AndroidManifest.xml (balise `<application>`)
 
-Ouvrez `android/app/src/main/AndroidManifest.xml` et ajoutez à l'intérieur de la balise `<application>` les éléments décrits dans `AndroidManifest-snippet.xml` :
+Ajoutez à l'intérieur de la balise `<application>` :
 
 ```xml
 <!-- Android Auto -->
@@ -59,9 +89,9 @@ Ouvrez `android/app/src/main/AndroidManifest.xml` et ajoutez à l'intérieur de 
     android:value="com.radiosphere.app.CastOptionsProvider" />
 ```
 
-## Étape 4 : Enregistrer le plugin Capacitor
+## Étape 5 : Enregistrer les plugins Capacitor
 
-Dans `android/app/src/main/java/app/lovable/radiosphere/MainActivity.kt`, ajoutez :
+Dans `android/app/src/main/java/.../MainActivity.kt` :
 
 ```kotlin
 import app.lovable.radiosphere.RadioAutoPlugin
@@ -76,28 +106,40 @@ class MainActivity : BridgeActivity() {
 }
 ```
 
-## Étape 5 : Icône de notification
+## Étape 6 : App ID Cast (Test vs Production)
 
-Placez une icône pour la notification dans :
-```
-android/app/src/main/res/drawable/ic_notification.xml
-```
+Le fichier `CastPlugin.java` et `CastOptionsProvider.java` utilisent le même App ID.
 
-Vous pouvez utiliser une icône vectorielle simple (ex: un symbole radio/play).
+- **Test** : `CC1AD845` (récepteur par défaut Google — permet de valider que la découverte réseau fonctionne)
+- **Production** : `65257ADB` (récepteur personnalisé RadioSphere)
 
-## Étape 6 : Build & Test
+> **Important** : Les deux fichiers doivent utiliser le **même** App ID. Commencez par `CC1AD845` pour tester, puis passez à `65257ADB` une fois la découverte confirmée.
+
+## Étape 7 : Build & Test
 
 ```bash
-# Sync les fichiers web
 npx cap sync android
-
-# Ouvrir dans Android Studio
 npx cap open android
-
 # Compiler et lancer sur appareil/émulateur
 ```
 
-### Tester avec Android Auto DHU (Desktop Head Unit)
+### Diagnostic Chromecast (Logcat)
+
+Filtrez par `CastPlugin` dans Logcat pour voir :
+- Nombre de routes total et routes Cast détectées
+- État des permissions (granted/missing)
+- App ID utilisé
+- Événements de session (connected/disconnected)
+
+### Permissions runtime
+
+Au premier lancement ou au clic sur le bouton Cast, l'app demandera automatiquement :
+- **Android 13+** : Permission "Appareils Wi-Fi à proximité" (`NEARBY_WIFI_DEVICES`)
+- **Android ≤12** : Permission "Localisation" (`ACCESS_FINE_LOCATION`)
+
+Si l'utilisateur refuse, le bouton Cast restera visible mais la découverte d'appareils sera impossible.
+
+## Tester avec Android Auto DHU
 
 1. Installez le DHU depuis le SDK Manager Android Studio
 2. Activez le mode développeur dans l'app Android Auto sur votre appareil

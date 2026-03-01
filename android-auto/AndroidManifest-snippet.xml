@@ -1,11 +1,39 @@
 <!--
   ══════════════════════════════════════════════════════════════════════
-  RadioSphere — Android Auto Manifest Additions
+  RadioSphere — AndroidManifest.xml Additions
   ══════════════════════════════════════════════════════════════════════
 
-  Add these elements inside the <application> tag of your AndroidManifest.xml
-  (android/app/src/main/AndroidManifest.xml)
+  SECTION 1: Permissions (add at <manifest> level, before <application>)
+  SECTION 2: Application components (add inside <application> tag)
 -->
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SECTION 1: Permissions (at <manifest> level)
+     ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Réseau de base -->
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+<!-- Découverte réseau local (Cast SDK) -->
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+<!-- Android 13+ : obligatoire pour découverte mDNS/Cast -->
+<uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+    android:usesPermissionFlags="neverForLocation" />
+
+<!-- Services & notifications -->
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SECTION 2: Inside <application> tag
+     ═══════════════════════════════════════════════════════════════════ -->
 
 <!-- 1. Android Auto metadata — tells Android this is a media app -->
 <meta-data
@@ -22,13 +50,20 @@
     </intent-filter>
 </service>
 
+<!-- 3. Chromecast — CastOptionsProvider (OBLIGATOIRE pour Cast SDK) -->
+<meta-data
+    android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+    android:value="com.radiosphere.app.CastOptionsProvider" />
+
 <!--
   ══════════════════════════════════════════════════════════════════════
-  Also add the Capacitor plugin registration in your MainActivity.kt:
+  Also register plugins in your MainActivity.kt:
 
   import app.lovable.radiosphere.RadioAutoPlugin
+  import com.radiosphere.app.CastPlugin
 
-  // Inside the init block or onCreate:
+  // Inside onCreate:
   registerPlugin(RadioAutoPlugin::class.java)
+  registerPlugin(CastPlugin::class.java)
   ══════════════════════════════════════════════════════════════════════
 -->
