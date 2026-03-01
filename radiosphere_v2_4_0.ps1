@@ -117,7 +117,10 @@ if (Test-Path $ManifestPath) {
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.CHANGE_WIFI_MULTICAST_STATE"
     )
     $PermsToAdd = ""
     foreach ($perm in $PermsList) {
@@ -1410,6 +1413,7 @@ Write-Host "    - index.html : bridge Cast SDK capture __onGCastApiAvailable ava
 Write-Host "    - PlayerContext.tsx : guard anti-doublons loadMedia (lastCastStationIdRef)" -ForegroundColor White
 Write-Host "    - Gradle : play-services-cast-framework:21.4.0 + mediarouter:1.7.0" -ForegroundColor White
 Write-Host "    - Manifest : CastOptionsProvider meta-data (OBLIGATOIRE)" -ForegroundColor White
+Write-Host "    - Manifest : ACCESS_NETWORK_STATE + ACCESS_WIFI_STATE + CHANGE_WIFI_MULTICAST_STATE (decouverte Cast)" -ForegroundColor White
 Write-Host "    - App ID Cast: 65257ADB" -ForegroundColor White
 Write-Host ""
 Write-Host "  ANDROID AUTO (INCHANGE depuis v2.3.0) :" -ForegroundColor Cyan
