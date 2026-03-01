@@ -13,6 +13,7 @@ import { LibraryPage } from "@/pages/LibraryPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { WelcomePage } from "@/pages/WelcomePage";
 import { ExitConfirmDialog } from "@/components/ExitConfirmDialog";
+import { SleepTimerIndicator } from "@/components/SleepTimerIndicator";
 import { useBackButton } from "@/hooks/useBackButton";
 import type { Language } from "@/i18n/translations";
 
@@ -87,6 +88,7 @@ function AppContentInner() {
   return (
       <PremiumProvider>
         <SleepTimerProvider>
+          <SleepTimerIndicator />
           <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
             <div className={`flex-1 flex flex-col overflow-hidden ${currentStation ? 'pb-28' : 'pb-14'}`}>
               {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
