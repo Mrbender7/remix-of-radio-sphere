@@ -130,6 +130,10 @@ public class MediaPlaybackService extends Service {
         if (artwork != null) {
             metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork);
             metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artwork);
+        } else {
+            Bitmap fallback = BitmapFactory.decodeResource(getResources(), R.drawable.station_placeholder);
+            metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, fallback);
+            metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, fallback);
         }
         mediaSession.setMetadata(metaBuilder.build());
 
@@ -181,6 +185,8 @@ public class MediaPlaybackService extends Service {
 
         if (artwork != null) {
             builder.setLargeIcon(artwork);
+        } else {
+            builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.station_placeholder));
         }
 
         return builder.build();
