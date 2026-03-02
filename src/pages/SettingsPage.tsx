@@ -4,7 +4,7 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, Car, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck, RotateCcw, Sparkles, Trash2, RefreshCw } from "lucide-react";
+import { Wifi, Crown, Moon, Car, Cast, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck, RotateCcw, Sparkles, Trash2, RefreshCw } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import {
   Select,
@@ -103,6 +103,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
     { icon: Car, title: t("premium.androidAuto"), desc: t("premium.androidAutoDesc") },
+    { icon: Cast, title: t("premium.chromecast"), desc: t("premium.chromecastDesc") },
   ];
 
   return (
@@ -547,7 +548,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       )}
 
       {/* App version */}
-      <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v2.2.8e</p>
+      <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v2.4.8</p>
     </div>
   );
 }

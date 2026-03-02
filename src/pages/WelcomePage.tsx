@@ -1,6 +1,6 @@
 import { useState } from "react";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
-import { Globe, Radio, Heart, Search, Music, ChevronRight } from "lucide-react";
+import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
 import type { Language } from "@/i18n/translations";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import translations from "@/i18n/translations";
@@ -92,7 +92,17 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
         <ChevronRight className="w-4 h-4" />
       </button>
 
-      <p className="text-[10px] text-muted-foreground mt-6 opacity-60">Radio Sphere v2.2.8e</p>
+      <a
+        href="https://mrbender7.github.io/privacy-policy-radiosphere/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:underline mt-4"
+      >
+        <ShieldCheck className="w-3 h-3" />
+        {t("settings.privacyPolicy")}
+      </a>
+
+      <p className="text-[10px] text-muted-foreground mt-3 opacity-60">Radio Sphere v2.4.8</p>
     </div>
   );
 }
