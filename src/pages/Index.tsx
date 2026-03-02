@@ -36,8 +36,8 @@ function AppContentInner() {
   const { isFullScreen, closeFullScreen, currentStation } = usePlayer();
   const { setLanguage } = useTranslation();
 
-  const handleGenreClick = useCallback((genre: string) => {
-    setSelectedGenre(genre);
+  const handleTagClick = useCallback((tag: string) => {
+    setSelectedGenre(tag);
     setActiveTab("search");
   }, []);
 
@@ -91,14 +91,14 @@ function AppContentInner() {
           <SleepTimerIndicator />
           <div className="flex flex-col h-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 24px)' }}>
             <div className={`flex-1 flex flex-col overflow-hidden ${currentStation ? 'pb-28' : 'pb-14'}`}>
-              {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleGenreClick} />}
+              {activeTab === "home" && <HomePage recent={recent} favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} onGenreClick={handleTagClick} />}
               {activeTab === "search" && <SearchPage isFavorite={isFavorite} onToggleFavorite={toggleFavorite} initialGenre={selectedGenre} />}
               {activeTab === "library" && <LibraryPage favorites={favorites} isFavorite={isFavorite} onToggleFavorite={toggleFavorite} />}
               {activeTab === "settings" && <SettingsPage onReopenWelcome={handleReopenWelcome} onResetApp={handleResetApp} />}
             </div>
             <MiniPlayer />
             <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-            <FullScreenPlayer />
+            <FullScreenPlayer onTagClick={handleTagClick} />
             <ExitConfirmDialog open={showExitDialog} onOpenChange={setShowExitDialog} />
           </div>
         </SleepTimerProvider>

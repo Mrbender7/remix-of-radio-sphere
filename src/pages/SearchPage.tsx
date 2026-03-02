@@ -50,7 +50,12 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   const PAGE_SIZE = 40;
 
   useEffect(() => {
-    if (initialGenre) setGenres([initialGenre]);
+    if (initialGenre) {
+      setGenres([initialGenre]);
+      setQuery("");
+      setCountry("");
+      setLanguages([]);
+    }
   }, [initialGenre]);
 
   const { data: apiCountries } = useQuery({

@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
-export function FullScreenPlayer() {
+export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) => void }) {
   const { currentStation, isPlaying, isBuffering, togglePlay, volume, setVolume, isFullScreen, closeFullScreen, isCasting, castDeviceName } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const { t } = useTranslation();
@@ -119,7 +119,18 @@ export function FullScreenPlayer() {
          {currentStation.tags.length > 0 && (
            <div className="flex flex-wrap gap-2">
              {currentStation.tags.slice(0, 4).map((tag, i) => (
-               <span key={i} className="px-3 py-1 rounded-full bg-accent text-xs text-foreground font-medium">{tag}</span>
+               <button
+                 key={i}
+                 onClick={() => {
+                   if (onTagClick) {
+                     closeFullScreen();
+                     onTagClick(tag);
+                   }
+                 }}
+                 className="px-3 py-1 rounded-full bg-accent text-xs text-foreground font-medium hover:bg-primary/20 active:bg-primary/30 transition-colors"
+               >
+                 {tag}
+               </button>
              ))}
            </div>
          )}
