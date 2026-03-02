@@ -33,8 +33,9 @@ import java.util.List;
 /**
  * RadioBrowserService — Android Auto MediaBrowserService for RadioSphere.
  *
- * v2.3.0: Stream URL resolution (redirects + m3u/pls parsing),
- *         local artwork fallback, protocol fallback on buffering timeout.
+ * v2.4.8: User-Agent headers, Content-Type playlist detection, robust PLS parsing,
+ *         alphabetical favorites sort, Top Stations replacing Genres, error feedback,
+ *         increased timeouts.
  */
 public class RadioBrowserService extends MediaBrowserServiceCompat {
 
@@ -42,20 +43,15 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private static final String ROOT_ID = "root";
     private static final String FAVORITES_ID = "favorites";
     private static final String RECENTS_ID = "recents";
-    private static final String GENRES_ID = "genres";
+    private static final String TOP_STATIONS_ID = "top_stations";
 
-    private static final String GENRE_PREFIX = "genre:";
     private static final String STATION_PREFIX = "station:";
 
     private static final String PREFS_NAME = "RadioAutoPrefs";
     private static final String KEY_FAVORITES = "favorites_json";
     private static final String KEY_RECENTS = "recents_json";
 
-    private static final String[] GENRES = {
-        "60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical",
-        "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal",
-        "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"
-    };
+    private static final String USER_AGENT = "RadioSphere/1.0";
 
     private static final String[] API_MIRRORS = {
         "https://de1.api.radio-browser.info",
@@ -178,12 +174,14 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
                 items.add(buildBrowsableItem(FAVORITES_ID, "Favoris", "Vos stations preferees"));
                 items.add(buildBrowsableItem(RECENTS_ID, "Recents", "Dernieres stations ecoutees"));
-                items.add(buildBrowsableItem(GENRES_ID, "Genres", "Explorer par genre musical"));
+                items.add(buildBrowsableItem(TOP_STATIONS_ID, "Top Stations", "Les stations les plus populaires"));
                 result.sendResult(items);
                 break;
             }
             case FAVORITES_ID: {
                 List<StationData> stations = loadStations(KEY_FAVORITES);
+                // Sort favorites alphabetically
+                stations.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
                 currentStations = stations;
                 if (stations.isEmpty()) {
                     List<MediaBrowserCompat.MediaItem> empty = new ArrayList<>();
@@ -206,27 +204,17 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 }
                 break;
             }
-            case GENRES_ID: {
-                List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-                for (String genre : GENRES) {
-                    String title = genre.substring(0, 1).toUpperCase() + genre.substring(1);
-                    items.add(buildBrowsableItem(GENRE_PREFIX + genre, title, "Stations " + genre + " populaires"));
-                }
-                result.sendResult(items);
+            case TOP_STATIONS_ID: {
+                result.detach();
+                new Thread(() -> {
+                    List<StationData> stations = fetchTopStations(25);
+                    currentStations = stations;
+                    result.sendResult(toMediaItems(stations));
+                }).start();
                 break;
             }
             default: {
-                if (parentId.startsWith(GENRE_PREFIX)) {
-                    String genre = parentId.substring(GENRE_PREFIX.length());
-                    result.detach();
-                    new Thread(() -> {
-                        List<StationData> stations = fetchStationsByGenre(genre, 25);
-                        currentStations = stations;
-                        result.sendResult(toMediaItems(stations));
-                    }).start();
-                } else {
-                    result.sendResult(new ArrayList<>());
-                }
+                result.sendResult(new ArrayList<>());
                 break;
             }
         }
@@ -375,12 +363,12 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private void startBufferingTimeout() {
         cancelBufferingTimeout();
         bufferingTimeoutRunnable = () -> {
-            Log.w(TAG, "Buffering timeout (10s) — trying protocol fallback");
+            Log.w(TAG, "Buffering timeout (15s) — trying protocol fallback");
             if (currentStation != null && !triedProtocolFallback) {
                 tryProtocolFallback();
             }
         };
-        handler.postDelayed(bufferingTimeoutRunnable, 10000);
+        handler.postDelayed(bufferingTimeoutRunnable, 15000);
     }
 
     private void cancelBufferingTimeout() {
@@ -412,22 +400,45 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     // ─── Stream URL Resolution ──────────────────────────────────────────
 
     /**
-     * Resolves a stream URL by following redirects (up to 5 levels)
+     * Resolves a stream URL by following redirects (up to 5 levels),
+     * detecting playlist type by Content-Type header AND file extension,
      * and parsing .m3u / .pls playlists to get the actual stream URL.
      */
     private String resolveStreamUrl(String urlStr) {
         Log.d(TAG, "resolveStreamUrl: " + urlStr);
         try {
             String resolved = followRedirects(urlStr, 5);
-            // Check if it's a playlist
+
+            // Detect playlist type by Content-Type via HEAD request
+            String contentType = "";
+            try {
+                HttpURLConnection headConn = (HttpURLConnection) new URL(resolved).openConnection();
+                headConn.setRequestMethod("HEAD");
+                headConn.setConnectTimeout(8000);
+                headConn.setReadTimeout(8000);
+                headConn.setRequestProperty("User-Agent", USER_AGENT);
+                headConn.setInstanceFollowRedirects(true);
+                contentType = headConn.getContentType();
+                headConn.disconnect();
+                if (contentType == null) contentType = "";
+                contentType = contentType.toLowerCase();
+                Log.d(TAG, "Content-Type for " + resolved + ": " + contentType);
+            } catch (Exception e) {
+                Log.w(TAG, "HEAD request failed, falling back to extension detection: " + e.getMessage());
+            }
+
             String lower = resolved.toLowerCase();
-            if (lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains("m3u")) {
+            boolean isPls = contentType.contains("audio/x-scpls") || lower.endsWith(".pls") || lower.contains(".pls?");
+            boolean isM3u = contentType.contains("audio/mpegurl") || contentType.contains("audio/x-mpegurl")
+                || lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains(".m3u?");
+
+            if (isM3u) {
                 String fromPlaylist = parseM3uPlaylist(resolved);
                 if (fromPlaylist != null) {
                     Log.d(TAG, "Resolved from M3U: " + fromPlaylist);
                     return fromPlaylist;
                 }
-            } else if (lower.endsWith(".pls") || lower.contains("pls")) {
+            } else if (isPls) {
                 String fromPlaylist = parsePlsPlaylist(resolved);
                 if (fromPlaylist != null) {
                     Log.d(TAG, "Resolved from PLS: " + fromPlaylist);
@@ -447,9 +458,10 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         for (int i = 0; i < maxRedirects; i++) {
             HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
             conn.setInstanceFollowRedirects(false);
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(8000);
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", USER_AGENT);
             int code = conn.getResponseCode();
             if (code >= 300 && code < 400) {
                 String location = conn.getHeaderField("Location");
@@ -486,14 +498,19 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         return null;
     }
 
+    /**
+     * Parse PLS playlist — case-insensitive, supports any FileN= entry.
+     */
     private String parsePlsPlaylist(String urlStr) {
         try {
             String content = httpGet(urlStr);
             String[] lines = content.split("\n");
             for (String line : lines) {
                 line = line.trim();
-                if (line.toLowerCase().startsWith("file1=")) {
-                    return line.substring(6).trim();
+                // Match File1=, file2=, FILE3=, etc. (case-insensitive, any number)
+                if (line.toLowerCase().matches("^file\\d+=.*")) {
+                    String url = line.substring(line.indexOf('=') + 1).trim();
+                    if (!url.isEmpty()) return url;
                 }
             }
         } catch (Exception e) {
@@ -561,12 +578,17 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
             | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID;
 
-        PlaybackStateCompat playbackState = new PlaybackStateCompat.Builder()
+        PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder()
             .setActions(actions)
-            .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
-            .build();
+            .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
 
-        mediaSession.setPlaybackState(playbackState);
+        // Add error message for user feedback on Android Auto
+        if (state == PlaybackStateCompat.STATE_ERROR) {
+            builder.setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR,
+                "Impossible de lire cette station");
+        }
+
+        mediaSession.setPlaybackState(builder.build());
     }
 
     // ─── Data Helpers ───────────────────────────────────────────────────
@@ -600,11 +622,11 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         return list;
     }
 
-    private List<StationData> fetchStationsByGenre(String genre, int limit) {
+    private List<StationData> fetchTopStations(int limit) {
         for (String mirror : API_MIRRORS) {
             try {
-                String url = mirror + "/json/stations/bytag/" + Uri.encode(genre)
-                    + "?limit=" + limit + "&order=votes&reverse=true&hidebroken=true";
+                String url = mirror + "/json/stations/topvote"
+                    + "?limit=" + limit + "&hidebroken=true";
                 return parseApiResponse(httpGet(url));
             } catch (Exception e) { /* next */ }
         }
@@ -642,8 +664,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private String httpGet(String urlStr) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
         conn.setRequestMethod("GET");
-        conn.setConnectTimeout(5000);
-        conn.setReadTimeout(5000);
+        conn.setConnectTimeout(8000);
+        conn.setReadTimeout(8000);
+        conn.setRequestProperty("User-Agent", USER_AGENT);
         conn.setInstanceFollowRedirects(true);
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder sb = new StringBuilder();

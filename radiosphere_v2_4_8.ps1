@@ -1,10 +1,10 @@
-# radiosphere_v2_4_7.ps1
-# v2.4.7 -- Cast: DEFAULT_MEDIA_RECEIVER everywhere, dual perms Android 13+, audio/* content type
+# radiosphere_v2_4_8.ps1
+# v2.4.8 -- Stream resolution fixes, User-Agent, Content-Type detection, Top Stations, error feedback
 $RepoUrl = "https://github.com/Mrbender7/remix-of-radio-sphere"
 $ProjectFolder = "remix-of-radio-sphere"
 $UTF8NoBOM = New-Object System.Text.UTF8Encoding($False)
 
-Write-Host ">>> Lancement du Master Fix v2.4.7 - Cast DEFAULT_MEDIA_RECEIVER + Android Auto" -ForegroundColor Cyan
+Write-Host ">>> Lancement du Master Fix v2.4.8 - Stream fixes + Top Stations + Error feedback" -ForegroundColor Cyan
 
 if (Test-Path $ProjectFolder) { Remove-Item -Recurse -Force $ProjectFolder }
 git clone $RepoUrl
@@ -675,8 +675,8 @@ $CastOptionsProviderJava = $CastOptionsProviderJava -replace '__PACKAGE__', $Act
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "CastOptionsProvider.java"), $CastOptionsProviderJava, $UTF8NoBOM)
 Write-Host "    CastOptionsProvider.java genere avec succes (v2.4.7)" -ForegroundColor Green
 
-# --- RadioBrowserService.java (v2.3.0 -- stream resolution + local artwork) ---
-Write-Host "    Generation RadioBrowserService.java (v2.3.0 -- stream resolution + local artwork)..." -ForegroundColor DarkGray
+# --- RadioBrowserService.java (v2.4.8 -- stream resolution + User-Agent + Content-Type + Top Stations) ---
+Write-Host "    Generation RadioBrowserService.java (v2.4.8)..." -ForegroundColor DarkGray
 $RadioBrowserServiceJava = @'
 package __PACKAGE__;
 
@@ -716,18 +716,12 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private static final String ROOT_ID = "root";
     private static final String FAVORITES_ID = "favorites";
     private static final String RECENTS_ID = "recents";
-    private static final String GENRES_ID = "genres";
-    private static final String GENRE_PREFIX = "genre:";
+    private static final String TOP_STATIONS_ID = "top_stations";
     private static final String STATION_PREFIX = "station:";
     private static final String PREFS_NAME = "RadioAutoPrefs";
     private static final String KEY_FAVORITES = "favorites_json";
     private static final String KEY_RECENTS = "recents_json";
-
-    private static final String[] GENRES = {
-        "60s", "70s", "80s", "90s", "ambient", "blues", "chillout", "classical",
-        "country", "electronic", "funk", "hiphop", "jazz", "latin", "metal",
-        "news", "pop", "r&b", "reggae", "rock", "soul", "techno", "trance", "world"
-    };
+    private static final String USER_AGENT = "RadioSphere/1.0";
 
     private static final String[] API_MIRRORS = {
         "https://de1.api.radio-browser.info",
@@ -830,12 +824,13 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
                 items.add(buildBrowsableItem(FAVORITES_ID, "Favoris", "Vos stations preferees"));
                 items.add(buildBrowsableItem(RECENTS_ID, "Recents", "Dernieres stations ecoutees"));
-                items.add(buildBrowsableItem(GENRES_ID, "Genres", "Explorer par genre musical"));
+                items.add(buildBrowsableItem(TOP_STATIONS_ID, "Top Stations", "Les stations les plus populaires"));
                 result.sendResult(items);
                 break;
             }
             case FAVORITES_ID: {
                 List<StationData> stations = loadStations(KEY_FAVORITES);
+                stations.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
                 currentStations = stations;
                 if (stations.isEmpty()) {
                     List<MediaBrowserCompat.MediaItem> empty = new ArrayList<>();
@@ -854,25 +849,17 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
                 } else { result.sendResult(toMediaItems(stations)); }
                 break;
             }
-            case GENRES_ID: {
-                List<MediaBrowserCompat.MediaItem> items = new ArrayList<>();
-                for (String genre : GENRES) {
-                    String title = genre.substring(0, 1).toUpperCase() + genre.substring(1);
-                    items.add(buildBrowsableItem(GENRE_PREFIX + genre, title, "Stations " + genre + " populaires"));
-                }
-                result.sendResult(items);
+            case TOP_STATIONS_ID: {
+                result.detach();
+                new Thread(() -> {
+                    List<StationData> stations = fetchTopStations(25);
+                    currentStations = stations;
+                    result.sendResult(toMediaItems(stations));
+                }).start();
                 break;
             }
             default: {
-                if (parentId.startsWith(GENRE_PREFIX)) {
-                    String genre = parentId.substring(GENRE_PREFIX.length());
-                    result.detach();
-                    new Thread(() -> {
-                        List<StationData> stations = fetchStationsByGenre(genre, 25);
-                        currentStations = stations;
-                        result.sendResult(toMediaItems(stations));
-                    }).start();
-                } else { result.sendResult(new ArrayList<>()); }
+                result.sendResult(new ArrayList<>());
                 break;
             }
         }
@@ -976,10 +963,10 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private void startBufferingTimeout() {
         cancelBufferingTimeout();
         bufferingTimeoutRunnable = () -> {
-            Log.w(TAG, "Buffering timeout (10s) -- trying protocol fallback");
+            Log.w(TAG, "Buffering timeout (15s) -- trying protocol fallback");
             if (currentStation != null && !triedProtocolFallback) tryProtocolFallback();
         };
-        handler.postDelayed(bufferingTimeoutRunnable, 10000);
+        handler.postDelayed(bufferingTimeoutRunnable, 15000);
     }
 
     private void cancelBufferingTimeout() {
@@ -1007,11 +994,33 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         Log.d(TAG, "resolveStreamUrl: " + urlStr);
         try {
             String resolved = followRedirects(urlStr, 5);
+
+            String contentType = "";
+            try {
+                HttpURLConnection headConn = (HttpURLConnection) new URL(resolved).openConnection();
+                headConn.setRequestMethod("HEAD");
+                headConn.setConnectTimeout(8000);
+                headConn.setReadTimeout(8000);
+                headConn.setRequestProperty("User-Agent", USER_AGENT);
+                headConn.setInstanceFollowRedirects(true);
+                contentType = headConn.getContentType();
+                headConn.disconnect();
+                if (contentType == null) contentType = "";
+                contentType = contentType.toLowerCase();
+                Log.d(TAG, "Content-Type for " + resolved + ": " + contentType);
+            } catch (Exception e) {
+                Log.w(TAG, "HEAD request failed, falling back to extension detection: " + e.getMessage());
+            }
+
             String lower = resolved.toLowerCase();
-            if (lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains(".m3u")) {
+            boolean isPls = contentType.contains("audio/x-scpls") || lower.endsWith(".pls") || lower.contains(".pls?");
+            boolean isM3u = contentType.contains("audio/mpegurl") || contentType.contains("audio/x-mpegurl")
+                || lower.endsWith(".m3u") || lower.endsWith(".m3u8") || lower.contains(".m3u?");
+
+            if (isM3u) {
                 String fromPlaylist = parseM3uPlaylist(resolved);
                 if (fromPlaylist != null) { Log.d(TAG, "Resolved M3U: " + fromPlaylist); return fromPlaylist; }
-            } else if (lower.endsWith(".pls") || lower.contains(".pls")) {
+            } else if (isPls) {
                 String fromPlaylist = parsePlsPlaylist(resolved);
                 if (fromPlaylist != null) { Log.d(TAG, "Resolved PLS: " + fromPlaylist); return fromPlaylist; }
             }
@@ -1028,8 +1037,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         for (int i = 0; i < maxRedirects; i++) {
             HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
             conn.setInstanceFollowRedirects(false);
-            conn.setConnectTimeout(5000); conn.setReadTimeout(5000);
+            conn.setConnectTimeout(8000); conn.setReadTimeout(8000);
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", USER_AGENT);
             int code = conn.getResponseCode();
             if (code >= 300 && code < 400) {
                 String location = conn.getHeaderField("Location");
@@ -1062,7 +1072,10 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             String content = httpGet(urlStr);
             for (String line : content.split("\n")) {
                 line = line.trim();
-                if (line.toLowerCase().startsWith("file1=")) return line.substring(6).trim();
+                if (line.toLowerCase().matches("^file\\d+=.*")) {
+                    String url = line.substring(line.indexOf('=') + 1).trim();
+                    if (!url.isEmpty()) return url;
+                }
             }
         } catch (Exception e) { Log.w(TAG, "parsePls error: " + e.getMessage()); }
         return null;
@@ -1110,8 +1123,13 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             | PlaybackStateCompat.ACTION_STOP | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
             | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
             | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID;
-        mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
-            .setActions(actions).setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f).build());
+        PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder()
+            .setActions(actions).setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
+        if (state == PlaybackStateCompat.STATE_ERROR) {
+            builder.setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR,
+                "Impossible de lire cette station");
+        }
+        mediaSession.setPlaybackState(builder.build());
     }
 
     private List<StationData> loadStations(String key) {
@@ -1135,11 +1153,10 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         return list;
     }
 
-    private List<StationData> fetchStationsByGenre(String genre, int limit) {
+    private List<StationData> fetchTopStations(int limit) {
         for (String mirror : API_MIRRORS) {
             try {
-                String url = mirror + "/json/stations/bytag/" + Uri.encode(genre)
-                    + "?limit=" + limit + "&order=votes&reverse=true&hidebroken=true";
+                String url = mirror + "/json/stations/topvote?limit=" + limit + "&hidebroken=true";
                 return parseApiResponse(httpGet(url));
             } catch (Exception e) { /* next */ }
         }
@@ -1171,7 +1188,8 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
     private String httpGet(String urlStr) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(urlStr).openConnection();
-        conn.setRequestMethod("GET"); conn.setConnectTimeout(5000); conn.setReadTimeout(5000);
+        conn.setRequestMethod("GET"); conn.setConnectTimeout(8000); conn.setReadTimeout(8000);
+        conn.setRequestProperty("User-Agent", USER_AGENT);
         conn.setInstanceFollowRedirects(true);
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder sb = new StringBuilder();
@@ -1231,7 +1249,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 '@
 $RadioBrowserServiceJava = $RadioBrowserServiceJava -replace '__PACKAGE__', $ActualPackage
 [System.IO.File]::WriteAllText((Join-Path $PackageDir "RadioBrowserService.java"), $RadioBrowserServiceJava, $UTF8NoBOM)
-Write-Host "    RadioBrowserService.java genere avec succes (v2.3.0 -- stream resolution + local artwork)" -ForegroundColor Green
+Write-Host "    RadioBrowserService.java genere avec succes (v2.4.8)" -ForegroundColor Green
 
 Write-Host "    Tous les fichiers Java generes avec succes!" -ForegroundColor Green
 
@@ -1292,40 +1310,24 @@ npx cap sync
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host ">>> Script v2.4.6 Termine ! Cast sync + Android Auto" -ForegroundColor Green
+Write-Host ">>> Script v2.4.8 Termine ! Stream fixes + Top Stations" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "CHANGEMENTS v2.4.6 :" -ForegroundColor Yellow
-Write-Host "  CAST :" -ForegroundColor Cyan
-Write-Host "    - CastPlugin.java : Code exact fourni par l'utilisateur (compile sans erreur)" -ForegroundColor White
-Write-Host "    - CastPlugin.java : App ID production 65257ADB" -ForegroundColor White
-Write-Host "    - CastPlugin.java : Content-Type 'audio/mpeg'" -ForegroundColor White
-Write-Host "    - CastPlugin.java : Log 'Loading URL to Cast: ...' avant rmc.load()" -ForegroundColor White
-Write-Host "    - CastPlugin.java : events localAudioControl (pauseLocal/resumeLocal)" -ForegroundColor White
-Write-Host "    - CastPlugin.java : MediaRouteChooserDialog pour requestSession" -ForegroundColor White
-Write-Host "    - CastOptionsProvider.java : App ID production 65257ADB" -ForegroundColor White
-Write-Host "    - Manifest : + ACCESS_COARSE_LOCATION (vieux Chromecasts / mDNS)" -ForegroundColor White
-Write-Host ""
-Write-Host "  FRONTEND :" -ForegroundColor Cyan
-Write-Host "    - useCast.ts : logs castDevicesAvailable + castStateChanged + localAudioControl" -ForegroundColor White
-Write-Host "    - useCast.ts : loadMedia envoie URL sans modification" -ForegroundColor White
-Write-Host "    - CastButton.tsx : etat 'Chargement' (spinner) si castInitState=initializing" -ForegroundColor White
-Write-Host "    - CastButton.tsx : clic bloque tant que castInitState != ready" -ForegroundColor White
-Write-Host "    - PlayerContext.tsx : castInitState expose dans le contexte" -ForegroundColor White
-Write-Host ""
+Write-Host "CHANGEMENTS v2.4.8 :" -ForegroundColor Yellow
 Write-Host "  ANDROID AUTO :" -ForegroundColor Cyan
-Write-Host "    - RadioBrowserService (MediaSession 'RadioSphereSession') + MediaPlaybackService (MediaSession 'RadioSphereNotif')" -ForegroundColor White
-Write-Host "    - Manifest : meta-data SmallIcon pour notifications AA" -ForegroundColor White
+Write-Host "    - User-Agent 'RadioSphere/1.0' sur toutes les requetes HTTP" -ForegroundColor White
+Write-Host "    - Detection playlist par Content-Type (audio/x-scpls, audio/mpegurl)" -ForegroundColor White
+Write-Host "    - PLS parsing robuste : case-insensitive, FileN= (tout numero)" -ForegroundColor White
+Write-Host "    - Timeouts HTTP augmentes de 5s a 8s" -ForegroundColor White
+Write-Host "    - Buffering timeout augmente de 10s a 15s" -ForegroundColor White
+Write-Host "    - Message d'erreur visible sur Android Auto (STATE_ERROR)" -ForegroundColor White
+Write-Host "    - Genres remplaces par Top Stations (top 25 par votes)" -ForegroundColor White
+Write-Host "    - Favoris tries alphabetiquement (A-Z)" -ForegroundColor White
+Write-Host "    - Recherche vocale toujours disponible via micro AA" -ForegroundColor White
 Write-Host ""
 Write-Host "IMPORTANT : DESINSTALLER L'ANCIENNE APK AVANT D'INSTALLER !" -ForegroundColor Red
 Write-Host ""
 Write-Host "ANDROID AUTO : Activer 'Sources inconnues' dans Parametres > Developpeur" -ForegroundColor Yellow
 Write-Host "               de l'app Android Auto sur le smartphone" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "DIAGNOSTIC CHROMECAST :" -ForegroundColor Yellow
-Write-Host "  1. Logcat filtre 'CastPlugin'" -ForegroundColor White
-Write-Host "  2. Chercher 'Loading URL to Cast: ...' pour verifier l'URL envoyee" -ForegroundColor White
-Write-Host "  3. Verifier les events castDevicesAvailable et castStateChanged" -ForegroundColor White
-Write-Host "  4. App ID utilise : 65257ADB (recepteur personnalise RadioSphere)" -ForegroundColor White
 Write-Host ""
 Write-Host ">>> npx cap open android" -ForegroundColor Cyan
