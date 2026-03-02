@@ -376,6 +376,40 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
             {t("favorites.import")}
           </Button>
 
+          <Button
+            onClick={async () => {
+              if (favorites.length === 0) {
+                toast({ title: t("favorites.noFavoritesToExport") });
+                return;
+              }
+              toast({ title: `🔄 ${t("favorites.refreshingMetadata")}` });
+              const notFound: RadioStation[] = [];
+              for (const station of favorites) {
+                try {
+                  const found = await searchStationByUrl(station.streamUrl);
+                  if (found) {
+                    importFavorites([{ ...found, id: found.id }]);
+                  } else {
+                    notFound.push(station);
+                  }
+                } catch {
+                  notFound.push(station);
+                }
+              }
+              toast({ title: `✅ ${t("favorites.metadataRefreshed")}` });
+              if (notFound.length > 0) {
+                setUnavailableStations(notFound);
+                setShowUnavailableDialog(true);
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="w-full rounded-lg text-xs gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            {t("favorites.refreshMetadata")}
+          </Button>
+
         </div>
       </CollapsibleSection>
 
