@@ -5,7 +5,7 @@ import { Play, Pause, Heart, Loader2, Cast } from "lucide-react";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
-const MARQUEE_SPEED = 60; // pixels per second — constant speed
+const MARQUEE_SPEED = 40; // pixels per second — constant speed
 
 export function MiniPlayer() {
   const { currentStation, isPlaying, isBuffering, togglePlay, openFullScreen, isCasting, castDeviceName } = usePlayer();
