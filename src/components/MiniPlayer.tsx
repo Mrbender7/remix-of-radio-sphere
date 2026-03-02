@@ -5,17 +5,27 @@ import { Play, Pause, Heart, Loader2, Cast } from "lucide-react";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import stationPlaceholder from "@/assets/station-placeholder.png";
 
+const MARQUEE_SPEED = 60; // pixels per second — constant speed
+
 export function MiniPlayer() {
   const { currentStation, isPlaying, isBuffering, togglePlay, openFullScreen, isCasting, castDeviceName } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const textContainerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
+  const [marqueeDuration, setMarqueeDuration] = useState(10);
 
   useEffect(() => {
     const check = () => {
-      if (measureRef.current && containerRef.current) {
-        setNeedsMarquee(measureRef.current.scrollWidth > containerRef.current.clientWidth);
+      if (measureRef.current && textContainerRef.current) {
+        const textWidth = measureRef.current.scrollWidth;
+        const containerWidth = textContainerRef.current.clientWidth;
+        const overflow = textWidth > containerWidth;
+        setNeedsMarquee(overflow);
+        if (overflow) {
+          // Duration = text width / speed → constant scroll speed
+          setMarqueeDuration(textWidth / MARQUEE_SPEED);
+        }
       }
     };
     check();
@@ -40,11 +50,15 @@ export function MiniPlayer() {
           <img src={stationPlaceholder} alt={currentStation.name} className="w-full h-full object-cover" />
         )}
       </div>
+      {/* Text zone — flex-1 min-w-0 ensures it shrinks to fit between thumbnail and right-side controls */}
       <div className="flex-1 min-w-0">
         {/* Hidden measurer */}
         <span ref={measureRef} className="text-lg font-heading font-bold whitespace-nowrap absolute invisible pointer-events-none">{currentStation.name}</span>
-        <div ref={containerRef} className="overflow-hidden">
-          <p className={`text-lg font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : ""}`}>
+        <div ref={textContainerRef} className="overflow-hidden">
+          <p
+            className={`text-lg font-heading font-bold bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent whitespace-nowrap ${needsMarquee ? "w-fit animate-marquee" : ""}`}
+            style={needsMarquee ? { animationDuration: `${marqueeDuration}s` } : undefined}
+          >
             {needsMarquee
               ? <>{currentStation.name}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;{currentStation.name}&nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;</>
               : currentStation.name
@@ -67,13 +81,13 @@ export function MiniPlayer() {
       )}
       <button
         onClick={e => { e.stopPropagation(); toggleFavorite(currentStation); }}
-        className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+        className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
       >
         <Heart className={`w-4 h-4 ${fav ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : ""}`} />
       </button>
       <button
         onClick={e => { e.stopPropagation(); togglePlay(); }}
-        className={`w-11 h-11 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
+        className={`w-11 h-11 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all flex-shrink-0 ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
       >
         {isBuffering ? <Loader2 className="w-5 h-5 animate-spin" /> : isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
       </button>
