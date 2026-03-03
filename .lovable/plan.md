@@ -1,63 +1,78 @@
 
+Objectif immédiat
+- Restaurer une recherche fiable (plus de spinner interminable, plus d’écran “vide” ambigu) même quand Radio Browser est instable.
+- Garantir une liste de pays complète quand l’API répond, et un mode dégradé clair quand elle ne répond pas.
 
-# Audit Google Play + Ameliorations demandees
+Constat d’audit (ce qui se passe réellement)
+1) L’API Radio Browser est instable selon le nœud/miroir
+- Le endpoint des serveurs dynamiques renvoie actuellement surtout de1/de2.
+- Tests externes: certains miroirs timeout, d’autres renvoient 403/Cloudflare.
+- Donc oui: il y a bien une part “API qui ne répond plus / répond mal” selon la route réseau.
 
-## A. Audit de conformite Google Play
+2) Le code actuel amplifie cette instabilité
+- `src/services/RadioService.ts` essaie les miroirs en séquentiel (5s chacun): avec plusieurs miroirs morts, une seule requête peut prendre très longtemps.
+- La recherche fait souvent 2 requêtes en parallèle (`name` + `tag`) avec `Promise.all`: si une seule branche échoue, tout échoue.
+- Pas de validation stricte du format de réponse (JSON tableau attendu): une réponse HTML/objet peut casser le flux.
+- Pas d’annulation des requêtes obsolètes lors de la frappe (si l’utilisateur tape vite, des requêtes anciennes restent en vol).
+- React Query retry par défaut sur la recherche => rallonge encore l’attente perçue.
+- Résultat: “ça tourne à vide”, “pays incomplets”, “pas stable”.
 
-### Ce qui est OK
-- **Politique de confidentialite** : Lien present dans les Reglages (ligne 501-509 de SettingsPage.tsx) pointant vers GitHub Pages
-- **Permissions justifiees** : Internet, reseau, localisation (Cast), foreground service, notifications — toutes documentees dans la privacy policy
-- **Stockage local uniquement** : Aucune donnee personnelle envoyee a un serveur (confirme dans les disclaimers)
-- **Meta tags HTML** : Description, OG tags, theme-color presents dans index.html
-- **Content rating** : App de streaming radio, pas de contenu sensible genere par l'app
-- **Multilingue** : 5 langues supportees (FR, EN, ES, DE, JA)
+Plan d’implémentation (ordre proposé)
+1) Durcir le client API (priorité haute) — `src/services/RadioService.ts`
+- Ajouter un fetch sûr:
+  - vérification `content-type`,
+  - fallback lecture texte + détection HTML/Cloudflare,
+  - validation “array attendu”.
+- Remplacer la logique “séquentielle lente” par une logique plus rapide:
+  - miroirs priorisés (dernier miroir sain en premier),
+  - nombre d’essais borné (ex: 3 max),
+  - arrêt rapide sur succès (et blacklist temporaire des miroirs en échec).
+- Ajouter support d’annulation (`AbortSignal`) sur toutes les méthodes de recherche/pays.
+- Conserver timeout 5s mais avec compatibilité (si `AbortSignal.timeout` indisponible, fallback `AbortController + setTimeout`).
+- Ne pas considérer un miroir “OK” tant que la réponse n’est pas JSON valide (et tableau).
 
-### Points a corriger
+2) Rendre la recherche tolérante aux pannes partielles — `src/pages/SearchPage.tsx`
+- Passer les combinaisons `name/tag` et multi-genres de `Promise.all` à `Promise.allSettled`.
+- Fusionner les succès disponibles au lieu d’échouer globalement si 1 sous-requête tombe.
+- Brancher le `signal` React Query vers le service pour annuler les anciennes recherches quand l’utilisateur tape.
+- Réduire les retries de la query recherche (0 ou 1 max) pour éviter l’impression de freeze.
 
-1. **Version affichee obsolete** : "v2.2.8e" est affiche sur la WelcomePage (ligne 95) et SettingsPage (ligne 550), alors que le code est en v2.4.8. Doit etre mis a jour.
+3) Clarifier l’état “pays indisponibles” — `src/pages/SearchPage.tsx`
+- Si fallback pays utilisé, afficher un message explicite (“liste réduite temporaire”) + bouton Réessayer visible.
+- Conserver le dropdown utilisable, mais distinguer clairement “données API complètes” vs “mode secours”.
 
-2. **Lien politique de confidentialite sur WelcomePage** : Google exige que les utilisateurs puissent acceder a la politique de confidentialite AVANT d'utiliser l'app. Le lien doit etre ajoute sur la page de bienvenue.
+4) Stabiliser les autres appels parallèles sensibles — `src/hooks/useWeeklyDiscoveries.ts`
+- Remplacer `Promise.all` par `Promise.allSettled` pour que l’accueil ne casse pas si une sous-requête API tombe.
+- Garder des découvertes partielles plutôt que zéro résultat.
 
-3. **Chromecast dans les features Premium** : La liste des features Premium ne mentionne que Sleep Timer et Android Auto. Le Chromecast doit etre ajoute comme feature visible dans la section Premium des Reglages.
+5) Instrumentation minimale pour diagnostic rapide — `src/services/RadioService.ts`
+- Logs structurés (miroir tenté, raison d’échec: timeout/HTTP/non-JSON).
+- Message d’erreur métier unique renvoyé à l’UI (“serveur stations indisponible”) pour éviter des états silencieux.
 
-4. **PremiumPage.tsx obsolete** : Ce fichier (pages/PremiumPage.tsx) contient une ancienne page Premium avec des boutons "monthly/yearly" factices. Elle ne semble plus utilisee (pas importee dans Index.tsx) mais reste dans le projet. A nettoyer ou ignorer.
+Validation prévue (avant livraison)
+- Test E2E recherche:
+  - taper rapidement une requête (ex: “jazz”, “rock fm”),
+  - vérifier qu’aucun spinner ne reste bloqué et que les anciennes requêtes sont annulées.
+- Test défaillance réseau:
+  - simuler miroirs KO (offline/devtools),
+  - vérifier affichage erreur clair + bouton Réessayer.
+- Test pays:
+  - cas API OK => liste complète,
+  - cas API KO => fallback visible + mention “liste réduite” + retry.
+- Test non-régression:
+  - filtres genre/langue/pays + pagination “Plus de stations”.
 
----
+Résultat attendu après correction
+- Recherche perçue comme “rapide ou clairement en erreur” (plus de “tourne à vide”).
+- Plus de blocage total quand un miroir répond mal.
+- Pays non “mystérieusement incomplets”: soit complet, soit fallback assumé avec retry.
+- Comportement global nettement plus stable même avec une API Radio Browser intermittente.
 
-## B. Plan d'implementation
-
-### 1. WelcomePage — Ajouter lien politique de confidentialite
-- Ajouter un lien cliquable sous le bouton "Commencer" avec l'icone ShieldCheck
-- Texte traduit via la cle existante `settings.privacyPolicy`
-- Lien vers `https://mrbender7.github.io/privacy-policy-radiosphere/`
-- Style : `text-[10px] text-muted-foreground` avec hover underline
-
-### 2. SettingsPage — Ajouter Chromecast dans les features Premium
-- Ajouter une 3e entree dans le tableau `premiumFeatures` (ligne 103-106) :
-  ```
-  { icon: Cast, title: t("premium.chromecast"), desc: t("premium.chromecastDesc") }
-  ```
-- Importer `Cast` depuis lucide-react (deja utilise dans CastButton)
-
-### 3. Traductions — Ajouter les cles manquantes
-- Ajouter `premium.chromecast` et `premium.chromecastDesc` dans les 5 langues :
-  - FR: "Chromecast" / "Diffusez vos stations sur votre TV ou enceinte connectee via Chromecast"
-  - EN: "Chromecast" / "Cast your stations to your TV or connected speaker via Chromecast"
-  - ES: "Chromecast" / "Transmite tus estaciones a tu TV o altavoz conectado via Chromecast"
-  - DE: "Chromecast" / "Streame deine Sender auf deinen Fernseher oder Lautsprecher uber Chromecast"
-  - JA: "Chromecast" / "Chromecastを使ってテレビやスマートスピーカーにストリーミング"
-
-### 4. Mettre a jour le numero de version
-- WelcomePage ligne 95 : "v2.2.8e" → "v2.4.8"
-- SettingsPage ligne 550 : "v2.2.8e" → "v2.4.8"
-
----
-
-## C. Resume des fichiers modifies
-
-| Fichier | Modifications |
-|---------|--------------|
-| `src/pages/WelcomePage.tsx` | Ajouter lien privacy policy + mettre a jour version |
-| `src/pages/SettingsPage.tsx` | Ajouter Chromecast aux features Premium + Cast import + mettre a jour version |
-| `src/i18n/translations.ts` | Ajouter `premium.chromecast` et `premium.chromecastDesc` dans 5 langues |
-
+Section technique (détails d’implémentation ciblés)
+- Fichiers: `src/services/RadioService.ts`, `src/pages/SearchPage.tsx`, `src/hooks/useWeeklyDiscoveries.ts`.
+- Changements clés:
+  - helper `fetchJsonSafely<T>()` + garde `Array.isArray`,
+  - stratégie miroir bornée et priorisée,
+  - signature méthodes service compatible `signal?: AbortSignal`,
+  - `queryFn: ({ signal }) => ...` dans SearchPage,
+  - `Promise.allSettled` + déduplication conservée.
