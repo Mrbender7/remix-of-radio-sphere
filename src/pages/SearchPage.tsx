@@ -10,15 +10,41 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
 
 const FALLBACK_COUNTRIES = [
-  { label: "France 🇫🇷", value: "France" },
+  { label: "Argentina 🇦🇷", value: "Argentina" },
+  { label: "Australia 🇦🇺", value: "Australia" },
+  { label: "Austria 🇦🇹", value: "Austria" },
   { label: "Belgium 🇧🇪", value: "Belgium" },
-  { label: "Switzerland 🇨🇭", value: "Switzerland" },
+  { label: "Brazil 🇧🇷", value: "Brazil" },
   { label: "Canada 🇨🇦", value: "Canada" },
+  { label: "Chile 🇨🇱", value: "Chile" },
+  { label: "China 🇨🇳", value: "China" },
+  { label: "Colombia 🇨🇴", value: "Colombia" },
+  { label: "Czechia 🇨🇿", value: "Czech Republic" },
+  { label: "Denmark 🇩🇰", value: "Denmark" },
+  { label: "Egypt 🇪🇬", value: "Egypt" },
+  { label: "Finland 🇫🇮", value: "Finland" },
+  { label: "France 🇫🇷", value: "France" },
   { label: "Germany 🇩🇪", value: "Germany" },
-  { label: "USA 🇺🇸", value: "The United States Of America" },
-  { label: "Spain 🇪🇸", value: "Spain" },
+  { label: "Greece 🇬🇷", value: "Greece" },
+  { label: "India 🇮🇳", value: "India" },
+  { label: "Ireland 🇮🇪", value: "Ireland" },
   { label: "Italy 🇮🇹", value: "Italy" },
+  { label: "Japan 🇯🇵", value: "Japan" },
+  { label: "Mexico 🇲🇽", value: "Mexico" },
+  { label: "Morocco 🇲🇦", value: "Morocco" },
+  { label: "Netherlands 🇳🇱", value: "Netherlands" },
+  { label: "New Zealand 🇳🇿", value: "New Zealand" },
+  { label: "Norway 🇳🇴", value: "Norway" },
+  { label: "Poland 🇵🇱", value: "Poland" },
+  { label: "Portugal 🇵🇹", value: "Portugal" },
+  { label: "Romania 🇷🇴", value: "Romania" },
+  { label: "South Africa 🇿🇦", value: "South Africa" },
+  { label: "Spain 🇪🇸", value: "Spain" },
+  { label: "Sweden 🇸🇪", value: "Sweden" },
+  { label: "Switzerland 🇨🇭", value: "Switzerland" },
+  { label: "Turkey 🇹🇷", value: "Turkey" },
   { label: "UK 🇬🇧", value: "The United Kingdom Of Great Britain And Northern Ireland" },
+  { label: "USA 🇺🇸", value: "The United States Of America" },
 ];
 
 function countryCodeToFlag(iso: string): string {
@@ -71,7 +97,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     queryKey: ["countries"],
     queryFn: ({ signal }) => getCountries(signal),
     staleTime: 30 * 60 * 1000,
-    retry: 1,
+    retry: 0,
   });
 
   const countryList = useMemo(() => {
@@ -83,6 +109,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
   }, [apiCountries]);
 
   const usingFallbackCountries = !apiCountries || apiCountries.length === 0;
+  const reducedCountryListLabel = t("search.reducedCountryList");
 
   const hasFilters = !!(query || country || genres.length || languages.length);
 
@@ -169,7 +196,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
     },
     enabled: hasFilters,
     staleTime: 2 * 60 * 1000,
-    retry: 1,
+    retry: 0,
   });
 
   // Derive allResults from query data + extra loaded pages
@@ -295,8 +322,12 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
         )}
         {usingFallbackCountries && !isCountriesError && (
           <div className="flex items-center gap-1.5 mt-1 px-1">
-            <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
-            <p className="text-xs text-muted-foreground">{t("search.reducedCountryList") || "Liste de pays réduite (temporaire)"}</p>
+            <AlertTriangle className="w-3 h-3 text-muted-foreground shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              {reducedCountryListLabel === "search.reducedCountryList"
+                ? "Liste de pays réduite (temporaire)"
+                : reducedCountryListLabel}
+            </p>
             <button onClick={() => retryCountries()} className="text-xs text-primary hover:underline font-medium ml-1">
               {t("search.retry")}
             </button>

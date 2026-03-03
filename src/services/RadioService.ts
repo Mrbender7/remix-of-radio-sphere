@@ -1,6 +1,7 @@
 import { RadioStation, RadioProvider, SearchParams } from "@/types/radio";
 
 const FALLBACK_MIRRORS = [
+  "https://all.api.radio-browser.info",
   "https://de1.api.radio-browser.info",
   "https://fr1.api.radio-browser.info",
   "https://at1.api.radio-browser.info",
@@ -10,7 +11,7 @@ const FALLBACK_MIRRORS = [
 
 const USER_AGENT = "RadioSphere/1.0";
 const REQUEST_TIMEOUT_MS = 5000;
-const MAX_MIRROR_ATTEMPTS = 3;
+const MAX_MIRROR_ATTEMPTS = 6;
 
 // Session-level mirror state
 let cachedWorkingMirror: string | null = null;
@@ -18,15 +19,6 @@ let dynamicMirrors: string[] | null = null;
 let mirrorFetchPromise: Promise<string[]> | null = null;
 const blacklistedMirrors = new Map<string, number>(); // mirror -> blacklist expiry timestamp
 const BLACKLIST_DURATION_MS = 60_000; // 1 minute
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 function isBlacklisted(mirror: string): boolean {
   const expiry = blacklistedMirrors.get(mirror);
@@ -106,8 +98,10 @@ async function fetchDynamicMirrors(): Promise<string[]> {
     const urls = data
       .map((s: any) => `https://${s.name}`)
       .filter((u: string) => u.includes("api.radio-browser.info"));
-    const merged = new Set([...urls, ...FALLBACK_MIRRORS]);
-    return Array.from(merged);
+
+    // Keep deterministic priority: stable fallbacks first, then discovered mirrors
+    const merged = [...FALLBACK_MIRRORS, ...urls.filter((u: string) => !FALLBACK_MIRRORS.includes(u))];
+    return merged;
   } catch (e) {
     console.warn("[RadioService] Dynamic mirror fetch failed, using fallbacks:", e);
     return FALLBACK_MIRRORS;
@@ -139,13 +133,13 @@ async function fetchWithMirrors(path: string, params?: Record<string, string>, e
     available.push(...allMirrors);
   }
 
-  // Prioritize cached working mirror
+  // Prioritize cached working mirror, then keep deterministic order
   const mirrors = cachedWorkingMirror && available.includes(cachedWorkingMirror)
-    ? [cachedWorkingMirror, ...shuffleArray(available.filter(m => m !== cachedWorkingMirror))]
-    : shuffleArray(available);
+    ? [cachedWorkingMirror, ...available.filter(m => m !== cachedWorkingMirror)]
+    : available;
 
-  // Limit attempts
-  const toTry = mirrors.slice(0, MAX_MIRROR_ATTEMPTS);
+  // Bounded attempts (try all if less than max)
+  const toTry = mirrors.slice(0, Math.min(MAX_MIRROR_ATTEMPTS, mirrors.length));
 
   let lastError: Error | null = null;
   for (const mirror of toTry) {
