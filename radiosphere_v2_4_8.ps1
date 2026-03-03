@@ -152,8 +152,14 @@ if (Test-Path $ManifestPath) {
     }
 
     # Disable auto backup (clean uninstall = full data wipe)
-    if ($ManifestContent -notmatch 'allowBackup') {
-        $ManifestContent = $ManifestContent -replace '<application', '<application android:allowBackup="false" android:fullBackupContent="false"'
+    $ManifestContent = [regex]::Replace($ManifestContent, 'android:allowBackup="[^"]*"', 'android:allowBackup="false"')
+    if ($ManifestContent -notmatch 'android:allowBackup=') {
+        $ManifestContent = $ManifestContent -replace '<application', '<application android:allowBackup="false"'
+    }
+
+    $ManifestContent = [regex]::Replace($ManifestContent, 'android:fullBackupContent="[^"]*"', 'android:fullBackupContent="false"')
+    if ($ManifestContent -notmatch 'android:fullBackupContent=') {
+        $ManifestContent = $ManifestContent -replace '<application', '<application android:fullBackupContent="false"'
     }
 
     # networkSecurityConfig
@@ -317,6 +323,28 @@ public class RadioAutoPlugin extends Plugin {
         String stations = call.getString("stations", "[]");
         getPrefs().edit().putString(KEY_RECENTS, stations).apply();
         call.resolve();
+    }
+
+    @PluginMethod
+    public void clearAppData(PluginCall call) {
+        try {
+            getPrefs().edit()
+                .remove(KEY_FAVORITES)
+                .remove(KEY_RECENTS)
+                .remove(KEY_PLAYBACK_STATE)
+                .apply();
+
+            Context ctx = getContext();
+            try {
+                ctx.stopService(new Intent(ctx, MediaPlaybackService.class));
+            } catch (Exception e) {
+                // Service not running, ignore
+            }
+
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to clear app data", e);
+        }
     }
 
     @PluginMethod

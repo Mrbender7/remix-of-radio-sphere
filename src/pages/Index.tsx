@@ -16,6 +16,7 @@ import { ExitConfirmDialog } from "@/components/ExitConfirmDialog";
 import { SleepTimerIndicator } from "@/components/SleepTimerIndicator";
 import { useBackButton } from "@/hooks/useBackButton";
 import type { Language } from "@/i18n/translations";
+import { clearNativeAppData } from "@/plugins/RadioAutoPlugin";
 
 const ONBOARDING_KEY = "radiosphere_onboarded";
 
@@ -58,9 +59,16 @@ function AppContentInner() {
 
   const handleResetApp = useCallback(async () => {
     try {
-      // Clear all localStorage
-      localStorage.clear();
+      // Clear native Android persisted data (SharedPreferences)
+      await clearNativeAppData();
     } catch {}
+
+    try {
+      // Clear web storage
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+
     // Delete all IndexedDB databases
     try {
       const dbs = await window.indexedDB.databases();
@@ -68,6 +76,7 @@ function AppContentInner() {
         if (db.name) window.indexedDB.deleteDatabase(db.name);
       }
     } catch {}
+
     window.location.reload();
   }, []);
 

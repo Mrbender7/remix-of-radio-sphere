@@ -61,6 +61,28 @@ public class RadioAutoPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void clearAppData(PluginCall call) {
+        try {
+            getPrefs().edit()
+                .remove(KEY_FAVORITES)
+                .remove(KEY_RECENTS)
+                .remove(KEY_PLAYBACK_STATE)
+                .apply();
+
+            Context ctx = getContext();
+            try {
+                ctx.stopService(new Intent(ctx, MediaPlaybackService.class));
+            } catch (Exception ignored) {
+                // Service may not be running
+            }
+
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to clear app data", e);
+        }
+    }
+
+    @PluginMethod
     public void notifyPlaybackState(PluginCall call) {
         String stationId = call.getString("stationId", "");
         String name = call.getString("name", "");

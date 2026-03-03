@@ -10,6 +10,7 @@ import { RadioStation } from '@/types/radio';
 export interface RadioAutoPluginInterface {
   syncFavorites(options: { stations: string }): Promise<void>;
   syncRecents(options: { stations: string }): Promise<void>;
+  clearAppData(): Promise<void>;
   notifyPlaybackState(options: {
     stationId: string;
     name: string;
@@ -89,6 +90,19 @@ export async function syncRecentsToNative(stations: RadioStation[]): Promise<voi
     console.log('[RadioAuto] Recents synced to native:', stations.length);
   } catch (e) {
     console.log('[RadioAuto] syncRecents not available (expected in browser)', e);
+  }
+}
+
+/**
+ * Clear native persisted app data used by Android integration
+ */
+export async function clearNativeAppData(): Promise<void> {
+  if (!isCapacitorAndroid()) return;
+  try {
+    await RadioAutoPlugin.clearAppData();
+    console.log('[RadioAuto] Native app data cleared');
+  } catch (e) {
+    console.log('[RadioAuto] clearAppData not available (expected in browser)', e);
   }
 }
 
