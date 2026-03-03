@@ -607,7 +607,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         if (station.logo != null && !station.logo.isEmpty()) {
             artworkUri = Uri.parse(station.logo.replace("http://", "https://"));
         } else {
-            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
+            artworkUri = Uri.parse("android.resource://" + getPackageName() + "/drawable/station_placeholder");
         }
 
         MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
