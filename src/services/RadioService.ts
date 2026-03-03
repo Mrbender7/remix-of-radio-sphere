@@ -36,7 +36,9 @@ async function fetchDynamicMirrors(): Promise<string[]> {
     const urls = servers
       .map(s => `https://${s.name}`)
       .filter(u => u.includes("api.radio-browser.info"));
-    return urls.length > 0 ? urls : FALLBACK_MIRRORS;
+    // Merge dynamic + static fallbacks, deduplicated, to ensure we always have backup mirrors
+    const merged = new Set([...urls, ...FALLBACK_MIRRORS]);
+    return Array.from(merged);
   } catch {
     return FALLBACK_MIRRORS;
   }
