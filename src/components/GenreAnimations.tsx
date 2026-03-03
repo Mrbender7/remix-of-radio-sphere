@@ -328,15 +328,17 @@ function CowboyHat() {
   return (
     <svg viewBox="0 0 80 80" className={svgBase} style={filterStyle}>
       <g>
-        <animateTransform attributeName="transform" type="rotate" values="-3 40 44;3 40 44;-3 40 44" dur="3s" repeatCount="indefinite" />
-        {/* Bord du chapeau - ailes larges relevées */}
-        <path d="M2,52 Q14,60 40,56 Q66,60 78,52 Q66,48 40,50 Q14,48 2,52Z" stroke={W} strokeWidth="2.5" {...S} />
-        {/* Calotte haute avec pincement */}
-        <path d="M18,50 L22,26 Q28,16 40,18 Q52,16 58,26 L62,50" stroke={W} strokeWidth="2.5" {...S} />
-        {/* Sommet avec creux marqué */}
-        <path d="M22,26 Q31,36 40,33 Q49,36 58,26" stroke={W} strokeWidth="2" {...S} />
+        <animateTransform attributeName="transform" type="rotate" values="-3 40 50;3 40 50;-3 40 50" dur="3s" repeatCount="indefinite" />
+        {/* Bord du chapeau - large brim */}
+        <path d="M5,60 C16,53 25,50 40,50 C55,50 64,53 75,60 C64,66 55,69 40,69 C25,69 16,66 5,60Z" stroke={W} strokeWidth="2.5" {...S} />
+        {/* Calotte haute */}
+        <path d="M25,50 C22,44 22,28 28,22 C33,17 36,19 40,19 C44,19 47,17 52,22 C58,28 58,44 55,50" stroke={W} strokeWidth="2.5" {...S} />
+        {/* Ligne centrale de la calotte */}
+        <line x1="40" y1="19" x2="40" y2="38" stroke={W} strokeWidth="1.5" {...S} opacity="0.5">
+          <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite" />
+        </line>
         {/* Bande du chapeau */}
-        <path d="M20,44 Q30,42 40,43 Q50,42 60,44" stroke={W} strokeWidth="2" {...S} opacity="0.6">
+        <path d="M24,44 L56,44" stroke={W} strokeWidth="2" {...S} opacity="0.6">
           <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite" />
         </path>
         {/* Étoile de shérif */}
