@@ -374,7 +374,7 @@ export function SearchPage({ isFavorite, onToggleFavorite, initialGenre }: Searc
 
       {!isLoading && allResults.length > 0 && (
         <p className="text-xs text-muted-foreground mb-3">
-          {allResults.length} {t("search.resultsCount")}
+          {hasMore ? `${allResults.length}+` : allResults.length} {t("search.resultsCount")}
         </p>
       )}
 
