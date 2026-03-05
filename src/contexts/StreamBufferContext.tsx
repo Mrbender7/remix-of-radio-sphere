@@ -229,6 +229,30 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
     setBufferSeconds(Math.min(duration, MAX_BUFFER_DURATION));
   }, []);
 
+  // Try fetching a stream URL, with CORS proxy fallback
+  const fetchWithCorsFallback = useCallback(async (streamUrl: string, signal: AbortSignal): Promise<Response> => {
+    try {
+      const response = await fetch(streamUrl, {
+        signal,
+        headers: { 'Accept': '*/*', 'Icy-MetaData': '1' },
+      });
+      if (response.ok && response.body) return response;
+      throw new Error('Response not ok or no body');
+    } catch (directError: any) {
+      if (directError?.name === 'AbortError') throw directError;
+      console.warn("[StreamBuffer] Direct fetch failed, trying CORS proxy:", directError?.message);
+      // Retry via CORS proxy
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(streamUrl)}`;
+      const response = await fetch(proxyUrl, {
+        signal,
+        headers: { 'Accept': '*/*', 'Icy-MetaData': '1' },
+      });
+      if (!response.ok || !response.body) throw new Error('Proxy fetch also failed');
+      console.log("[StreamBuffer] CORS proxy succeeded for:", streamUrl);
+      return response;
+    }
+  }, []);
+
   // Start fetching stream in parallel — capture Content-Type + ICY headers
   const startFetch = useCallback(async (streamUrl: string) => {
     stopFetch();
@@ -240,16 +264,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
     fetchStartTimeRef.current = Date.now();
 
     try {
-      // Request ICY metadata header
-      const response = await fetch(streamUrl, {
-        signal: controller.signal,
-        headers: { 'Accept': '*/*', 'Icy-MetaData': '1' },
-      });
-
-      if (!response.ok || !response.body) {
-        console.warn("[StreamBuffer] Fetch failed or no body — buffer unavailable");
-        return;
-      }
+      const response = await fetchWithCorsFallback(streamUrl, controller.signal);
 
       // Capture Content-Type from response
       const contentType = response.headers.get('Content-Type') || '';
@@ -307,7 +322,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
         setBufferAvailable(false);
       }
     }
-  }, [stopFetch, clearBuffer, trimBuffer, updateBufferSeconds, currentStation?.codec]);
+  }, [stopFetch, clearBuffer, trimBuffer, updateBufferSeconds, currentStation?.codec, fetchWithCorsFallback]);
 
   // React to station/playing changes
   useEffect(() => {
@@ -526,7 +541,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
     }
   }, [bufferAvailable, isPlaying, hasMediaRecorder]);
 
-  // Auto-return to live when blob playback ends naturally
+  // Auto-return to live when blob playback ends naturally OR errors out
   useEffect(() => {
     const handleBlobEnded = () => {
       if (!isLive && seekBlobUrlRef.current && globalAudio.src.startsWith('blob:')) {
@@ -534,8 +549,18 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
         returnToLiveInternal();
       }
     };
+    const handleBlobError = () => {
+      if (globalAudio.src && globalAudio.src.startsWith('blob:')) {
+        console.warn("[StreamBuffer] Blob playback error, auto-returning to live");
+        returnToLiveInternal();
+      }
+    };
     globalAudio.addEventListener('ended', handleBlobEnded);
-    return () => globalAudio.removeEventListener('ended', handleBlobEnded);
+    globalAudio.addEventListener('error', handleBlobError);
+    return () => {
+      globalAudio.removeEventListener('ended', handleBlobEnded);
+      globalAudio.removeEventListener('error', handleBlobError);
+    };
   }, [isLive, returnToLiveInternal]);
 
   return (

@@ -315,6 +315,13 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     audio.volume = state.volume;
 
     const handleError = () => {
+      // Skip error handling for blob: URLs (time-shift seek-back) —
+      // transient decoding errors are normal when blob starts mid-frame.
+      // StreamBufferContext will handle auto-return-to-live.
+      if (audio.src && audio.src.startsWith('blob:')) {
+        console.warn("[RadioSphere] Blob playback error ignored (time-shift), StreamBuffer will handle recovery");
+        return;
+      }
       setState(s => ({ ...s, isPlaying: false }));
       stopSilentLoop();
       stopHeartbeat();

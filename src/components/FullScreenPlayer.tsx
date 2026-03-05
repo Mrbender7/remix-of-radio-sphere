@@ -193,123 +193,130 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
         </div>
       )}
 
-       {/* Info & Controls */}
+       {/* Info & Controls — with vertical volume on the right */}
        <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+6rem)] space-y-4">
-         <div className="flex items-start justify-between gap-3">
-           <div className="min-w-0">
-             <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                {currentStation.tags.length > 0 ? currentStation.tags.slice(0, 2).join(' • ') : currentStation.country}
-              </p>
+         {/* Title + Volume right layout */}
+         <div className="flex items-start gap-3">
+           {/* Left: title + tags + controls */}
+           <div className="flex-1 min-w-0 space-y-4">
+             <div className="flex items-start justify-between gap-3">
+               <div className="min-w-0">
+                 <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>
+                 <p className="text-sm text-muted-foreground">
+                   {currentStation.tags.length > 0 ? currentStation.tags.slice(0, 2).join(' • ') : currentStation.country}
+                 </p>
+               </div>
+               <button
+                 onClick={() => toggleFavorite(currentStation)}
+                 className="flex-shrink-0 p-2 rounded-full hover:bg-accent transition-colors"
+               >
+                 <Heart className={`w-6 h-6 ${fav ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : "text-muted-foreground"}`} />
+               </button>
+             </div>
+
+             {/* Tags */}
+             {currentStation.tags.length > 0 && (
+               <div className="flex flex-wrap gap-2">
+                 {currentStation.tags.slice(0, 4).map((tag, i) => (
+                   <button
+                     key={i}
+                     onClick={() => {
+                       if (onTagClick) {
+                         closeFullScreen();
+                         onTagClick(tag);
+                       }
+                     }}
+                     className="px-3 py-1 rounded-full bg-accent text-xs text-foreground font-medium hover:bg-primary/20 active:bg-primary/30 transition-colors"
+                   >
+                     {tag}
+                   </button>
+                 ))}
+               </div>
+             )}
+
+             {/* Play + REC buttons */}
+             <div className="flex items-center justify-center gap-6">
+               {/* REC button */}
+               {recordingAvailable && (
+                 <button
+                   onClick={handleRecToggle}
+                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                     isRecording
+                       ? "bg-red-600 shadow-lg shadow-red-500/40"
+                       : "bg-accent hover:bg-red-600/20 border border-red-500/30"
+                   }`}
+                   title={isRecording ? t("player.recording") : "REC"}
+                 >
+                   {isRecording ? (
+                     <Square className="w-5 h-5 text-white" />
+                   ) : (
+                     <Circle className="w-5 h-5 text-red-500 fill-red-500" />
+                   )}
+                 </button>
+               )}
+
+               {/* Play button */}
+               <button
+                 onClick={togglePlay}
+                 className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
+               >
+                 {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
+               </button>
+
+               {/* Recording duration counter */}
+               {isRecording && (
+                 <div className="flex items-center gap-1.5">
+                   <div className="w-2 h-2 rounded-full bg-red-500 rec-blink" />
+                   <span className="text-sm font-mono text-red-400 font-semibold">
+                     {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, "0")}
+                   </span>
+                 </div>
+               )}
+             </div>
            </div>
-           <button
-             onClick={() => toggleFavorite(currentStation)}
-             className="flex-shrink-0 p-2 rounded-full hover:bg-accent transition-colors"
-           >
-             <Heart className={`w-6 h-6 ${fav ? "fill-[hsl(280,80%,60%)] text-[hsl(280,80%,60%)]" : "text-muted-foreground"}`} />
-           </button>
+
+           {/* Right: vertical volume slider */}
+           <div className="flex flex-col items-center gap-2 pt-2 flex-shrink-0" style={{ height: '160px' }}>
+             <Volume2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+             <Slider
+               value={[volume * 100]}
+               onValueChange={([v]) => setVolume(v / 100)}
+               max={100}
+               step={1}
+               orientation="vertical"
+               className="h-full [&_[role=slider]]:bg-gradient-to-b [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-b [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
+             />
+           </div>
          </div>
 
-         {/* Tags */}
-         {currentStation.tags.length > 0 && (
-           <div className="flex flex-wrap gap-2">
-             {currentStation.tags.slice(0, 4).map((tag, i) => (
+         {/* Scrub / Timeline bar */}
+         {bufferAvailable && canSeekBack && (
+           <div className="space-y-1">
+             <Slider
+               value={[seekDraft ?? (isLive ? 0 : -currentSeekOffsetSeconds)]}
+               min={-Math.floor(bufferSeconds)}
+               max={0}
+               step={1}
+               onValueChange={handleSeekDrag}
+               onValueCommit={handleSeekCommit}
+               className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
+             />
+             <div className="flex items-center justify-between">
+               <span className="text-[10px] text-muted-foreground">{formatSeekTime(bufferSeconds)}</span>
                <button
-                 key={i}
-                 onClick={() => {
-                   if (onTagClick) {
-                     closeFullScreen();
-                     onTagClick(tag);
-                   }
-                 }}
-                 className="px-3 py-1 rounded-full bg-accent text-xs text-foreground font-medium hover:bg-primary/20 active:bg-primary/30 transition-colors"
+                 onClick={returnToLive}
+                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                   isLive
+                     ? "text-green-400 live-pulse"
+                     : "text-muted-foreground bg-accent hover:text-green-400"
+                 }`}
                >
-                 {tag}
+                 <Radio className="w-3 h-3" />
+                 {t("player.live")}
                </button>
-             ))}
+             </div>
            </div>
          )}
-
-        {/* Play + REC buttons */}
-        <div className="flex items-center justify-center gap-6">
-          {/* REC button */}
-          {recordingAvailable && (
-            <button
-              onClick={handleRecToggle}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                isRecording
-                  ? "bg-red-600 shadow-lg shadow-red-500/40"
-                  : "bg-accent hover:bg-red-600/20 border border-red-500/30"
-              }`}
-              title={isRecording ? t("player.recording") : "REC"}
-            >
-              {isRecording ? (
-                <Square className="w-5 h-5 text-white" />
-              ) : (
-                <Circle className="w-5 h-5 text-red-500 fill-red-500" />
-              )}
-            </button>
-          )}
-
-          {/* Play button */}
-          <button
-            onClick={togglePlay}
-            className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
-          >
-            {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
-          </button>
-
-          {/* Recording duration counter */}
-          {isRecording && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-red-500 rec-blink" />
-              <span className="text-sm font-mono text-red-400 font-semibold">
-                {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, "0")}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Scrub / Timeline bar */}
-        {bufferAvailable && canSeekBack && (
-          <div className="space-y-1">
-            <Slider
-              value={[seekDraft ?? (isLive ? 0 : -currentSeekOffsetSeconds)]}
-              min={-Math.floor(bufferSeconds)}
-              max={0}
-              step={1}
-              onValueChange={handleSeekDrag}
-              onValueCommit={handleSeekCommit}
-              className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground">{formatSeekTime(bufferSeconds)}</span>
-              <button
-                onClick={returnToLive}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                  isLive
-                    ? "text-green-400 live-pulse"
-                    : "text-muted-foreground bg-accent hover:text-green-400"
-                }`}
-              >
-                <Radio className="w-3 h-3" />
-                {t("player.live")}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Volume */}
-        <div className="flex items-center gap-3">
-          <Volume2 className="w-4 h-4 text-muted-foreground" />
-          <Slider
-            value={[volume * 100]}
-            onValueChange={([v]) => setVolume(v / 100)}
-            max={100}
-            step={1}
-            className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
-          />
-        </div>
 
          {/* Codec / Bitrate / Language info */}
          <div className="grid grid-cols-3 gap-3 py-4 px-4 rounded-xl bg-accent/50">
@@ -331,7 +338,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
                <p className="text-sm font-semibold text-foreground">{currentStation.language}</p>
              </div>
            )}
-          </div>
+         </div>
 
         </div>
 
