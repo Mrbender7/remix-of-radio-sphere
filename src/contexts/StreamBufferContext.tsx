@@ -356,7 +356,23 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
   const startRecording = useCallback(() => {
     if (bufferAvailable && chunksRef.current.length > 0) {
       usingMediaRecorderRef.current = false;
-      recordingStartIdxRef.current = chunksRef.current.length - 1;
+      
+      if (!isLive && currentSeekOffsetSeconds > 0) {
+        // In seek-back: find chunk corresponding to current seek position
+        const now = Date.now();
+        const targetTime = now - currentSeekOffsetSeconds * 1000;
+        let startIdx = 0;
+        for (let i = 0; i < chunksRef.current.length; i++) {
+          if (chunksRef.current[i].time >= targetTime) {
+            startIdx = i;
+            break;
+          }
+        }
+        recordingStartIdxRef.current = startIdx;
+        console.log("[StreamBuffer] Recording started from seek-back position, offset:", currentSeekOffsetSeconds, "s, startIdx:", startIdx);
+      } else {
+        recordingStartIdxRef.current = chunksRef.current.length - 1;
+      }
     } else {
       usingMediaRecorderRef.current = true;
       try {
@@ -393,7 +409,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
     }, 1000);
 
     toast.success(t("player.recordingStarted"));
-  }, [t, bufferAvailable]);
+  }, [t, bufferAvailable, isLive, currentSeekOffsetSeconds]);
 
   const stopRecording = useCallback(async (): Promise<{ blob: Blob; fileName: string } | null> => {
     if (!isRecording) return null;
@@ -545,8 +561,14 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const handleBlobEnded = () => {
       if (!isLive && seekBlobUrlRef.current && globalAudio.src.startsWith('blob:')) {
-        console.log("[StreamBuffer] Blob playback ended naturally, returning to live");
-        returnToLiveInternal();
+        if (isRecording) {
+          console.log("[StreamBuffer] Blob ended during recording — returning to live WITHOUT stopping recording");
+          returnToLiveInternal();
+          toast.info(t("player.recordingContinuesLive") || "Retour au direct, enregistrement en cours...");
+        } else {
+          console.log("[StreamBuffer] Blob playback ended naturally, returning to live");
+          returnToLiveInternal();
+        }
       }
     };
     const handleBlobError = () => {
@@ -561,7 +583,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
       globalAudio.removeEventListener('ended', handleBlobEnded);
       globalAudio.removeEventListener('error', handleBlobError);
     };
-  }, [isLive, returnToLiveInternal]);
+  }, [isLive, isRecording, returnToLiveInternal, t]);
 
   return (
     <StreamBufferContext.Provider value={{
