@@ -165,7 +165,12 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
 
       {/* Artwork */}
       <div className="flex-1 flex items-center justify-center px-10">
-        <div className="w-full max-w-[300px] aspect-square rounded-2xl bg-accent shadow-2xl flex items-center justify-center overflow-hidden" style={{ boxShadow: '0 20px 60px -10px hsla(250, 80%, 50%, 0.5), 0 10px 30px -5px hsla(220, 90%, 60%, 0.3)' }}>
+        <div
+          className={`aspect-square rounded-2xl bg-accent shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-700 ease-in-out ${
+            isRecording ? "w-full max-w-[150px]" : "w-full max-w-[300px]"
+          }`}
+          style={{ boxShadow: '0 20px 60px -10px hsla(250, 80%, 50%, 0.5), 0 10px 30px -5px hsla(220, 90%, 60%, 0.3)' }}
+        >
           {currentStation.logo ? (
             <img src={currentStation.logo.replace('http://', 'https://')} alt={currentStation.name} loading="lazy" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = stationPlaceholder; }} />
           ) : (
@@ -184,7 +189,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
 
       {/* Audio Visualizer or Cassette Animation */}
       {isPlaying && (
-        <div className="flex justify-center py-3">
+        <div className={`flex justify-center py-3 ${isRecording ? "animate-fade-in" : ""}`}>
           {isRecording ? (
             <CassetteAnimation duration={recordingDuration} maxDuration={600} />
           ) : (
