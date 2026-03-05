@@ -296,8 +296,6 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
     toast.success(t("player.recordingStopped"));
     setRecordingDuration(0);
     return { blob, fileName };
-    setRecordingDuration(0);
-    return { blob, fileName };
   }, [isRecording, currentStation?.name, t]);
 
   const seekBack = useCallback((seconds: number) => {

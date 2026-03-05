@@ -94,15 +94,20 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
 
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = (reader.result as string).split(",")[1];
-        await Filesystem.writeFile({
-          path: `Download/${lastRecording.fileName}`,
-          data: base64,
-          directory: Directory.ExternalStorage,
-        });
-        toast.success(t("player.fileSaved"));
-        setShowSaveSheet(false);
-        setLastRecording(null);
+        try {
+          const base64 = (reader.result as string).split(",")[1];
+          await Filesystem.writeFile({
+            path: lastRecording.fileName,
+            data: base64,
+            directory: Directory.Documents,
+          });
+          toast.success(t("player.fileSaved"));
+          setShowSaveSheet(false);
+          setLastRecording(null);
+        } catch (e) {
+          console.error("[Save] writeFile failed:", e);
+          toast.error(t("player.unexpectedError"));
+        }
       };
       reader.readAsDataURL(lastRecording.blob);
     } catch {
@@ -127,18 +132,23 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
       const reader = new FileReader();
       reader.onload = async () => {
-        const base64 = (reader.result as string).split(",")[1];
-        const saved = await Filesystem.writeFile({
-          path: `Cache/${lastRecording.fileName}`,
-          data: base64,
-          directory: Directory.Cache,
-        });
-        await Share.share({
-          title: lastRecording.fileName,
-          url: saved.uri,
-        });
-        setShowSaveSheet(false);
-        setLastRecording(null);
+        try {
+          const base64 = (reader.result as string).split(",")[1];
+          const saved = await Filesystem.writeFile({
+            path: lastRecording.fileName,
+            data: base64,
+            directory: Directory.Cache,
+          });
+          await Share.share({
+            title: lastRecording.fileName,
+            url: saved.uri,
+          });
+          setShowSaveSheet(false);
+          setLastRecording(null);
+        } catch (e) {
+          console.error("[Share] failed:", e);
+          toast.error(t("player.unexpectedError"));
+        }
       };
       reader.readAsDataURL(lastRecording.blob);
     } catch {
@@ -213,7 +223,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
       )}
 
        {/* Info & Controls */}
-       <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+4rem)] space-y-4">
+       <div className="px-6 pb-[calc(max(env(safe-area-inset-bottom,16px),1rem)+6rem)] space-y-4">
          <div className="flex items-start justify-between gap-3">
            <div className="min-w-0">
              <h2 className="text-3xl sm:text-4xl font-heading font-bold leading-tight bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent">{currentStation.name}</h2>
@@ -355,8 +365,8 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
 
       {/* Save/Share Sheet */}
       {showSaveSheet && lastRecording && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end justify-center" onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}>
-          <div className="w-full max-w-md bg-card rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-start justify-center" style={{ paddingTop: "max(env(safe-area-inset-top, 24px), 2rem)" }} onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}>
+          <div className="w-full max-w-md mx-4 bg-card rounded-2xl p-6 space-y-4 animate-in slide-in-from-top" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-foreground text-center">{t("player.recordingStopped")}</h3>
             <p className="text-sm text-muted-foreground text-center">{lastRecording.fileName}</p>
             <div className="flex flex-col gap-3">

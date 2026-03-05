@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { Globe, Radio, Heart, Search, Music, ChevronRight, ShieldCheck } from "lucide-react";
 import { requestAllPermissions } from "@/utils/permissions";
@@ -24,13 +24,10 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
   const [selectedLang, setSelectedLang] = useState<Language>("fr");
   const t = (key: string) => translations[selectedLang][key] ?? key;
 
-  // Request all permissions when welcome page is shown
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      requestAllPermissions();
-    }, 800); // Small delay so the page renders first
-    return () => clearTimeout(timer);
-  }, []);
+  const handleContinue = async () => {
+    await requestAllPermissions();
+    onComplete(selectedLang);
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background px-6 py-10 text-center overflow-y-auto">
@@ -94,7 +91,7 @@ export function WelcomePage({ onComplete }: WelcomePageProps) {
 
       {/* Continue button */}
       <button
-        onClick={() => onComplete(selectedLang)}
+        onClick={handleContinue}
         className="w-full max-w-xs py-3.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-[hsl(220,90%,56%)] to-[hsl(280,80%,56%)] text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-200 flex items-center justify-center gap-2"
       >
         {t("welcome.start")}
