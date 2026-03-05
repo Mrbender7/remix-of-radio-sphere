@@ -686,7 +686,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
 
         // Resolve URL in background then play (stale requests are ignored)
         new Thread(() -> {
-            String resolvedUrl = station.streamUrl; // TEST: bypass resolution to isolate AA playback issue
+            String resolvedUrl = resolveStreamUrlSafely(station.streamUrl);
             Log.d(TAG, "Playing resolved URL: " + resolvedUrl);
 
             handler.post(() -> {
