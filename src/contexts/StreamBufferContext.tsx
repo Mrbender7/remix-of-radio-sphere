@@ -51,6 +51,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
   const captureRecorderRef = useRef<MediaRecorder | null>(null);
   const webmHeaderRef = useRef<Uint8Array | null>(null);
   const isFirstChunkRef = useRef(true);
+  const bufferAvailableRef = useRef(false);
 
   const [bufferSeconds, setBufferSeconds] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -77,6 +78,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
+    bufferAvailableRef.current = false;
     if (seekBlobUrlRef.current) {
       URL.revokeObjectURL(seekBlobUrlRef.current);
       seekBlobUrlRef.current = null;
@@ -156,7 +158,10 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
           chunksRef.current.push(chunk);
           totalBytesRef.current += data.byteLength;
 
-          if (!bufferAvailable) setBufferAvailable(true);
+          if (!bufferAvailableRef.current) {
+            bufferAvailableRef.current = true;
+            setBufferAvailable(true);
+          }
 
           trimBuffer();
           updateBufferSeconds();
@@ -177,7 +182,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
       setBufferAvailable(false);
       setRecordingAvailable(false);
     }
-  }, [stopCapture, trimBuffer, updateBufferSeconds, bufferAvailable]);
+  }, [stopCapture, trimBuffer, updateBufferSeconds]);
 
   // React to station/playing changes — start capture when audio is playing
   useEffect(() => {
