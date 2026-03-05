@@ -18,6 +18,8 @@ export async function requestAllPermissions() {
     } else if ("Notification" in window) {
       const result = await Notification.requestPermission();
       if (result === "granted") granted++;
+    } else {
+      granted++; // No notification API available
     }
   } catch {
     console.log("[Permissions] Notification permission request failed");
@@ -37,10 +39,12 @@ export async function requestAllPermissions() {
     console.log("[Permissions] Storage permission request failed");
   }
 
-  toast({
-    title: `${granted}/${total}`,
-    description: granted === total
-      ? "✅ All permissions granted"
-      : "⚠️ Some permissions were denied. You can enable them in your device settings.",
-  });
+  try {
+    toast({
+      title: `${granted}/${total}`,
+      description: granted === total
+        ? "✅ All permissions granted"
+        : "⚠️ Some permissions were denied. You can enable them in your device settings.",
+    });
+  } catch {}
 }
