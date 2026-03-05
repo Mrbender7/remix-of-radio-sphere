@@ -292,6 +292,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
          {/* Scrub / Timeline bar */}
          {bufferAvailable && canSeekBack && (
            <div className="space-y-1">
+           <div className="relative">
              <Slider
                value={[seekDraft ?? (isLive ? 0 : -currentSeekOffsetSeconds)]}
                min={-Math.floor(bufferSeconds)}
@@ -301,6 +302,20 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
                onValueCommit={handleSeekCommit}
                className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
              />
+             {seekDraft !== null && (
+               <div
+                 className="absolute -top-7 pointer-events-none"
+                 style={{
+                   left: `${((seekDraft - (-Math.floor(bufferSeconds))) / (0 - (-Math.floor(bufferSeconds)))) * 100}%`,
+                   transform: 'translateX(-50%)',
+                 }}
+               >
+                 <span className="px-1.5 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-mono font-bold shadow-lg">
+                   {formatSeekTime(Math.abs(seekDraft))}
+                 </span>
+               </div>
+             )}
+           </div>
              <div className="flex items-center justify-between">
                <span className="text-[10px] text-muted-foreground">{formatSeekTime(bufferSeconds)}</span>
                <button
