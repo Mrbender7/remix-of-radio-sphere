@@ -17,7 +17,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const { t } = useTranslation();
   const { isPremium } = usePremium();
-  const { bufferSeconds, isRecording, recordingDuration, isLive, canSeekBack, bufferAvailable, startRecording, stopRecording, seekBack, returnToLive } = useStreamBuffer();
+  const { bufferSeconds, isRecording, recordingDuration, isLive, canSeekBack, bufferAvailable, recordingAvailable, startRecording, stopRecording, seekBack, returnToLive } = useStreamBuffer();
 
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [lastRecording, setLastRecording] = useState<{ blob: Blob; fileName: string } | null>(null);
@@ -252,7 +252,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
         {/* Play + REC buttons */}
         <div className="flex items-center justify-center gap-6">
           {/* REC button */}
-          {bufferAvailable && (
+          {recordingAvailable && (
             <button
               onClick={handleRecToggle}
               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${

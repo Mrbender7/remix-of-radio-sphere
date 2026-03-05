@@ -15,6 +15,7 @@ interface StreamBufferContextType {
   isLive: boolean;
   canSeekBack: boolean;
   bufferAvailable: boolean;
+  recordingAvailable: boolean; // true if either buffer or MediaRecorder fallback works
   startRecording: () => void;
   stopRecording: () => Promise<{ blob: Blob; fileName: string } | null>;
   seekBack: (seconds: number) => void;
@@ -38,6 +39,9 @@ const MAX_BUFFER_BYTES = 5 * 60 * 16 * 1024; // ~4.7MB
 export function StreamBufferProvider({ children }: { children: React.ReactNode }) {
   const { currentStation, isPlaying } = usePlayer();
   const { t } = useTranslation();
+  
+  // Check if MediaRecorder fallback is available (for web when CORS blocks fetch buffer)
+  const hasMediaRecorder = typeof MediaRecorder !== 'undefined';
 
   const chunksRef = useRef<TimestampedChunk[]>([]);
   const totalBytesRef = useRef(0);
@@ -47,12 +51,16 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seekBlobUrlRef = useRef<string | null>(null);
   const stationIdRef = useRef<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
+  const usingMediaRecorderRef = useRef(false);
 
   const [bufferSeconds, setBufferSeconds] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isLive, setIsLive] = useState(true);
   const [bufferAvailable, setBufferAvailable] = useState(false);
+  const [recordingAvailable, setRecordingAvailable] = useState(false);
 
   const clearBuffer = useCallback(() => {
     chunksRef.current = [];
@@ -186,8 +194,38 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
   }, [stopFetch]);
 
   const startRecording = useCallback(() => {
-    if (chunksRef.current.length === 0) return;
-    recordingStartIdxRef.current = chunksRef.current.length - 1;
+    // If buffer is available, use buffer-based recording
+    if (bufferAvailable && chunksRef.current.length > 0) {
+      usingMediaRecorderRef.current = false;
+      recordingStartIdxRef.current = chunksRef.current.length - 1;
+    } else {
+      // Fallback: MediaRecorder on the global audio element
+      usingMediaRecorderRef.current = true;
+      try {
+        const audio = document.querySelector('audio') as HTMLAudioElement | null;
+        if (!audio) {
+          toast.error("No audio element found");
+          return;
+        }
+        const stream = (audio as any).captureStream?.() || (audio as any).mozCaptureStream?.();
+        if (!stream) {
+          toast.error("Recording not available in this browser");
+          return;
+        }
+        mediaChunksRef.current = [];
+        const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) mediaChunksRef.current.push(e.data);
+        };
+        recorder.start(1000); // collect data every second
+        mediaRecorderRef.current = recorder;
+      } catch (e) {
+        console.warn("[StreamBuffer] MediaRecorder fallback failed:", e);
+        toast.error("Recording not available");
+        return;
+      }
+    }
+
     setIsRecording(true);
     setRecordingDuration(0);
 
@@ -197,16 +235,15 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
       setRecordingDuration(elapsed);
 
       if (elapsed >= MAX_RECORDING_DURATION) {
-        // Auto-stop will be handled by the component
         toast.info(t("player.recordingMaxReached"));
       }
     }, 1000);
 
     toast.success(t("player.recordingStarted"));
-  }, [t]);
+  }, [t, bufferAvailable]);
 
   const stopRecording = useCallback(async (): Promise<{ blob: Blob; fileName: string } | null> => {
-    if (!isRecording || recordingStartIdxRef.current < 0) return null;
+    if (!isRecording) return null;
 
     setIsRecording(false);
     if (recordingTimerRef.current) {
@@ -214,32 +251,51 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
       recordingTimerRef.current = null;
     }
 
-    const chunks = chunksRef.current;
-    const startIdx = Math.max(0, recordingStartIdxRef.current);
-    const recordedChunks = chunks.slice(startIdx);
-    recordingStartIdxRef.current = -1;
+    let blob: Blob;
 
-    if (recordedChunks.length === 0) return null;
+    if (usingMediaRecorderRef.current && mediaRecorderRef.current) {
+      // MediaRecorder fallback path
+      const recorder = mediaRecorderRef.current;
+      await new Promise<void>((resolve) => {
+        recorder.onstop = () => resolve();
+        recorder.stop();
+      });
+      mediaRecorderRef.current = null;
 
-    // Concatenate all recorded chunks
-    const totalSize = recordedChunks.reduce((sum, c) => sum + c.data.byteLength, 0);
-    const result = new Uint8Array(totalSize);
-    let offset = 0;
-    for (const chunk of recordedChunks) {
-      result.set(chunk.data, offset);
-      offset += chunk.data.byteLength;
+      if (mediaChunksRef.current.length === 0) return null;
+      blob = new Blob(mediaChunksRef.current, { type: 'audio/webm' });
+      mediaChunksRef.current = [];
+    } else {
+      // Buffer-based recording path
+      if (recordingStartIdxRef.current < 0) return null;
+      const chunks = chunksRef.current;
+      const startIdx = Math.max(0, recordingStartIdxRef.current);
+      const recordedChunks = chunks.slice(startIdx);
+      recordingStartIdxRef.current = -1;
+
+      if (recordedChunks.length === 0) return null;
+
+      const totalSize = recordedChunks.reduce((sum, c) => sum + c.data.byteLength, 0);
+      const result = new Uint8Array(totalSize);
+      let offset = 0;
+      for (const chunk of recordedChunks) {
+        result.set(chunk.data, offset);
+        offset += chunk.data.byteLength;
+      }
+      blob = new Blob([result], { type: 'audio/mpeg' });
     }
-
-    const blob = new Blob([result], { type: 'audio/mpeg' });
 
     // Generate filename
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = `${String(now.getHours()).padStart(2, '0')}h${String(now.getMinutes()).padStart(2, '0')}`;
     const stationName = (currentStation?.name ?? 'Station').replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '').replace(/\s+/g, '_').slice(0, 40);
-    const fileName = `RadioSphere_${stationName}_${dateStr}_${timeStr}.mp3`;
+    const ext = usingMediaRecorderRef.current ? 'webm' : 'mp3';
+    const fileName = `RadioSphere_${stationName}_${dateStr}_${timeStr}.${ext}`;
 
     toast.success(t("player.recordingStopped"));
+    setRecordingDuration(0);
+    return { blob, fileName };
     setRecordingDuration(0);
     return { blob, fileName };
   }, [isRecording, currentStation?.name, t]);
@@ -265,6 +321,19 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
 
   const canSeekBack = bufferAvailable && bufferSeconds > 2;
 
+  // Recording is available if buffer works OR if MediaRecorder + captureStream is supported
+  useEffect(() => {
+    if (bufferAvailable) {
+      setRecordingAvailable(true);
+    } else if (isPlaying && hasMediaRecorder) {
+      // Check if captureStream is supported on audio elements
+      const audio = document.querySelector('audio') as any;
+      setRecordingAvailable(!!(audio && (audio.captureStream || audio.mozCaptureStream)));
+    } else {
+      setRecordingAvailable(false);
+    }
+  }, [bufferAvailable, isPlaying, hasMediaRecorder]);
+
   return (
     <StreamBufferContext.Provider value={{
       bufferSeconds,
@@ -273,6 +342,7 @@ export function StreamBufferProvider({ children }: { children: React.ReactNode }
       isLive,
       canSeekBack,
       bufferAvailable,
+      recordingAvailable,
       startRecording,
       stopRecording,
       seekBack,
