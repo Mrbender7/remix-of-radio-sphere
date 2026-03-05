@@ -1,35 +1,68 @@
 
 
-## Diagnostic et plan de correction
+## Audit complet du magnétophone — 3 bugs majeurs
 
-### 3 problemes identifies
+### Problème 1 : Save affiche "fichier sauvegardé" mais le fichier est introuvable
 
-**1. Toasts (sonner) apparaissent en bas, sous la barre de navigation Android**
-Le composant `Sonner` utilise la position par defaut (`bottom-right`). Sur APK, les toasts sont caches derriere la barre de navigation native.
+`Directory.Documents` sur Android 10+ écrit dans le stockage sandboxé de l'app (`/data/data/com.radiosphere.app/files/Documents/`). Le fichier existe bien mais l'utilisateur ne peut pas le voir depuis un explorateur de fichiers ni depuis Downloads.
 
-**Correction** : Ajouter `position="top-center"` au composant `<Sonner>` dans `src/components/ui/sonner.tsx`.
+**Correction** : Unifier Save et Share. Sauvegarder le fichier dans `Directory.Cache`, puis ouvrir le share sheet natif (via `@capacitor/share`) qui permet à l'utilisateur de choisir "Enregistrer dans Fichiers", "Enregistrer dans Downloads", envoyer par WhatsApp, etc. C'est le seul moyen fiable sur Android 10+ sans accès MediaStore. Le bouton "Sauvegarder" devient "Enregistrer / Exporter" et utilise le même mécanisme que le partage.
 
-**2. Permissions jamais demandees au premier lancement**
-`requestAllPermissions()` est appelee dans le `useEffect` de `WelcomePage` avec un `setTimeout(800ms)`. Le probleme : sur Android, les demandes de permissions declenchees sans geste utilisateur direct sont souvent ignorees ou bloquees par le systeme. De plus, `window.hasOwnProperty("Capacitor")` peut etre `false` si Capacitor n'est pas encore initialise a 800ms.
+### Problème 2 : Pas d'audio enregistré pour les flux non-MP3 (AAC, OGG, etc.)
 
-**Correction** : Supprimer l'appel automatique dans `useEffect` de `WelcomePage`. A la place, declencher `requestAllPermissions()` sur le clic du bouton "Continuer" (`onComplete`), **avant** de naviguer. Cela garantit un geste utilisateur direct, requis par Android 13+ pour les notifications.
+Le buffer parallèle (`fetch` du stream) capture les octets bruts. Le Blob est créé avec `type: 'audio/mpeg'` en dur. Pour un flux AAC ou OGG, le fichier résultant est corrompu car le header MIME ne correspond pas aux données.
 
-**3. Sauvegarde et partage d'enregistrement echouent silencieusement**
+**Correction** :
+- Stocker le `Content-Type` de la réponse fetch dans un ref (`streamMimeTypeRef`)
+- Utiliser ce MIME type réel lors de la création du Blob (`audio/aac`, `audio/ogg`, etc.)
+- Adapter l'extension du fichier en fonction : `.mp3`, `.aac`, `.ogg`, `.m4a`
+- Fallback sur `currentStation.codec` si le Content-Type est générique (`application/octet-stream`)
+- Pour le fallback MediaRecorder (quand le fetch CORS échoue), garder `audio/webm` car c'est ce que MediaRecorder produit
 
-- **Save** : `Directory.ExternalStorage` + path `Download/...` est bloque sur Android 10+ (scoped storage). L'erreur est attrapee par le catch exterieur mais le fallback browser (`<a>` download) ne fonctionne pas dans un WebView Capacitor.
-- **Share** : Le path `Cache/${fileName}` cree un dossier `Cache` dans le cache (double imbrication). De plus, les erreurs dans `reader.onload` (async callback) ne sont pas attrapees par le try/catch externe, donc le partage echoue silencieusement.
+### Problème 3 : Seek back est un stub — impossible de remonter dans le buffer
 
-**Corrections** :
-- Save : utiliser `Directory.Documents` sans prefixe de sous-dossier
-- Save : wrapper le contenu de `reader.onload` dans un try/catch avec `toast.error` en fallback
-- Share : changer le path de `Cache/${fileName}` a juste `${fileName}` (le Directory.Cache suffit)
-- Share : wrapper le contenu de `reader.onload` dans un try/catch
+`seekBack()` ne fait que toggler `isLive` sans changer la source audio. Le slider est purement cosmétique.
 
-### Fichiers a modifier
+**Correction** :
+- Exporter `globalAudio` depuis `PlayerContext.tsx` pour que `StreamBufferContext` puisse le manipuler directement
+- Implémenter `seekBack(seconds)` :
+  1. Trouver le chunk dont le timestamp = `now - seconds * 1000`
+  2. Concaténer tous les chunks depuis ce point jusqu'au dernier
+  3. Créer un Blob avec le MIME type détecté, puis un blob URL
+  4. `globalAudio.pause()` → `globalAudio.src = blobUrl` → `globalAudio.play()`
+  5. `isLive = false`
+- Implémenter `returnToLive()` :
+  1. Révoquer le blob URL
+  2. `globalAudio.src = currentStation.streamUrl` → `globalAudio.load()` → `globalAudio.play()`
+  3. `isLive = true`
+- L'enregistrement pendant le seek-back fonctionne : les chunks continuent de s'accumuler en arrière-plan via le fetch parallèle
+
+### Fichiers à modifier
 
 | Fichier | Modification |
 |---|---|
-| `src/components/ui/sonner.tsx` | Ajouter `position="top-center"` au composant Sonner |
-| `src/pages/WelcomePage.tsx` | Supprimer le useEffect de permissions, appeler `requestAllPermissions()` dans le handler du bouton Continuer |
-| `src/components/FullScreenPlayer.tsx` | Fix save (Documents, try/catch dans onload), fix share (path + try/catch dans onload), augmenter padding bas a `+6rem` |
+| `src/contexts/PlayerContext.tsx` | Exporter `globalAudio` (1 ligne) |
+| `src/contexts/StreamBufferContext.tsx` | Stocker le MIME type du stream, implémenter seek-back réel avec swap audio, adapter extension fichier, corriger blob type |
+| `src/components/FullScreenPlayer.tsx` | Remplacer le bouton "Sauvegarder" par un export via Share (save-to-cache + share sheet), supprimer `handleSaveFile` séparé |
+| `radiosphere_v2_5_0.ps1` | Vérifier cohérence (aucun changement natif requis — tout est TypeScript, le `npm run build` suffit) |
+
+### Détails techniques
+
+**Mapping codec → MIME/extension :**
+
+```text
+Content-Type          → Extension
+audio/mpeg            → .mp3
+audio/aac             → .aac
+audio/aacp            → .aac
+audio/ogg             → .ogg
+audio/flac            → .flac
+audio/x-mpegurl       → .mp3 (HLS, raw bytes are usually AAC)
+application/ogg       → .ogg
+*fallback*            → .mp3
+```
+
+**Seek-back audio swap :** Le `globalAudio` est un objet `Audio` global hors React. Le swap de `src` est instantané. Pendant le seek-back, le fetch parallèle continue d'alimenter le buffer circulaire, donc le retour en live est sans coupure.
+
+**PS1 :** Aucune modification native requise. Les changements sont tous dans le code TypeScript/React compilé par `npm run build`. Le script PS1 actuel est cohérent.
 
