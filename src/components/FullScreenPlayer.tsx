@@ -80,6 +80,18 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
     if (!lastRecording) return;
     try {
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      // Request storage permission (needed on Android < 10)
+      try {
+        const permStatus = await Filesystem.checkPermissions();
+        if (permStatus.publicStorage !== "granted") {
+          const reqResult = await Filesystem.requestPermissions();
+          if (reqResult.publicStorage !== "granted") {
+            toast.error("Permission de stockage refusée");
+            return;
+          }
+        }
+      } catch { /* Permissions API may not be available on all platforms */ }
+
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = (reader.result as string).split(",")[1];

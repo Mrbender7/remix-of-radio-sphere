@@ -303,15 +303,32 @@ export function PlayerProvider({ children, onStationPlay }: { children: React.Re
     };
   }, [handlePlay, handlePause]);
 
-  // Request notification permission at startup
+  // Request notification permission at startup (native Android 13+ needs Capacitor API)
   useEffect(() => {
     if (notifPermissionAsked.current) return;
     notifPermissionAsked.current = true;
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().then(p => {
-        console.log("[RadioSphere] Notification permission:", p);
-      });
-    }
+
+    const requestNotifPermission = async () => {
+      try {
+        // Try native Capacitor LocalNotifications first (triggers real Android dialog on API 33+)
+        const { LocalNotifications } = await import("@capacitor/local-notifications");
+        const permStatus = await LocalNotifications.checkPermissions();
+        console.log("[RadioSphere] Notification permission status:", permStatus.display);
+        if (permStatus.display === "prompt" || permStatus.display === "prompt-with-rationale") {
+          const result = await LocalNotifications.requestPermissions();
+          console.log("[RadioSphere] Notification permission result:", result.display);
+        }
+      } catch {
+        // Fallback: Web API (works in browser, not in Capacitor WebView for Android 13+)
+        if ("Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission().then(p => {
+            console.log("[RadioSphere] Notification permission (web fallback):", p);
+          });
+        }
+      }
+    };
+
+    requestNotifPermission();
   }, []);
 
   useEffect(() => {
