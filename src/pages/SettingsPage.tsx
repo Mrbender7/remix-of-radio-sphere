@@ -4,7 +4,7 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from "@/contexts/SleepTimerContext
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import radioSphereLogo from "@/assets/new-radio-logo.png";
 import { cn } from "@/lib/utils";
-import { Wifi, Crown, Moon, Car, Cast, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck, RotateCcw, Sparkles, Trash2, RefreshCw } from "lucide-react";
+import { Wifi, Crown, Moon, Car, Cast, CheckCircle, Database, Globe, ChevronDown, TimerOff, Lock, Unlock, KeyRound, Heart, Download, Upload, ExternalLink, ShieldCheck, RotateCcw, Sparkles, Trash2, RefreshCw, Disc } from "lucide-react";
 import { LANGUAGE_OPTIONS } from "@/i18n/translations";
 import {
   Select,
@@ -115,6 +115,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
   const [showUnavailableDialog, setShowUnavailableDialog] = useState(false);
   const premiumFeatures = [
     { icon: Moon, title: t("premium.sleepTimer"), desc: t("premium.sleepTimerDesc") },
+    { icon: Disc, title: t("premium.recorder"), desc: t("premium.recorderDesc") },
     { icon: Car, title: t("premium.androidAuto"), desc: t("premium.androidAutoDesc") },
     { icon: Cast, title: t("premium.chromecast"), desc: t("premium.chromecastDesc") },
   ];
