@@ -11,7 +11,8 @@ import { useCast } from "@/hooks/useCast";
 // via notifyNativePlaybackState() which creates a proper MediaStyle notification.
 
 // Global audio instance — survives React lifecycle, never destroyed by re-renders
-const globalAudio = new Audio();
+// Exported so StreamBufferContext can swap src for seek-back
+export const globalAudio = new Audio();
 (globalAudio as any).playsInline = true;
 globalAudio.preload = "auto";
 

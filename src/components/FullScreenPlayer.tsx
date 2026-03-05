@@ -4,7 +4,7 @@ import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useStreamBuffer } from "@/contexts/StreamBufferContext";
-import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, Share2, Cast, Circle, Square, Radio } from "lucide-react";
+import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, Share2, Cast, Circle, Square, Radio, Download } from "lucide-react";
 import { CastButton } from "@/components/CastButton";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { CassetteAnimation } from "@/components/CassetteAnimation";
@@ -76,59 +76,11 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
     }
   };
 
-  const handleSaveFile = async () => {
-    if (!lastRecording) return;
-    try {
-      const { Filesystem, Directory } = await import("@capacitor/filesystem");
-      // Request storage permission (needed on Android < 10)
-      try {
-        const permStatus = await Filesystem.checkPermissions();
-        if (permStatus.publicStorage !== "granted") {
-          const reqResult = await Filesystem.requestPermissions();
-          if (reqResult.publicStorage !== "granted") {
-            toast.error("Permission de stockage refusée");
-            return;
-          }
-        }
-      } catch { /* Permissions API may not be available on all platforms */ }
-
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(",")[1];
-          await Filesystem.writeFile({
-            path: lastRecording.fileName,
-            data: base64,
-            directory: Directory.Documents,
-          });
-          toast.success(t("player.fileSaved"));
-          setShowSaveSheet(false);
-          setLastRecording(null);
-        } catch (e) {
-          console.error("[Save] writeFile failed:", e);
-          toast.error(t("player.unexpectedError"));
-        }
-      };
-      reader.readAsDataURL(lastRecording.blob);
-    } catch {
-      // Fallback: browser download
-      const url = URL.createObjectURL(lastRecording.blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = lastRecording.fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(t("player.fileSaved"));
-      setShowSaveSheet(false);
-      setLastRecording(null);
-    }
-  };
-
-  const handleShareRecording = async () => {
+  // Unified export: save to cache, then open share sheet
+  const handleExportRecording = async () => {
     if (!lastRecording) return;
     try {
       const { Share } = await import("@capacitor/share");
-      // Save temp file first
       const { Filesystem, Directory } = await import("@capacitor/filesystem");
       const reader = new FileReader();
       reader.onload = async () => {
@@ -146,13 +98,25 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
           setShowSaveSheet(false);
           setLastRecording(null);
         } catch (e) {
-          console.error("[Share] failed:", e);
+          console.error("[Export] failed:", e);
           toast.error(t("player.unexpectedError"));
         }
       };
+      reader.onerror = () => {
+        toast.error(t("player.unexpectedError"));
+      };
       reader.readAsDataURL(lastRecording.blob);
     } catch {
-      toast.error(t("player.unexpectedError"));
+      // Fallback: browser download
+      const url = URL.createObjectURL(lastRecording.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = lastRecording.fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("player.fileSaved"));
+      setShowSaveSheet(false);
+      setLastRecording(null);
     }
   };
 
@@ -363,7 +327,7 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
 
         </div>
 
-      {/* Save/Share Sheet */}
+      {/* Export Sheet (unified save/share) */}
       {showSaveSheet && lastRecording && (
         <div className="fixed inset-0 z-[60] bg-black/60 flex items-start justify-center" style={{ paddingTop: "max(env(safe-area-inset-top, 24px), 2rem)" }} onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}>
           <div className="w-full max-w-md mx-4 bg-card rounded-2xl p-6 space-y-4 animate-in slide-in-from-top" onClick={e => e.stopPropagation()}>
@@ -371,16 +335,11 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
             <p className="text-sm text-muted-foreground text-center">{lastRecording.fileName}</p>
             <div className="flex flex-col gap-3">
               <button
-                onClick={handleSaveFile}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] text-white font-semibold"
+                onClick={handleExportRecording}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] text-white font-semibold flex items-center justify-center gap-2"
               >
+                <Download className="w-5 h-5" />
                 {t("player.saveRecording")}
-              </button>
-              <button
-                onClick={handleShareRecording}
-                className="w-full py-3 rounded-xl bg-accent text-foreground font-semibold"
-              >
-                {t("player.shareRecording")}
               </button>
               <button
                 onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}
