@@ -31,7 +31,12 @@
 - **Description** : Guide utilisateur accessible depuis les réglages, modal avec sections accordéon (Accueil, Recherche, Favoris, Réglages). Un seul accordéon ouvert à la fois. Bilingue FR/EN
 - **Fichiers concernés** : `src/components/UserGuideModal.tsx`, `src/pages/SettingsPage.tsx`, `src/i18n/translations.ts`
 
----
+### 3.5. 🎙️ Enregistrement & Time-shift
+- **Statut** : ✅ Terminé (v2.5.0)
+- **Description** : Buffer circulaire de 5 minutes permettant de remonter dans le temps (scrub-back) sur le flux en cours. Enregistrement de segments jusqu'à 10 minutes, exportés en MP3 sur le téléphone ou partagés. Animation cassette rétro pendant l'enregistrement.
+- **Fichiers concernés** : `src/contexts/StreamBufferContext.tsx`, `src/components/CassetteAnimation.tsx`, `src/components/FullScreenPlayer.tsx`
+
+
 
 ## Fonctionnalités Premium futures (idées)
 

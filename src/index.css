@@ -81,3 +81,30 @@
   mask-image: radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%);
 }
+
+/* Cassette reel spin */
+@keyframes cassette-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.cassette-reel-spin {
+  animation: cassette-spin 3s linear infinite;
+}
+
+/* REC blink */
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.rec-blink {
+  animation: rec-blink 1s ease-in-out infinite;
+}
+
+/* LIVE pulse */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.live-pulse {
+  animation: live-pulse 2s ease-in-out infinite;
+}

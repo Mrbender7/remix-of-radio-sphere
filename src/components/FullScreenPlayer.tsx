@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavoritesContext } from "@/contexts/FavoritesContext";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, ExternalLink, Share2, Cast } from "lucide-react";
+import { usePremium } from "@/contexts/PremiumContext";
+import { useStreamBuffer } from "@/contexts/StreamBufferContext";
+import { Play, Pause, ChevronDown, Volume2, Heart, Loader2, Share2, Cast, Circle, Square, Radio } from "lucide-react";
 import { CastButton } from "@/components/CastButton";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
+import { CassetteAnimation } from "@/components/CassetteAnimation";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import stationPlaceholder from "@/assets/station-placeholder.png";
@@ -12,6 +16,11 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
   const { currentStation, isPlaying, isBuffering, togglePlay, volume, setVolume, isFullScreen, closeFullScreen, isCasting, castDeviceName } = usePlayer();
   const { isFavorite, toggleFavorite } = useFavoritesContext();
   const { t } = useTranslation();
+  const { isPremium } = usePremium();
+  const { bufferSeconds, isRecording, recordingDuration, isLive, canSeekBack, bufferAvailable, startRecording, stopRecording, seekBack, returnToLive } = useStreamBuffer();
+
+  const [showSaveSheet, setShowSaveSheet] = useState(false);
+  const [lastRecording, setLastRecording] = useState<{ blob: Blob; fileName: string } | null>(null);
 
   if (!isFullScreen || !currentStation) return null;
 
@@ -49,6 +58,95 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
     } catch {
       window.open(currentStation.homepage, "_blank");
     }
+  };
+
+  const handleRecToggle = async () => {
+    if (!isPremium) {
+      toast.error(t("player.recordPremiumOnly"));
+      return;
+    }
+    if (isRecording) {
+      const result = await stopRecording();
+      if (result) {
+        setLastRecording(result);
+        setShowSaveSheet(true);
+      }
+    } else {
+      startRecording();
+    }
+  };
+
+  const handleSaveFile = async () => {
+    if (!lastRecording) return;
+    try {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        await Filesystem.writeFile({
+          path: `Download/${lastRecording.fileName}`,
+          data: base64,
+          directory: Directory.ExternalStorage,
+        });
+        toast.success(t("player.fileSaved"));
+        setShowSaveSheet(false);
+        setLastRecording(null);
+      };
+      reader.readAsDataURL(lastRecording.blob);
+    } catch {
+      // Fallback: browser download
+      const url = URL.createObjectURL(lastRecording.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = lastRecording.fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("player.fileSaved"));
+      setShowSaveSheet(false);
+      setLastRecording(null);
+    }
+  };
+
+  const handleShareRecording = async () => {
+    if (!lastRecording) return;
+    try {
+      const { Share } = await import("@capacitor/share");
+      // Save temp file first
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const saved = await Filesystem.writeFile({
+          path: `Cache/${lastRecording.fileName}`,
+          data: base64,
+          directory: Directory.Cache,
+        });
+        await Share.share({
+          title: lastRecording.fileName,
+          url: saved.uri,
+        });
+        setShowSaveSheet(false);
+        setLastRecording(null);
+      };
+      reader.readAsDataURL(lastRecording.blob);
+    } catch {
+      toast.error(t("player.unexpectedError"));
+    }
+  };
+
+  const handleSeekChange = ([val]: number[]) => {
+    if (val >= 0) {
+      returnToLive();
+    } else {
+      seekBack(Math.abs(val));
+    }
+  };
+
+  const formatSeekTime = (s: number) => {
+    const abs = Math.abs(Math.round(s));
+    const m = Math.floor(abs / 60);
+    const sec = abs % 60;
+    return `-${m}:${String(sec).padStart(2, "0")}`;
   };
 
   return (
@@ -91,10 +189,14 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
         </div>
       )}
 
-      {/* Audio Visualizer */}
+      {/* Audio Visualizer or Cassette Animation */}
       {isPlaying && (
         <div className="flex justify-center py-3">
-          <AudioVisualizer size="large" />
+          {isRecording ? (
+            <CassetteAnimation duration={recordingDuration} maxDuration={600} />
+          ) : (
+            <AudioVisualizer size="large" />
+          )}
         </div>
       )}
 
@@ -135,15 +237,73 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
            </div>
          )}
 
-        {/* Play button */}
-        <div className="flex justify-center">
+        {/* Play + REC buttons */}
+        <div className="flex items-center justify-center gap-6">
+          {/* REC button */}
+          {bufferAvailable && (
+            <button
+              onClick={handleRecToggle}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                isRecording
+                  ? "bg-red-600 shadow-lg shadow-red-500/40"
+                  : "bg-accent hover:bg-red-600/20 border border-red-500/30"
+              }`}
+              title={isRecording ? t("player.recording") : "REC"}
+            >
+              {isRecording ? (
+                <Square className="w-5 h-5 text-white" />
+              ) : (
+                <Circle className="w-5 h-5 text-red-500 fill-red-500" />
+              )}
+            </button>
+          )}
+
+          {/* Play button */}
           <button
             onClick={togglePlay}
             className={`w-16 h-16 rounded-full bg-gradient-to-b from-primary to-primary/80 border-t border-white/20 flex items-center justify-center text-primary-foreground active:shadow-sm active:translate-y-0.5 transition-all ${isPlaying ? "animate-play-breathe" : "shadow-lg shadow-primary/50"}`}
           >
             {isBuffering ? <Loader2 className="w-7 h-7 animate-spin" /> : isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
           </button>
+
+          {/* Recording duration counter */}
+          {isRecording && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-red-500 rec-blink" />
+              <span className="text-sm font-mono text-red-400 font-semibold">
+                {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, "0")}
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Scrub / Timeline bar */}
+        {bufferAvailable && canSeekBack && (
+          <div className="space-y-1">
+            <Slider
+              value={[isLive ? 0 : -1]}
+              min={-Math.floor(bufferSeconds)}
+              max={0}
+              step={1}
+              onValueChange={handleSeekChange}
+              className="flex-1 [&_[role=slider]]:bg-gradient-to-r [&_[role=slider]]:from-[hsl(220,90%,60%)] [&_[role=slider]]:to-[hsl(280,80%,60%)] [&_[role=slider]]:border-0 [&_.absolute]:bg-gradient-to-r [&_.absolute]:from-[hsl(220,90%,60%)] [&_.absolute]:to-[hsl(280,80%,60%)]"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">{formatSeekTime(bufferSeconds)}</span>
+              <button
+                onClick={returnToLive}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  isLive
+                    ? "text-green-400 live-pulse"
+                    : "text-muted-foreground bg-accent hover:text-green-400"
+                }`}
+              >
+                <Radio className="w-3 h-3" />
+                {t("player.live")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Volume */}
         <div className="flex items-center gap-3">
@@ -180,6 +340,36 @@ export function FullScreenPlayer({ onTagClick }: { onTagClick?: (tag: string) =>
           </div>
 
         </div>
+
+      {/* Save/Share Sheet */}
+      {showSaveSheet && lastRecording && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end justify-center" onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}>
+          <div className="w-full max-w-md bg-card rounded-t-2xl p-6 space-y-4 animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-foreground text-center">{t("player.recordingStopped")}</h3>
+            <p className="text-sm text-muted-foreground text-center">{lastRecording.fileName}</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleSaveFile}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] text-white font-semibold"
+              >
+                {t("player.saveRecording")}
+              </button>
+              <button
+                onClick={handleShareRecording}
+                className="w-full py-3 rounded-xl bg-accent text-foreground font-semibold"
+              >
+                {t("player.shareRecording")}
+              </button>
+              <button
+                onClick={() => { setShowSaveSheet(false); setLastRecording(null); }}
+                className="w-full py-3 text-muted-foreground text-sm"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     );
   }
