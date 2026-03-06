@@ -7,130 +7,59 @@
     <meta name="description" content="Privacy Policy for the Radio Sphere mobile application – all languages.">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: #0d0d1a;
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem 3rem;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .header h1 {
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, #4a90ff, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.25rem;
-        }
-        .header p { font-size: 0.8rem; color: #888; }
-        .lang-switcher {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-        .lang-btn {
-            padding: 0.5rem 1rem;
-            border: 1px solid #333;
-            border-radius: 999px;
-            background: transparent;
-            color: #aaa;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-        .lang-btn:hover { border-color: #666; color: #fff; }
-        .lang-btn.active {
-            background: linear-gradient(135deg, #4a90ff, #a855f7);
-            color: #fff;
-            border-color: transparent;
-        }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+        .header { text-align: center; padding: 2.5rem 1rem 1.5rem; background: linear-gradient(135deg, #1a1a3e, #0a0a1a); border-bottom: 1px solid rgba(100,100,255,0.15); }
+        .header h1 { font-size: 1.6rem; background: linear-gradient(90deg,#6080ff,#a060ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { font-size: .85rem; color: #999; margin-top: .25rem; }
+        .lang-bar { display: flex; justify-content: center; gap: .5rem; padding: 1rem; flex-wrap: wrap; }
+        .lang-btn { padding: .4rem .9rem; border-radius: 999px; border: 1px solid rgba(100,100,255,0.25); background: transparent; color: #ccc; cursor: pointer; font-size: .8rem; transition: all .2s; }
+        .lang-btn:hover, .lang-btn.active { background: rgba(100,100,255,0.2); color: #fff; border-color: rgba(100,100,255,0.5); }
+        .container { max-width: 720px; margin: 0 auto; padding: 0 1.25rem 3rem; }
         .lang-section { display: none; }
         .lang-section.active { display: block; }
-        .policy h2 {
-            font-size: 1.4rem;
-            color: #fff;
-            margin-bottom: 0.5rem;
-        }
-        .policy .date {
-            font-size: 0.8rem;
-            color: #888;
-            margin-bottom: 1.5rem;
-        }
-        .policy p {
-            font-size: 0.95rem;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-            color: #ccc;
-        }
-        .policy h3 {
-            font-size: 1.1rem;
-            color: #e0e0e0;
-            margin: 1.5rem 0 0.5rem;
-        }
-        .policy ul {
-            padding-left: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .policy ul li {
-            font-size: 0.9rem;
-            line-height: 1.6;
-            color: #bbb;
-            margin-bottom: 0.3rem;
-        }
-        .policy ul li strong { color: #e0e0e0; }
-        .policy footer {
-            margin-top: 2.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #222;
-            font-size: 0.8rem;
-            color: #666;
-            line-height: 1.8;
-        }
+        .lang-section h2 { font-size: 1.35rem; color: #8090ff; margin: 2rem 0 .5rem; }
+        .lang-section h3 { font-size: 1.05rem; color: #99aaff; margin: 1.5rem 0 .4rem; }
+        .lang-section p { line-height: 1.7; margin: .5rem 0; color: #ccc; font-size: .92rem; }
+        .lang-section ul { padding-left: 1.25rem; margin: .5rem 0; }
+        .lang-section li { margin: .35rem 0; line-height: 1.6; color: #bbb; font-size: .9rem; }
+        footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); font-size: .82rem; color: #888; line-height: 1.8; }
     </style>
 </head>
 <body>
+
+    <div class="header">
+        <h1>Radio Sphere</h1>
+        <p>Privacy Policy / Politique de Confidentialité</p>
+    </div>
+
+    <div class="lang-bar">
+        <button class="lang-btn active" id="btn-fr" onclick="showLang('fr')">🇫🇷 Français</button>
+        <button class="lang-btn" id="btn-en" onclick="showLang('en')">🇬🇧 English</button>
+        <button class="lang-btn" id="btn-es" onclick="showLang('es')">🇪🇸 Español</button>
+        <button class="lang-btn" id="btn-de" onclick="showLang('de')">🇩🇪 Deutsch</button>
+        <button class="lang-btn" id="btn-ja" onclick="showLang('ja')">🇯🇵 日本語</button>
+    </div>
+
     <div class="container">
-        <div class="header">
-            <h1>Radio Sphere</h1>
-            <p>Privacy Policy / Politique de Confidentialité</p>
-        </div>
-
-        <div class="lang-switcher">
-            <button class="lang-btn active" id="btn-fr" onclick="showLang('fr')">🇫🇷 Français</button>
-            <button class="lang-btn" id="btn-en" onclick="showLang('en')">🇬🇧 English</button>
-            <button class="lang-btn" id="btn-es" onclick="showLang('es')">🇪🇸 Español</button>
-            <button class="lang-btn" id="btn-de" onclick="showLang('de')">🇩🇪 Deutsch</button>
-            <button class="lang-btn" id="btn-ja" onclick="showLang('ja')">🇯🇵 日本語</button>
-        </div>
-
-        <!-- ==================== FRANÇAIS ==================== -->
+        <!-- ======================= FRANÇAIS ======================= -->
         <div id="fr" class="lang-section active">
-            <div class="policy">
+            <div>
                 <h2>Politique de Confidentialité</h2>
-                <p class="date">Dernière mise à jour : 28 février 2026</p>
+                <p><strong>Dernière mise à jour : 6 mars 2026</strong></p>
 
-                <p>L'application <strong>Radio Sphere</strong>, développée par <strong>Franck H. Malherbe</strong>, respecte votre vie privée. Cette politique détaille la gestion de vos données conformément au Règlement Général sur la Protection des Données (RGPD) et aux exigences de Google Play.</p>
+                <p>L'application Radio Sphere, développée par Franck H. Malherbe, respecte votre vie privée. Cette politique détaille la gestion de vos données conformément au Règlement Général sur la Protection des Données (RGPD) et aux exigences de Google Play.</p>
 
                 <h3>1. Collecte et utilisation des données</h3>
-                <p>Radio Sphere <strong>ne collecte aucune donnée personnelle identifiable</strong>. Aucune inscription, aucun compte utilisateur n'est requis.</p>
+                <p>Radio Sphere ne collecte aucune donnée personnelle identifiable. Aucune inscription, aucun compte utilisateur n'est requis.</p>
                 <ul>
                     <li><strong>Favoris et préférences :</strong> Stockés exclusivement sur votre appareil (stockage local). Nous n'y avons pas accès.</li>
                     <li><strong>Flux audio :</strong> Les serveurs tiers de Radio Browser (radio-browser.info) reçoivent votre adresse IP uniquement pour la diffusion technique du flux audio. Nous ne contrôlons pas les politiques de confidentialité de ces serveurs tiers.</li>
                     <li><strong>Google Cast / Chromecast :</strong> Si vous utilisez cette fonctionnalité, Google peut collecter des données conformément à sa propre politique de confidentialité.</li>
-                    <li><strong>Android Auto :</strong> Aucune donnée supplémentaire n'est collectée. La lecture audio utilise les mêmes flux que l'application principale.</li>
+                    <li><strong>Android Auto :</strong> Aucune donnée supplémentaire n'est collectée. Les métadonnées de lecture (nom de la station, artwork) sont partagées avec le système Android via MediaSession pour l'affichage sur l'écran du véhicule. Aucune donnée de localisation ou de conduite n'est collectée par l'application.</li>
                 </ul>
 
                 <h3>2. Partage des données</h3>
-                <p>Radio Sphere <strong>ne partage, ne vend ni ne transfère</strong> aucune donnée personnelle à des tiers. Aucun outil d'analyse, de publicité ou de suivi n'est intégré à l'application.</p>
+                <p>Radio Sphere ne partage, ne vend ni ne transfère aucune donnée personnelle à des tiers. Aucun outil d'analyse, de publicité ou de suivi n'est intégré à l'application.</p>
 
                 <h3>3. Permissions de l'application</h3>
                 <ul>
@@ -139,19 +68,34 @@
                     <li><strong>Stockage :</strong> Utilisé uniquement pour l'exportation/importation de vos favoris au format CSV.</li>
                 </ul>
 
-                <h3>4. Conservation des données</h3>
+                <h3>4. Enregistrement des flux audio</h3>
+                <p>Radio Sphere permet l'enregistrement de segments audio diffusés en direct.</p>
+                <ul>
+                    <li>Les enregistrements sont destinés à un <strong>usage strictement personnel et privé</strong>, conformément au droit à la copie privée.</li>
+                    <li>L'utilisateur est <strong>seul responsable</strong> du respect des droits d'auteur, des droits voisins et des législations locales applicables dans son pays de résidence.</li>
+                    <li>Radio Sphere <strong>n'encourage ni ne cautionne</strong> la redistribution, la diffusion publique ou le partage commercial de contenus enregistrés.</li>
+                    <li>Les fichiers enregistrés sont stockés <strong>exclusivement sur l'appareil de l'utilisateur</strong> et ne sont jamais transmis à nos serveurs ni à des tiers.</li>
+                </ul>
+
+                <h3>5. Conservation des données</h3>
                 <p>Toutes les données (favoris, langue, préférences) sont stockées localement sur votre appareil. La suppression de l'application efface toutes les données associées. Aucune donnée n'est conservée sur nos serveurs.</p>
 
-                <h3>5. Sécurité</h3>
+                <h3>6. Sécurité</h3>
                 <p>Nous privilégions systématiquement les solutions de stockage local. L'application n'envoie aucune donnée vers des serveurs propriétaires. Les connexions aux flux radio utilisent HTTPS lorsque disponible.</p>
 
-                <h3>6. Enfants</h3>
+                <h3>7. Enfants</h3>
                 <p>Radio Sphere n'est pas destinée aux enfants de moins de 13 ans et ne collecte pas intentionnellement de données auprès d'enfants. Le contenu diffusé dépend des stations de radio tierces.</p>
 
-                <h3>7. Modifications de cette politique</h3>
+                <h3>8. Limitation de responsabilité</h3>
+                <p>Radio Sphere agit en tant qu'<strong>agrégateur de flux radio</strong>. Le contenu audio diffusé est fourni par des stations de radio tierces accessibles via l'annuaire radio-browser.info. Nous ne contrôlons pas, ne modérons pas et ne sommes pas responsables du contenu diffusé par ces stations. L'utilisateur utilise l'application à ses propres risques.</p>
+
+                <h3>9. Modifications de cette politique</h3>
                 <p>Nous nous réservons le droit de modifier cette politique. Toute modification sera publiée sur cette page avec une date de mise à jour révisée. Nous vous encourageons à consulter régulièrement cette page.</p>
 
-                <h3>8. Contact</h3>
+                <h3>10. Droit applicable et juridiction</h3>
+                <p>La présente politique est régie par le <strong>droit belge</strong>. Pour les utilisateurs résidant dans l'Union européenne, les dispositions du Règlement Général sur la Protection des Données (RGPD) s'appliquent. Pour les utilisateurs résidant en Californie (États-Unis), les droits prévus par le California Consumer Privacy Act (CCPA) sont également respectés.</p>
+
+                <h3>11. Contact</h3>
                 <p>Pour toute question relative à cette politique de confidentialité, contactez-nous :</p>
 
                 <footer>
@@ -162,25 +106,25 @@
             </div>
         </div>
 
-        <!-- ==================== ENGLISH ==================== -->
+        <!-- ======================= ENGLISH ======================= -->
         <div id="en" class="lang-section">
-            <div class="policy">
+            <div>
                 <h2>Privacy Policy</h2>
-                <p class="date">Last updated: February 28, 2026</p>
+                <p><strong>Last updated: March 6, 2026</strong></p>
 
-                <p>The <strong>Radio Sphere</strong> application, developed by <strong>Franck H. Malherbe</strong>, values your privacy. This policy outlines our data practices in accordance with the General Data Protection Regulation (GDPR) and Google Play requirements.</p>
+                <p>The Radio Sphere application, developed by Franck H. Malherbe, values your privacy. This policy outlines our data practices in accordance with the General Data Protection Regulation (GDPR) and Google Play requirements.</p>
 
                 <h3>1. Data Collection and Use</h3>
-                <p>Radio Sphere <strong>does not collect any personally identifiable information</strong>. No registration or user account is required.</p>
+                <p>Radio Sphere does not collect any personally identifiable information. No registration or user account is required.</p>
                 <ul>
                     <li><strong>Favorites and preferences:</strong> Stored exclusively on your device (local storage). We have no access to them.</li>
                     <li><strong>Audio streaming:</strong> Third-party Radio Browser servers (radio-browser.info) receive your IP address solely for the technical delivery of the audio stream. We do not control the privacy policies of these third-party servers.</li>
                     <li><strong>Google Cast / Chromecast:</strong> If you use this feature, Google may collect data in accordance with its own privacy policy.</li>
-                    <li><strong>Android Auto:</strong> No additional data is collected. Audio playback uses the same streams as the main application.</li>
+                    <li><strong>Android Auto:</strong> No additional data is collected. Playback metadata (station name, artwork) is shared with the Android system via MediaSession for display on the vehicle screen. No location or driving data is collected by the application.</li>
                 </ul>
 
                 <h3>2. Data Sharing</h3>
-                <p>Radio Sphere <strong>does not share, sell, or transfer</strong> any personal data to third parties. No analytics, advertising, or tracking tools are integrated into the application.</p>
+                <p>Radio Sphere does not share, sell, or transfer any personal data to third parties. No analytics, advertising, or tracking tools are integrated into the application.</p>
 
                 <h3>3. App Permissions</h3>
                 <ul>
@@ -189,19 +133,34 @@
                     <li><strong>Storage:</strong> Used solely for exporting/importing your favorites as CSV files.</li>
                 </ul>
 
-                <h3>4. Data Retention</h3>
+                <h3>4. Audio Stream Recording</h3>
+                <p>Radio Sphere allows the recording of live audio segments.</p>
+                <ul>
+                    <li>Recordings are intended for <strong>strictly personal and private use</strong>, in accordance with the right to private copying.</li>
+                    <li>The user is <strong>solely responsible</strong> for complying with copyright laws, neighboring rights, and applicable local legislation in their country of residence.</li>
+                    <li>Radio Sphere <strong>does not encourage or endorse</strong> the redistribution, public broadcasting, or commercial sharing of recorded content.</li>
+                    <li>Recorded files are stored <strong>exclusively on the user's device</strong> and are never transmitted to our servers or to third parties.</li>
+                </ul>
+
+                <h3>5. Data Retention</h3>
                 <p>All data (favorites, language, preferences) is stored locally on your device. Uninstalling the application deletes all associated data. No data is retained on our servers.</p>
 
-                <h3>5. Security</h3>
+                <h3>6. Security</h3>
                 <p>We strictly prioritize local storage solutions. The application does not send any data to proprietary servers. Radio stream connections use HTTPS when available.</p>
 
-                <h3>6. Children</h3>
+                <h3>7. Children</h3>
                 <p>Radio Sphere is not intended for children under 13 and does not knowingly collect data from children. Broadcast content depends on third-party radio stations.</p>
 
-                <h3>7. Changes to This Policy</h3>
+                <h3>8. Limitation of Liability</h3>
+                <p>Radio Sphere acts as a <strong>radio stream aggregator</strong>. Audio content is provided by third-party radio stations accessible through the radio-browser.info directory. We do not control, moderate, or bear responsibility for the content broadcast by these stations. The user uses the application at their own risk.</p>
+
+                <h3>9. Changes to This Policy</h3>
                 <p>We reserve the right to modify this policy. Any changes will be posted on this page with a revised update date. We encourage you to review this page periodically.</p>
 
-                <h3>8. Contact</h3>
+                <h3>10. Applicable Law and Jurisdiction</h3>
+                <p>This policy is governed by <strong>Belgian law</strong>. For users residing in the European Union, the provisions of the General Data Protection Regulation (GDPR) apply. For users residing in California (United States), the rights provided under the California Consumer Privacy Act (CCPA) are also respected.</p>
+
+                <h3>11. Contact</h3>
                 <p>For any questions regarding this privacy policy, please contact us:</p>
 
                 <footer>
@@ -212,25 +171,25 @@
             </div>
         </div>
 
-        <!-- ==================== ESPAÑOL ==================== -->
+        <!-- ======================= ESPAÑOL ======================= -->
         <div id="es" class="lang-section">
-            <div class="policy">
+            <div>
                 <h2>Política de Privacidad</h2>
-                <p class="date">Última actualización: 28 de febrero de 2026</p>
+                <p><strong>Última actualización: 6 de marzo de 2026</strong></p>
 
-                <p>La aplicación <strong>Radio Sphere</strong>, desarrollada por <strong>Franck H. Malherbe</strong>, respeta su privacidad. Esta política detalla la gestión de sus datos de conformidad con el Reglamento General de Protección de Datos (RGPD) y los requisitos de Google Play.</p>
+                <p>La aplicación Radio Sphere, desarrollada por Franck H. Malherbe, respeta su privacidad. Esta política detalla la gestión de sus datos de conformidad con el Reglamento General de Protección de Datos (RGPD) y los requisitos de Google Play.</p>
 
                 <h3>1. Recopilación y uso de datos</h3>
-                <p>Radio Sphere <strong>no recopila ningún dato personal identificable</strong>. No se requiere registro ni cuenta de usuario.</p>
+                <p>Radio Sphere no recopila ningún dato personal identificable. No se requiere registro ni cuenta de usuario.</p>
                 <ul>
                     <li><strong>Favoritos y preferencias:</strong> Almacenados exclusivamente en su dispositivo (almacenamiento local). No tenemos acceso a ellos.</li>
                     <li><strong>Transmisión de audio:</strong> Los servidores de terceros de Radio Browser (radio-browser.info) reciben su dirección IP únicamente para la entrega técnica del flujo de audio. No controlamos las políticas de privacidad de estos servidores de terceros.</li>
                     <li><strong>Google Cast / Chromecast:</strong> Si utiliza esta función, Google puede recopilar datos de acuerdo con su propia política de privacidad.</li>
-                    <li><strong>Android Auto:</strong> No se recopilan datos adicionales. La reproducción de audio utiliza los mismos flujos que la aplicación principal.</li>
+                    <li><strong>Android Auto:</strong> No se recopilan datos adicionales. Los metadatos de reproducción (nombre de la estación, artwork) se comparten con el sistema Android a través de MediaSession para su visualización en la pantalla del vehículo. La aplicación no recopila datos de ubicación ni de conducción.</li>
                 </ul>
 
                 <h3>2. Compartir datos</h3>
-                <p>Radio Sphere <strong>no comparte, vende ni transfiere</strong> ningún dato personal a terceros. No se integra ninguna herramienta de análisis, publicidad o seguimiento en la aplicación.</p>
+                <p>Radio Sphere no comparte, vende ni transfiere ningún dato personal a terceros. No se integra ninguna herramienta de análisis, publicidad o seguimiento en la aplicación.</p>
 
                 <h3>3. Permisos de la aplicación</h3>
                 <ul>
@@ -239,19 +198,34 @@
                     <li><strong>Almacenamiento:</strong> Utilizado únicamente para exportar/importar sus favoritos en formato CSV.</li>
                 </ul>
 
-                <h3>4. Retención de datos</h3>
+                <h3>4. Grabación de flujos de audio</h3>
+                <p>Radio Sphere permite la grabación de segmentos de audio transmitidos en directo.</p>
+                <ul>
+                    <li>Las grabaciones están destinadas a un <strong>uso estrictamente personal y privado</strong>, de acuerdo con el derecho a la copia privada.</li>
+                    <li>El usuario es el <strong>único responsable</strong> del cumplimiento de los derechos de autor, los derechos conexos y la legislación local aplicable en su país de residencia.</li>
+                    <li>Radio Sphere <strong>no fomenta ni respalda</strong> la redistribución, difusión pública o comercialización de contenidos grabados.</li>
+                    <li>Los archivos grabados se almacenan <strong>exclusivamente en el dispositivo del usuario</strong> y nunca se transmiten a nuestros servidores ni a terceros.</li>
+                </ul>
+
+                <h3>5. Retención de datos</h3>
                 <p>Todos los datos (favoritos, idioma, preferencias) se almacenan localmente en su dispositivo. La desinstalación de la aplicación elimina todos los datos asociados. No se conservan datos en nuestros servidores.</p>
 
-                <h3>5. Seguridad</h3>
+                <h3>6. Seguridad</h3>
                 <p>Priorizamos estrictamente las soluciones de almacenamiento local. La aplicación no envía ningún dato a servidores propietarios. Las conexiones de flujos de radio utilizan HTTPS cuando está disponible.</p>
 
-                <h3>6. Niños</h3>
+                <h3>7. Niños</h3>
                 <p>Radio Sphere no está destinada a niños menores de 13 años y no recopila intencionalmente datos de niños. El contenido transmitido depende de las estaciones de radio de terceros.</p>
 
-                <h3>7. Cambios en esta política</h3>
+                <h3>8. Limitación de responsabilidad</h3>
+                <p>Radio Sphere actúa como un <strong>agregador de flujos de radio</strong>. El contenido de audio es proporcionado por estaciones de radio de terceros accesibles a través del directorio radio-browser.info. No controlamos, moderamos ni somos responsables del contenido emitido por estas estaciones. El usuario utiliza la aplicación bajo su propia responsabilidad.</p>
+
+                <h3>9. Cambios en esta política</h3>
                 <p>Nos reservamos el derecho de modificar esta política. Cualquier cambio se publicará en esta página con una fecha de actualización revisada. Le animamos a revisar esta página periódicamente.</p>
 
-                <h3>8. Contacto</h3>
+                <h3>10. Legislación aplicable y jurisdicción</h3>
+                <p>Esta política se rige por el <strong>derecho belga</strong>. Para los usuarios residentes en la Unión Europea, se aplican las disposiciones del Reglamento General de Protección de Datos (RGPD). Para los usuarios residentes en California (Estados Unidos), también se respetan los derechos previstos por la Ley de Privacidad del Consumidor de California (CCPA).</p>
+
+                <h3>11. Contacto</h3>
                 <p>Para cualquier pregunta sobre esta política de privacidad, contáctenos:</p>
 
                 <footer>
@@ -262,25 +236,25 @@
             </div>
         </div>
 
-        <!-- ==================== DEUTSCH ==================== -->
+        <!-- ======================= DEUTSCH ======================= -->
         <div id="de" class="lang-section">
-            <div class="policy">
+            <div>
                 <h2>Datenschutzerklärung</h2>
-                <p class="date">Letzte Aktualisierung: 28. Februar 2026</p>
+                <p><strong>Letzte Aktualisierung: 6. März 2026</strong></p>
 
-                <p>Die Anwendung <strong>Radio Sphere</strong>, entwickelt von <strong>Franck H. Malherbe</strong>, respektiert Ihre Privatsphäre. Diese Richtlinie beschreibt unseren Umgang mit Ihren Daten in Übereinstimmung mit der Datenschutz-Grundverordnung (DSGVO) und den Anforderungen von Google Play.</p>
+                <p>Die Anwendung Radio Sphere, entwickelt von Franck H. Malherbe, respektiert Ihre Privatsphäre. Diese Richtlinie beschreibt unseren Umgang mit Ihren Daten in Übereinstimmung mit der Datenschutz-Grundverordnung (DSGVO) und den Anforderungen von Google Play.</p>
 
                 <h3>1. Datenerhebung und -nutzung</h3>
-                <p>Radio Sphere <strong>erhebt keine personenbezogenen Daten</strong>. Es ist keine Registrierung oder Benutzerkonto erforderlich.</p>
+                <p>Radio Sphere erhebt keine personenbezogenen Daten. Es ist keine Registrierung oder Benutzerkonto erforderlich.</p>
                 <ul>
                     <li><strong>Favoriten und Einstellungen:</strong> Werden ausschließlich auf Ihrem Gerät gespeichert (lokaler Speicher). Wir haben keinen Zugriff darauf.</li>
                     <li><strong>Audio-Streaming:</strong> Die Drittanbieter-Server von Radio Browser (radio-browser.info) empfangen Ihre IP-Adresse ausschließlich für die technische Bereitstellung des Audiostreams. Wir kontrollieren nicht die Datenschutzrichtlinien dieser Drittanbieter.</li>
                     <li><strong>Google Cast / Chromecast:</strong> Wenn Sie diese Funktion nutzen, kann Google Daten gemäß seiner eigenen Datenschutzrichtlinie erheben.</li>
-                    <li><strong>Android Auto:</strong> Es werden keine zusätzlichen Daten erhoben. Die Audiowiedergabe verwendet dieselben Streams wie die Hauptanwendung.</li>
+                    <li><strong>Android Auto:</strong> Es werden keine zusätzlichen Daten erhoben. Wiedergabe-Metadaten (Sendername, Artwork) werden über MediaSession mit dem Android-System geteilt, um sie auf dem Fahrzeugbildschirm anzuzeigen. Die Anwendung erhebt keine Standort- oder Fahrdaten.</li>
                 </ul>
 
                 <h3>2. Datenweitergabe</h3>
-                <p>Radio Sphere <strong>gibt keine personenbezogenen Daten weiter, verkauft oder überträgt sie</strong> an Dritte. Es sind keine Analyse-, Werbe- oder Tracking-Tools in die Anwendung integriert.</p>
+                <p>Radio Sphere gibt keine personenbezogenen Daten weiter, verkauft oder überträgt sie an Dritte. Es sind keine Analyse-, Werbe- oder Tracking-Tools in die Anwendung integriert.</p>
 
                 <h3>3. App-Berechtigungen</h3>
                 <ul>
@@ -289,19 +263,34 @@
                     <li><strong>Speicher:</strong> Wird ausschließlich für den Export/Import Ihrer Favoriten als CSV-Dateien verwendet.</li>
                 </ul>
 
-                <h3>4. Datenspeicherung</h3>
+                <h3>4. Aufnahme von Audiostreams</h3>
+                <p>Radio Sphere ermöglicht die Aufnahme von live übertragenen Audiosegmenten.</p>
+                <ul>
+                    <li>Die Aufnahmen sind für den <strong>ausschließlich persönlichen und privaten Gebrauch</strong> bestimmt, im Einklang mit dem Recht auf Privatkopie.</li>
+                    <li>Der Nutzer ist <strong>allein verantwortlich</strong> für die Einhaltung des Urheberrechts, der verwandten Schutzrechte und der geltenden lokalen Gesetzgebung in seinem Wohnsitzland.</li>
+                    <li>Radio Sphere <strong>fördert und unterstützt nicht</strong> die Weiterverbreitung, öffentliche Ausstrahlung oder kommerzielle Verwertung aufgenommener Inhalte.</li>
+                    <li>Aufgenommene Dateien werden <strong>ausschließlich auf dem Gerät des Nutzers</strong> gespeichert und niemals an unsere Server oder an Dritte übertragen.</li>
+                </ul>
+
+                <h3>5. Datenspeicherung</h3>
                 <p>Alle Daten (Favoriten, Sprache, Einstellungen) werden lokal auf Ihrem Gerät gespeichert. Die Deinstallation der Anwendung löscht alle zugehörigen Daten. Auf unseren Servern werden keine Daten gespeichert.</p>
 
-                <h3>5. Sicherheit</h3>
+                <h3>6. Sicherheit</h3>
                 <p>Wir setzen strikt auf lokale Speicherlösungen. Die Anwendung sendet keine Daten an eigene Server. Radio-Stream-Verbindungen verwenden HTTPS, wenn verfügbar.</p>
 
-                <h3>6. Kinder</h3>
+                <h3>7. Kinder</h3>
                 <p>Radio Sphere ist nicht für Kinder unter 13 Jahren bestimmt und erhebt wissentlich keine Daten von Kindern. Die ausgestrahlten Inhalte hängen von den Drittanbieter-Radiosendern ab.</p>
 
-                <h3>7. Änderungen dieser Richtlinie</h3>
+                <h3>8. Haftungsbeschränkung</h3>
+                <p>Radio Sphere fungiert als <strong>Radiostream-Aggregator</strong>. Audioinhalte werden von Drittanbieter-Radiosendern bereitgestellt, die über das Verzeichnis radio-browser.info zugänglich sind. Wir kontrollieren, moderieren und haften nicht für die von diesen Sendern ausgestrahlten Inhalte. Der Nutzer verwendet die Anwendung auf eigene Gefahr.</p>
+
+                <h3>9. Änderungen dieser Richtlinie</h3>
                 <p>Wir behalten uns das Recht vor, diese Richtlinie zu ändern. Änderungen werden auf dieser Seite mit einem aktualisierten Datum veröffentlicht. Wir empfehlen Ihnen, diese Seite regelmäßig zu überprüfen.</p>
 
-                <h3>8. Kontakt</h3>
+                <h3>10. Anwendbares Recht und Gerichtsbarkeit</h3>
+                <p>Diese Richtlinie unterliegt dem <strong>belgischen Recht</strong>. Für Nutzer mit Wohnsitz in der Europäischen Union gelten die Bestimmungen der Datenschutz-Grundverordnung (DSGVO). Für Nutzer mit Wohnsitz in Kalifornien (USA) werden auch die Rechte gemäß dem California Consumer Privacy Act (CCPA) eingehalten.</p>
+
+                <h3>11. Kontakt</h3>
                 <p>Bei Fragen zu dieser Datenschutzerklärung kontaktieren Sie uns bitte:</p>
 
                 <footer>
@@ -312,25 +301,25 @@
             </div>
         </div>
 
-        <!-- ==================== 日本語 ==================== -->
+        <!-- ======================= 日本語 ======================= -->
         <div id="ja" class="lang-section">
-            <div class="policy">
+            <div>
                 <h2>プライバシーポリシー</h2>
-                <p class="date">最終更新日：2026年2月28日</p>
+                <p><strong>最終更新日：2026年3月6日</strong></p>
 
-                <p><strong>Radio Sphere</strong>アプリケーションは、<strong>Franck H. Malherbe</strong>によって開発され、お客様のプライバシーを尊重します。本ポリシーは、一般データ保護規則（GDPR）およびGoogle Playの要件に従ったデータの取り扱いについて説明します。</p>
+                <p>Radio Sphereアプリケーションは、Franck H. Malherbeによって開発され、お客様のプライバシーを尊重します。本ポリシーは、一般データ保護規則（GDPR）およびGoogle Playの要件に従ったデータの取り扱いについて説明します。</p>
 
                 <h3>1. データの収集と使用</h3>
-                <p>Radio Sphereは<strong>個人を特定できる情報を一切収集しません</strong>。登録やユーザーアカウントは必要ありません。</p>
+                <p>Radio Sphereは個人を特定できる情報を一切収集しません。登録やユーザーアカウントは必要ありません。</p>
                 <ul>
                     <li><strong>お気に入りと設定：</strong>お客様のデバイスにのみ保存されます（ローカルストレージ）。当方はアクセスできません。</li>
                     <li><strong>オーディオストリーミング：</strong>Radio Browser（radio-browser.info）のサードパーティサーバーは、オーディオストリームの技術的な配信のためにのみお客様のIPアドレスを受信します。これらのサードパーティサーバーのプライバシーポリシーは当方の管理外です。</li>
                     <li><strong>Google Cast / Chromecast：</strong>この機能を使用する場合、Googleが独自のプライバシーポリシーに従ってデータを収集する場合があります。</li>
-                    <li><strong>Android Auto：</strong>追加のデータは収集されません。オーディオ再生はメインアプリケーションと同じストリームを使用します。</li>
+                    <li><strong>Android Auto：</strong>追加のデータは収集されません。再生メタデータ（局名、アートワーク）は、車両画面に表示するためにMediaSessionを通じてAndroidシステムと共有されます。アプリケーションは位置情報や運転データを収集しません。</li>
                 </ul>
 
                 <h3>2. データの共有</h3>
-                <p>Radio Sphereは個人データを第三者と<strong>共有、販売、または転送しません</strong>。アプリケーションには、分析、広告、またはトラッキングツールは統合されていません。</p>
+                <p>Radio Sphereは個人データを第三者と共有、販売、または転送しません。アプリケーションには、分析、広告、またはトラッキングツールは統合されていません。</p>
 
                 <h3>3. アプリの権限</h3>
                 <ul>
@@ -339,19 +328,34 @@
                     <li><strong>ストレージ：</strong>お気に入りのCSVファイルとしてのエクスポート/インポートのためにのみ使用されます。</li>
                 </ul>
 
-                <h3>4. データの保持</h3>
+                <h3>4. オーディオストリームの録音</h3>
+                <p>Radio Sphereは、ライブ配信されるオーディオセグメントの録音を可能にします。</p>
+                <ul>
+                    <li>録音は、私的複製の権利に基づく<strong>厳密に個人的かつ私的な使用</strong>を目的としています。</li>
+                    <li>ユーザーは、居住国における著作権法、著作隣接権、および適用される現地法令の遵守について<strong>単独で責任</strong>を負います。</li>
+                    <li>Radio Sphereは、録音されたコンテンツの再配布、公衆送信、または商業的共有を<strong>奨励も支持もしません</strong>。</li>
+                    <li>録音されたファイルは<strong>ユーザーのデバイスにのみ</strong>保存され、当方のサーバーや第三者に送信されることはありません。</li>
+                </ul>
+
+                <h3>5. データの保持</h3>
                 <p>すべてのデータ（お気に入り、言語、設定）はお客様のデバイスにローカルに保存されます。アプリケーションをアンインストールすると、関連するすべてのデータが削除されます。当方のサーバーにはデータは保持されません。</p>
 
-                <h3>5. セキュリティ</h3>
+                <h3>6. セキュリティ</h3>
                 <p>当方はローカルストレージソリューションを厳密に優先します。アプリケーションは独自のサーバーにデータを送信しません。ラジオストリーム接続は、利用可能な場合はHTTPSを使用します。</p>
 
-                <h3>6. 児童</h3>
+                <h3>7. 児童</h3>
                 <p>Radio Sphereは13歳未満の児童を対象としておらず、故意に児童からデータを収集することはありません。放送内容はサードパーティのラジオ局に依存します。</p>
 
-                <h3>7. 本ポリシーの変更</h3>
+                <h3>8. 責任の制限</h3>
+                <p>Radio Sphereは<strong>ラジオストリームアグリゲーター</strong>として機能します。オーディオコンテンツは、radio-browser.infoディレクトリを通じてアクセス可能なサードパーティのラジオ局によって提供されます。当方は、これらの局が放送するコンテンツを管理、モデレート、または責任を負いません。ユーザーは自己の責任においてアプリケーションを使用します。</p>
+
+                <h3>9. 本ポリシーの変更</h3>
                 <p>当方は本ポリシーを変更する権利を留保します。変更は更新日とともにこのページに掲載されます。定期的にこのページを確認することをお勧めします。</p>
 
-                <h3>8. お問い合わせ</h3>
+                <h3>10. 準拠法および管轄</h3>
+                <p>本ポリシーは<strong>ベルギー法</strong>に準拠します。欧州連合に居住するユーザーには、一般データ保護規則（GDPR）の規定が適用されます。カリフォルニア州（米国）に居住するユーザーには、カリフォルニア消費者プライバシー法（CCPA）に基づく権利も尊重されます。</p>
+
+                <h3>11. お問い合わせ</h3>
                 <p>本プライバシーポリシーに関するご質問は、以下までお問い合わせください：</p>
 
                 <footer>

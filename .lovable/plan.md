@@ -1,34 +1,37 @@
 
 
-## Plan: Mise a jour de la Politique de Confidentialite
+## Plan : Unification Android Auto + Nettoyage MediaPlaybackService — TERMINÉ ✅
 
-### Ajouts dans toutes les langues (FR, EN, ES, DE, JA)
+### Architecture finale
 
-#### 1. Nouveau paragraphe "Enregistrement des flux audio" (section 3bis, apres Permissions)
-- L'application permet l'enregistrement de segments audio a des fins strictement personnelles et privees
-- L'utilisateur est seul responsable du respect des droits d'auteur et des lois locales
-- Radio Sphere ne cautionne ni n'encourage la redistribution de contenus enregistres
-- Les enregistrements sont stockes localement, jamais transmis a nos serveurs
+**Un seul service media : `RadioBrowserService`**, qui fonctionne en deux modes :
+1. **Mode Android Auto** : Browse tree + ExoPlayer natif (inchangé)
+2. **Mode Notification (Mirror)** : Reçoit les updates de `RadioAutoPlugin` via Intent `ACTION_UPDATE`, met à jour sa MediaSession unique et affiche une notification MediaStyle unifiée
 
-#### 2. Enrichissement section Android Auto (section 1)
-- Preciser que les metadonnees de lecture (nom de station, artwork) sont partagees avec le systeme Android via MediaSession pour l'affichage sur l'ecran du vehicule
-- Aucune donnee de localisation ou de conduite n'est collectee par l'application
+### v2.5.2 — Corrections favoris + navigation Android Auto
 
-#### 3. Nouveau paragraphe "Limitation de responsabilite" (section 6bis, apres Enfants)
-- Radio Sphere est un agregateur : le contenu diffuse est fourni par des stations tierces via radio-browser.info
-- Nous ne controlons pas et ne sommes pas responsables du contenu diffuse
-- L'utilisateur utilise l'application a ses propres risques
+| Correction | Détail |
+|-----------|--------|
+| **onPlayFromMediaId** | Fallback en 4 étapes : currentStations → favorites → recents → API (fetchStationByUuid) |
+| **updateFavorites/updateRecents** | Méthodes statiques appelées par RadioAutoPlugin pour rafraîchir le browse tree en temps réel via `notifyChildrenChanged()` |
+| **fetchStationByUuid** | Nouvelle méthode pour récupérer une station par UUID depuis l'API radio-browser |
+| **buildBrowsableItem** | Ajout d'une icône placeholder pour les dossiers (pas de trou visuel) |
+| **Ordre des dossiers** | Top Stations → Mes Favoris → Récents |
+| **activeInstance** | Set dans onCreate, cleared dans onDestroy pour le pattern static |
 
-#### 4. Nouveau paragraphe "Droit applicable et juridiction" (section 7bis)
-- Droit belge applicable
-- Reference au RGPD pour les utilisateurs de l'UE
-- Reference au CCPA pour les utilisateurs californiens (bonne pratique Google Play)
+### Changements effectués
 
-#### 5. Mise a jour de la date
-- "Derniere mise a jour : 6 mars 2026" dans toutes les langues
-
-### Fichier modifie
 | Fichier | Action |
 |---------|--------|
-| `docs/privacy-policy.html` | Ajout des 4 nouveaux paragraphes dans les 5 langues, MAJ date |
+| `android-auto/RadioBrowserService.java` | v2.5.2: onPlayFromMediaId fallback, updateFavorites/updateRecents static, fetchStationByUuid, folder icons |
+| `android-auto/RadioAutoPlugin.java` | v2.5.2: Appelle RadioBrowserService.updateFavorites/updateRecents après sync |
+| `android-auto/AndroidManifest-snippet.xml` | v2.5.2: Nettoyé, MediaPlaybackService supprimé |
+| `radiosphere_v2_5_0.ps1` | Templates inline mis à jour v2.5.2 |
+| `android-auto/MediaPlaybackService.java` | **Supprimé** (v2.5.1) |
 
+### Ce qui n'a pas changé
+- `CastPlugin.java`, `CastOptionsProvider.java` — déjà corrects
+- `PlayerContext.tsx`, `useCast.ts` — logique Cast déjà en place
+- `StationCard.tsx` — placeholder déjà géré
+- `MediaToggleReceiver.java` — inchangé (appelle RadioAutoPlugin)
+- Browse tree, ExoPlayer, audio focus, stream resolution
