@@ -1314,7 +1314,17 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
         return new ArrayList<>();
     }
 
-    private List<StationData> searchStations(String query, int limit) {
+    private StationData fetchStationByUuid(String uuid) {
+        for (String mirror : API_MIRRORS) {
+            try {
+                String url = mirror + "/json/stations/byuuid/" + Uri.encode(uuid);
+                List<StationData> results = parseApiResponse(httpGet(url));
+                if (!results.isEmpty()) return results.get(0);
+            } catch (Exception e) { /* next mirror */ }
+        }
+        return null;
+    }
+
         List<StationData> nameResults = new ArrayList<>();
         List<StationData> tagResults = new ArrayList<>();
         for (String mirror : API_MIRRORS) {
