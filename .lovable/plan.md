@@ -1,79 +1,74 @@
 
 
-## Audit Android Auto — Diagnostic complet
+## Plan : Unification Android Auto + Nettoyage MediaPlaybackService
 
-### Cause racine identifiee : `startForeground()` crash silencieux sur Android 14+
+### Probleme actuel
 
-Sur Android 14 (API 34) et superieur, appeler `startForeground(id, notification)` **sans specifier le type de service foreground** provoque une `MissingForegroundServiceTypeException` quand le service declare `foregroundServiceType="mediaPlayback"` dans le Manifest.
+Deux services media coexistent :
+- `RadioBrowserService` (MediaBrowserServiceCompat) — pour Android Auto, avec ExoPlayer
+- `MediaPlaybackService` (Service) — pour la notification lockscreen, miroir du WebView
 
-Le code actuel dans `RadioBrowserService.startAsForeground()` :
-```java
-startForeground(AUTO_NOTIFICATION_ID, notification);  // CRASH sur API 34+
-```
+Deux MediaSessions distinctes (`RadioSphereSession` + `RadioSphereNotif`) peuvent confondre le systeme Android sur le routage media. Le Manifest declare les deux, ce qui peut poser des conflits de detection.
 
-Devrait etre :
-```java
-if (Build.VERSION.SDK_INT >= 34) {
-    startForeground(AUTO_NOTIFICATION_ID, notification,
-        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-} else {
-    startForeground(AUTO_NOTIFICATION_ID, notification);
-}
-```
+### Architecture cible
 
-Le service crash **avant meme de demander l'audio focus**, donc aucun flux ne peut jouer. L'app reste visible dans AA car `onGetRoot`/`onLoadChildren` fonctionnent (pas besoin de foreground pour le browse tree), mais `playStation` echoue systematiquement.
+**Un seul service media : `RadioBrowserService`**, qui fonctionne en deux modes :
+1. **Mode Android Auto** : Browse tree + ExoPlayer natif (inchange)
+2. **Mode Notification** : Recoit les updates de `RadioAutoPlugin` via Intent, met a jour sa MediaSession et affiche une notification MediaStyle (remplace MediaPlaybackService)
 
-Le meme bug existe dans `MediaPlaybackService.updateSessionAndNotification()`.
+### Modifications
 
-### Probleme secondaire : drawable `station_placeholder` absent
+#### 1. PS1 — Manifest (`radiosphere_v2_5_0.ps1`, section 4)
+- Ajouter `android:appCategory="audio"` dans `<application>`
+- **Supprimer** la declaration de `MediaPlaybackService` et son `<receiver>` `MediaToggleReceiver` du bloc `$ServiceDecl`
+- Conserver uniquement `RadioBrowserService` + les meta-data existantes
+- Ajouter le receiver `MediaToggleReceiver` rattache a `RadioBrowserService` (meme action `TOGGLE_PLAYBACK`)
 
-Le PS1 ne copie jamais `android-auto/res/drawable/station_placeholder.jpg` dans le projet Android. L'artwork par defaut ne s'affiche pas, mais ce n'est pas bloquant.
+#### 2. RadioBrowserService.java — Ajout mode notification miroir
+- Ajouter les constantes `ACTION_UPDATE`, `ACTION_STOP`, `BROADCAST_TOGGLE`
+- Ajouter `onStartCommand()` : recoit les intents de RadioAutoPlugin avec `station_name`, `station_logo`, `is_playing`
+  - Met a jour la MediaSession existante (metadata + playback state)
+  - Affiche/met a jour la notification MediaStyle avec le token de la meme session
+  - Gere l'artwork : si logo vide → `android.resource://...drawable/station_placeholder`
+  - Telecharge le bitmap en arriere-plan si URL changee
+- La notification toggle envoie le broadcast `BROADCAST_TOGGLE` (capte par MediaToggleReceiver)
 
-### Plan de corrections
+#### 3. RadioAutoPlugin.java — Pointer vers RadioBrowserService
+- Remplacer `MediaPlaybackService.class` par `RadioBrowserService.class` dans `notifyPlaybackState()`
+- Remplacer `MediaPlaybackService.ACTION_UPDATE` par `RadioBrowserService.ACTION_UPDATE`
+- Remplacer `MediaPlaybackService.class` par `RadioBrowserService.class` dans `clearAppData()`
 
-**Fichiers a modifier (4 fichiers, meme fix) :**
+#### 4. PS1 — Suppression generation MediaPlaybackService
+- **Supprimer** le bloc de generation de `MediaPlaybackService.java` (lignes ~415-567)
+- **Mettre a jour** les templates inline de `RadioBrowserService.java` et `RadioAutoPlugin.java` avec les changements ci-dessus
+- Conserver `MediaToggleReceiver.java` (inchange, il appelle `RadioAutoPlugin.getActiveInstance()`)
 
-1. **`android-auto/RadioBrowserService.java`** — methode `startAsForeground()` : ajouter le type foreground service pour API 34+
-2. **`android-auto/MediaPlaybackService.java`** — methode `updateSessionAndNotification()` : meme fix
-3. **`radiosphere_v2_5_0.ps1`** — mettre a jour les 2 versions inline (RadioBrowserService + MediaPlaybackService) avec le meme fix + ajouter la copie de `station_placeholder.jpg`
+#### 5. PS1 — MainActivity
+- Supprimer la creation du canal `radio_playback_v3` (plus necessaire, RadioBrowserService cree son propre canal `radio_auto_playback`)
+- Ou mieux : garder un seul canal unifie `radio_auto_playback` pour tout
 
-**Detail technique du fix pour `startAsForeground` (RadioBrowserService) :**
-```java
-if (!foregroundStarted) {
-    if (Build.VERSION.SDK_INT >= 34) {
-        startForeground(AUTO_NOTIFICATION_ID, notification,
-            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-    } else {
-        startForeground(AUTO_NOTIFICATION_ID, notification);
-    }
-    foregroundStarted = true;
-} else {
-    // Update existing notification
-    NotificationManager nm = ...;
-    nm.notify(AUTO_NOTIFICATION_ID, notification);
-}
-```
+#### 6. CastPlugin / CastOptionsProvider — Verification (pas de changement)
+- Deja correct : `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID`, listeners `castStateChanged`/`localAudioControl`
 
-**Detail technique du fix pour `updateSessionAndNotification` (MediaPlaybackService) :**
-```java
-if (Build.VERSION.SDK_INT >= 34) {
-    startForeground(NOTIFICATION_ID, notification,
-        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-} else {
-    startForeground(NOTIFICATION_ID, notification);
-}
-```
+#### 7. PlayerContext.tsx — Verification (pas de changement)
+- Deja correct : logique `isCasting` → `castLoadMedia()` vs audio local
+- Artwork placeholder deja en place via `stationPlaceholder` import
 
-**PS1 — ajout copie station_placeholder :**
-```powershell
-# Apres la copie de ic_notification.png
-$PlaceholderSrc = "android-auto/res/drawable/station_placeholder.jpg"
-# ... copie vers android/app/src/main/res/drawable/
-```
+#### 8. StationCard.tsx — Verification (pas de changement)
+- Deja correct : utilise `station-placeholder.png` comme fallback
+
+### Fichiers modifies
+
+| Fichier | Action |
+|---------|--------|
+| `radiosphere_v2_5_0.ps1` | Manifest + suppression MediaPlaybackService + MAJ templates inline |
+| `android-auto/RadioBrowserService.java` | Ajout onStartCommand + mode notification miroir |
+| `android-auto/MediaPlaybackService.java` | **Suppression du fichier** |
 
 ### Ce qui ne change pas
-
-- Toute la logique browse tree, resolution de flux, ExoPlayer, audio focus, protocol fallback
-- Le Manifest, les permissions, les dependances Gradle
-- Les fichiers TypeScript/React cote web
+- `CastPlugin.java`, `CastOptionsProvider.java` — deja corrects
+- `PlayerContext.tsx`, `useCast.ts` — logique Cast deja en place
+- `StationCard.tsx` — placeholder deja gere
+- Browse tree, ExoPlayer, audio focus, stream resolution
+- `MediaToggleReceiver.java` — inchange (appelle RadioAutoPlugin)
 
