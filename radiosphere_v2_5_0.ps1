@@ -1397,13 +1397,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     }
 
     private MediaBrowserCompat.MediaItem buildBrowsableItem(String mediaId, String title, String subtitle) {
-        MediaDescriptionCompat.Builder builder = new MediaDescriptionCompat.Builder()
-            .setMediaId(mediaId).setTitle(title).setSubtitle(subtitle);
-        try {
-            Uri appIcon = Uri.parse("android.resource://" + getPackageName() + "/mipmap/ic_launcher");
-            builder.setIconUri(appIcon);
-        } catch (Exception e) { Log.w(TAG, "Could not set folder icon", e); }
-        return new MediaBrowserCompat.MediaItem(builder.build(), MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
+        MediaDescriptionCompat desc = new MediaDescriptionCompat.Builder()
+            .setMediaId(mediaId).setTitle(title).setSubtitle(subtitle).build();
+        return new MediaBrowserCompat.MediaItem(desc, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 
     private MediaBrowserCompat.MediaItem buildInfoItem(String title, String subtitle) {
