@@ -793,6 +793,7 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     @Override
     public void onCreate() {
         super.onCreate();
+        activeInstance = this;
         createNotificationChannel();
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         player = new ExoPlayer.Builder(this).build();
