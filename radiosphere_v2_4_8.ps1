@@ -247,14 +247,14 @@ dependencies {
 Write-Host ">>> Generation des fichiers natifs (Java)..." -ForegroundColor Yellow
 
 $JavaSrcBase = "android/app/src/main/java"
-$PackageDir = "$JavaSrcBase/com/radiosphere/app"
+$PackageDir = "$JavaSrcBase/com/fhm/radiosphere"
 if (!(Test-Path $PackageDir)) {
     $MainActFile = Get-ChildItem -Path $JavaSrcBase -Filter "MainActivity.*" -Recurse | Select-Object -First 1
     if ($MainActFile) {
         $PackageDir = $MainActFile.DirectoryName
         Write-Host "    Package directory found: $PackageDir" -ForegroundColor DarkGray
     } else {
-        $PackageDir = "$JavaSrcBase/com/radiosphere/app"
+        $PackageDir = "$JavaSrcBase/com/fhm/radiosphere"
         New-Item -ItemType Directory -Path $PackageDir -Force | Out-Null
     }
 }
