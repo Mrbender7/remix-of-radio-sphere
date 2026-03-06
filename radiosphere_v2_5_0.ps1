@@ -656,6 +656,9 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
     private Bitmap cachedMirrorArtwork;
     private String cachedMirrorLogoUrl = "";
 
+    // Static instance for live favorites/recents refresh
+    private static RadioBrowserService activeInstance;
+
     private static final String[] API_MIRRORS = {
         "https://de1.api.radio-browser.info",
         "https://fr1.api.radio-browser.info",
@@ -682,6 +685,16 @@ public class RadioBrowserService extends MediaBrowserServiceCompat {
             this.id = id; this.name = name; this.streamUrl = streamUrl;
             this.logo = logo; this.country = country; this.tags = tags;
         }
+    }
+
+    // Static methods for live browse tree refresh from Capacitor plugin
+    public static void updateFavorites(String json) {
+        Log.d(TAG, "updateFavorites called, instance=" + (activeInstance != null));
+        if (activeInstance != null) activeInstance.notifyChildrenChanged(FAVORITES_ID);
+    }
+    public static void updateRecents(String json) {
+        Log.d(TAG, "updateRecents called, instance=" + (activeInstance != null));
+        if (activeInstance != null) activeInstance.notifyChildrenChanged(RECENTS_ID);
     }
 
     private final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = focusChange -> {
