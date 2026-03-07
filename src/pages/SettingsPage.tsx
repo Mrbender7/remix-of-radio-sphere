@@ -519,12 +519,15 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
         {/* Restore purchases */}
         <div className="mt-3 pt-3 border-t border-border">
           <Button
-            onClick={() => {
-              // In a real app this would call the Play Store billing API
-              // For now just show feedback
-              if (isPremium) {
-                toast({ title: "✅ " + t("premium.restoreSuccess") });
-              } else {
+            onClick={async () => {
+              try {
+                await restorePurchases();
+                if (isPremium) {
+                  toast({ title: "✅ " + t("premium.restoreSuccess") });
+                } else {
+                  toast({ title: t("premium.restoreNone") });
+                }
+              } catch {
                 toast({ title: t("premium.restoreNone") });
               }
             }}
@@ -639,7 +642,7 @@ export function SettingsPage({ onReopenWelcome, onResetApp }: SettingsPageProps)
       )}
 
       {/* App version */}
-      <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v1.0</p>
+      <p className="text-center text-[10px] text-muted-foreground mb-6">Radio Sphere v1.1</p>
 
       {/* Unavailable stations dialog after import */}
       <Dialog open={showUnavailableDialog} onOpenChange={setShowUnavailableDialog}>
