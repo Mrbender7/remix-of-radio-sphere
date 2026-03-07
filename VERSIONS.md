@@ -2,6 +2,29 @@
 
 ---
 
+## v1.1.1 — 7 mars 2026 — *Fix pause & auto-restart*
+
+**Statut :** En préparation  
+**Package :** `com.fhm.radiosphere`  
+**Plateforme :** Android (Capacitor)
+
+### Corrections
+
+#### Bouton pause non réactif sur contenu dynamique
+- 🐛 Le bouton pause nécessitait 2 appuis lors de la bascule entre contenu dynamique et l'app
+- 🔧 Cause : `isPlayingRef` était mis à jour de façon asynchrone via `useEffect`, créant une fenêtre de race condition où le handler `keepAlive` relançait la lecture
+- ✅ Fix : mise à jour synchrone de `isPlayingRef.current` dans `handlePlay`, `handlePause`, `togglePlay` et `reloadStream`
+
+#### Station se relance après mise en arrière-plan
+- 🐛 Après une pause manuelle, réduire l'app provoquait un redémarrage automatique de la station quelques secondes plus tard
+- 🔧 Cause : le listener `keepAlive` se déclenchait sur les événements `blur`/`visibilitychange` et relançait `audio.play()` car le ref était encore à `true`
+- ✅ Fix : suppression des listeners `blur` et `focus`, `keepAlive` ne reprend la lecture que lors du retour au premier plan (`visibilityState === 'visible'`)
+
+### Fichier modifié
+- `src/contexts/PlayerContext.tsx`
+
+---
+
 ## v1.1.0 — 7 mars 2026 — *Google Play Billing + Fin période de test*
 
 **Statut :** En préparation  
