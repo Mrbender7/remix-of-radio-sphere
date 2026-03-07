@@ -1,39 +1,99 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
+import BillingPlugin from "@/plugins/BillingPlugin";
+import { toast } from "@/hooks/use-toast";
 
-// Simple hash to avoid storing password in plain text in localStorage
-// The actual password check uses a constant-time comparison against the hash
-const PREMIUM_HASH = "a3f2b8c1d4e5"; // Marker stored in localStorage when unlocked
+const PREMIUM_HASH = "a3f2b8c1d4e5";
 
 interface PremiumContextType {
   isPremium: boolean;
-  togglePremium: () => void;
+  isLoading: boolean;
+  purchasePremium: () => Promise<void>;
+  restorePurchases: () => Promise<void>;
+  /** Legacy: unlock via password (debug/web only) */
   unlockWithPassword: (password: string) => boolean;
   lockPremium: () => void;
 }
 
 const PremiumContext = createContext<PremiumContextType | undefined>(undefined);
 
-// The unlock password — obfuscated via simple check
+const isNative = Capacitor.isNativePlatform();
+
 function verifyPassword(input: string): boolean {
   return input === "TESTPREMIUM007";
 }
 
 export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(() => {
-    // Google Play test period: default to true so all premium features are unlocked
+    // On native, start false and let queryPurchases determine the real status
+    if (isNative) return false;
+    // On web, check localStorage (debug mode)
     try {
       const stored = localStorage.getItem("radiosphere_premium");
-      if (stored === null) return true; // Default unlocked for test period
       return stored === PREMIUM_HASH;
-    } catch { return true; }
+    } catch { return false; }
   });
+  const [isLoading, setIsLoading] = useState(isNative);
 
-  const togglePremium = useCallback(() => {
-    setIsPremium(prev => {
-      const next = !prev;
-      try { localStorage.setItem("radiosphere_premium", next ? PREMIUM_HASH : "false"); } catch {}
-      return next;
-    });
+  // On mount (native only), check real purchase status
+  useEffect(() => {
+    if (!isNative) return;
+    BillingPlugin.queryPurchases()
+      .then(({ isPremium: purchased }) => {
+        setIsPremium(purchased);
+        try { localStorage.setItem("radiosphere_premium", purchased ? PREMIUM_HASH : "false"); } catch {}
+      })
+      .catch(() => {
+        // Fallback to localStorage cache if billing unavailable
+        try {
+          const stored = localStorage.getItem("radiosphere_premium");
+          setIsPremium(stored === PREMIUM_HASH);
+        } catch {}
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const purchasePremium = useCallback(async () => {
+    if (isNative) {
+      try {
+        const { purchased } = await BillingPlugin.purchasePremium();
+        if (purchased) {
+          setIsPremium(true);
+          try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+        }
+      } catch (err) {
+        console.error("BillingPlugin.purchasePremium error:", err);
+        toast({ title: "❌ Erreur d'achat", description: String(err) });
+      }
+    } else {
+      // Web fallback: toggle for testing
+      setIsPremium(true);
+      try { localStorage.setItem("radiosphere_premium", PREMIUM_HASH); } catch {}
+    }
+  }, []);
+
+  const restorePurchases = useCallback(async () => {
+    if (isNative) {
+      try {
+        const { isPremium: purchased } = await BillingPlugin.restorePurchases();
+        setIsPremium(purchased);
+        try { localStorage.setItem("radiosphere_premium", purchased ? PREMIUM_HASH : "false"); } catch {}
+        return;
+      } catch (err) {
+        console.error("BillingPlugin.restorePurchases error:", err);
+        // Fallback to cache
+        try {
+          const stored = localStorage.getItem("radiosphere_premium");
+          setIsPremium(stored === PREMIUM_HASH);
+        } catch {}
+      }
+    } else {
+      // Web: check localStorage
+      try {
+        const stored = localStorage.getItem("radiosphere_premium");
+        setIsPremium(stored === PREMIUM_HASH);
+      } catch {}
+    }
   }, []);
 
   const unlockWithPassword = useCallback((password: string): boolean => {
@@ -51,7 +111,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <PremiumContext.Provider value={{ isPremium, togglePremium, unlockWithPassword, lockPremium }}>
+    <PremiumContext.Provider value={{ isPremium, isLoading, purchasePremium, restorePurchases, unlockWithPassword, lockPremium }}>
       {children}
     </PremiumContext.Provider>
   );

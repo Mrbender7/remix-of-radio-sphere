@@ -1,10 +1,11 @@
-import { Crown, Moon, Car, CheckCircle, Disc, Cast } from "lucide-react";
+import { Crown, Moon, Car, CheckCircle, Disc, Cast, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePremium } from "@/contexts/PremiumContext";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { toast } from "@/hooks/use-toast";
 
 export function PremiumPage() {
-  const { isPremium, togglePremium } = usePremium();
+  const { isPremium, isLoading, purchasePremium, restorePurchases } = usePremium();
   const { t } = useTranslation();
 
   const features = [
@@ -13,6 +14,19 @@ export function PremiumPage() {
     { icon: Car, title: t("premium.androidAuto"), desc: t("premium.androidAutoDesc") },
     { icon: Cast, title: t("premium.chromecast"), desc: t("premium.chromecastDesc") },
   ];
+
+  const handlePurchase = async () => {
+    await purchasePremium();
+  };
+
+  const handleRestore = async () => {
+    await restorePurchases();
+    // Show feedback after restore attempt
+    setTimeout(() => {
+      // Re-read from context (state will have updated)
+    }, 100);
+    toast({ title: t("premium.restorePurchases") + "..." });
+  };
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -44,20 +58,25 @@ export function PremiumPage() {
       </div>
 
       <div className="space-y-3 mb-8">
-        {isPremium ? (
-          <Button onClick={togglePremium} variant="outline" className="w-full h-14 text-base font-semibold rounded-xl border-amber-500/30 text-foreground">
-            {t("premium.cancel")}
-          </Button>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-14">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : isPremium ? (
+          <div className="text-center text-sm text-muted-foreground py-4">
+            {t("premium.active")} ✨
+          </div>
         ) : (
-          <>
-            <Button onClick={togglePremium} className="w-full h-14 text-base font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 rounded-xl shadow-lg">
-              {t("premium.monthly")}
-            </Button>
-            <Button onClick={togglePremium} variant="outline" className="w-full h-14 text-base font-semibold rounded-xl border-amber-500/30 text-foreground">
-              {t("premium.yearly")} <span className="ml-2 text-xs text-primary">{t("premium.yearlySave")}</span>
-            </Button>
-          </>
+          <Button onClick={handlePurchase} className="w-full h-14 text-base font-semibold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-500 hover:to-orange-600 rounded-xl shadow-lg">
+            {t("premium.monthly")}
+          </Button>
         )}
+
+        {/* Restore purchases button — always visible */}
+        <Button onClick={handleRestore} variant="outline" className="w-full h-12 text-sm font-semibold rounded-xl border-amber-500/30 text-foreground gap-2">
+          <RefreshCw className="w-4 h-4" />
+          {t("premium.restorePurchases")}
+        </Button>
       </div>
 
       <p className="text-[10px] text-muted-foreground text-center">{t("premium.disclaimer")}</p>

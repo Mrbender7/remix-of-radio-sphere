@@ -2,6 +2,51 @@
 
 ---
 
+## v1.1.0 — 7 mars 2026 — *Google Play Billing + Fin période de test*
+
+**Statut :** En préparation  
+**Package :** `com.fhm.radiosphere`  
+**Plateforme :** Android (Capacitor)
+
+### Changements
+
+#### Google Play Billing
+- 💳 Intégration Google Play Billing Library 6.1.0 (achat unique "Premium Lifetime" à 9,99€)
+- 🔄 Bouton "Restaurer les achats" fonctionnel (page Premium + Réglages)
+- 🔐 `PremiumContext` vérifie le statut d'achat réel au démarrage via `BillingPlugin`
+- 🌐 Fallback web : mode mot de passe conservé pour le debug en preview Lovable
+- ⏱️ Indicateur de chargement pendant la vérification du statut d'achat
+
+#### Fin de la période de test
+- `isPremium` n'est plus initialisé à `true` par défaut
+- Les fonctionnalités Premium sont verrouillées jusqu'à achat réel ou restauration
+
+#### Nouveau plugin natif
+- `BillingPlugin.java` : `queryPurchases()`, `purchasePremium()`, `restorePurchases()`
+- Acknowledge automatique des achats (requis Google Play)
+- Produit in-app : `premium_lifetime` (type INAPP, achat unique)
+
+#### Script de build
+- Nouveau `radiosphere_v1_1_0.ps1` avec :
+  - Dossier de destination `radiosphere-1.1.0` (remplace `remix-of-radio-sphere`)
+  - Dépendance Gradle `com.android.billingclient:billing:6.1.0`
+  - Génération de `BillingPlugin.java`
+  - Enregistrement dans `MainActivity.java`
+
+#### UI
+- `PremiumPage` : bouton unique "Achat unique — 9,99€" (plus de monthly/yearly)
+- `SettingsPage` : version affichée `v1.1`
+
+### Configuration Play Console requise
+
+1. **Produits internes** → Créer un produit géré :
+   - ID : `premium_lifetime`
+   - Type : Achat unique
+   - Prix : 9,99€
+   - Description : "Accès Premium à vie — toutes les fonctionnalités"
+
+---
+
 ## v1.0.0 — 7 mars 2026 — *Première release Google Play*
 
 **Statut :** En cours d'examen sur Google Play  
@@ -56,6 +101,7 @@ RadioSphere est une application de radio en streaming qui permet d'écouter des 
 | Natif | Capacitor 8 (Android) |
 | Audio Android | ExoPlayer (Android Auto) |
 | Cast | Google Cast SDK (Chromecast) |
+| Billing | Google Play Billing Library 6.1.0 (v1.1.0+) |
 | Icônes | Lucide React + Iconify |
 | Animations | CSS Keyframes + Audio Visualizer canvas |
 
