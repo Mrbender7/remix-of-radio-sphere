@@ -41,6 +41,21 @@ export function LibraryPage({ favorites, isFavorite, onToggleFavorite }: Library
       }));
   }, [favorites, t]);
 
+  const groupedByGenre = useMemo(() => {
+    const groups: Record<string, RadioStation[]> = {};
+    for (const s of favorites) {
+      const genre = s.tags[0]?.toLowerCase() || t("favorites.unknownGenre");
+      if (!groups[genre]) groups[genre] = [];
+      groups[genre].push(s);
+    }
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([genre, stations]) => ({
+        genre: genre.charAt(0).toUpperCase() + genre.slice(1),
+        stations: stations.sort((a, b) => a.name.localeCompare(b.name)),
+      }));
+  }, [favorites, t]);
+
   return (
     <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 pb-32">
       <h1 className="text-2xl font-heading font-bold mt-6 mb-2 bg-gradient-to-r from-[hsl(220,90%,60%)] to-[hsl(280,80%,60%)] bg-clip-text text-transparent flex items-center gap-2">
