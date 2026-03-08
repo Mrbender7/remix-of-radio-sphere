@@ -648,6 +648,8 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.sortName": "A-Z",
     "favorites.sortCountry": "Nach Land",
     "favorites.unknownCountry": "Unbekanntes Land",
+    "favorites.sortGenre": "Nach Genre",
+    "favorites.unknownGenre": "Unbekanntes Genre",
     "premium.title": "Radio Sphere Premium",
     "premium.subtitle": "Das ultimative Radio-Erlebnis",
     "premium.active": "Premium aktiv",
