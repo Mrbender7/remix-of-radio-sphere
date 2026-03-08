@@ -115,11 +115,24 @@ export function LibraryPage({ favorites, isFavorite, onToggleFavorite }: Library
             <StationCard key={s.id} station={s} compact isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
           ))}
         </div>
-      ) : (
+      ) : sortMode === "country" ? (
         <div className="space-y-4">
           {groupedByCountry.map(({ country, stations }) => (
             <div key={country}>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{country}</h3>
+              <div className="space-y-1">
+                {stations.map(s => (
+                  <StationCard key={s.id} station={s} compact isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {groupedByGenre.map(({ genre, stations }) => (
+            <div key={genre}>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{genre}</h3>
               <div className="space-y-1">
                 {stations.map(s => (
                   <StationCard key={s.id} station={s} compact isFavorite={isFavorite(s.id)} onToggleFavorite={onToggleFavorite} />
