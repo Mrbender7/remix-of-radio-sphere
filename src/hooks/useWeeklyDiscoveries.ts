@@ -123,7 +123,6 @@ export function useWeeklyDiscoveries(favorites: RadioStation[]) {
 }
 
 function pickThree(candidates: RadioStation[], _exclude: string[]): RadioStation[] {
-  // Shuffle and pick 3
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 3);
+  return shuffled.slice(0, 10);
 }
